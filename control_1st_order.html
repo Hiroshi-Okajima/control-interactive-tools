@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1次系の応答 — インタラクティブ可視化</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #f7f6f3;
+  --card: #ffffff;
+  --text: #1a1a2e;
+  --text2: #5a5a7a;
+  --accent: #2563eb;
+  --accent2: #dc2626;
+  --accent3: #059669;
+  --border: #e2e0dc;
+  --code-bg: #1e1e2e;
+  --r: 12px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg); color: var(--text);
+  font-size: 15px; line-height: 1.7;
+}
+.header {
+  background: linear-gradient(135deg, #0f172a, #1e3a5f, #2563eb);
+  color: #fff; padding: 2rem 1.5rem;
+  text-align: center; position: relative;
+}
+.header h1 {
+  font-family: 'Noto Serif JP', serif;
+  font-size: clamp(1.2rem, 3vw, 1.6rem);
+  font-weight: 700; margin-bottom: 0.3rem;
+}
+.header p { font-size: 0.85rem; opacity: 0.75; }
+.main { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
+
+/* Transfer function display */
+.tf-box {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1.2rem 1.5rem;
+  margin-bottom: 1.2rem; text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.tf-label {
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--text2); margin-bottom: 0.5rem;
+}
+.tf-math {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.3rem; font-weight: 600;
+  color: var(--text); line-height: 2.2;
+}
+.tf-math .frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; }
+.tf-math .frac-num { border-bottom: 2px solid var(--text); padding: 0 0.5rem 0.15rem; }
+.tf-math .frac-den { padding: 0.15rem 0.5rem 0; }
+.tf-math .param { color: var(--accent); font-weight: 700; }
+
+/* Controls */
+.controls {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1.2rem 1.5rem;
+  margin-bottom: 1.2rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.controls-title {
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--text2); margin-bottom: 0.8rem;
+}
+.slider-group { margin-bottom: 1rem; }
+.slider-group:last-child { margin-bottom: 0; }
+.slider-label {
+  display: flex; justify-content: space-between;
+  align-items: baseline; margin-bottom: 0.3rem;
+}
+.slider-label span:first-child {
+  font-weight: 600; font-size: 0.9rem;
+}
+.slider-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600; font-size: 0.9rem;
+  color: var(--accent);
+  background: #eef2ff; padding: 0.15em 0.5em;
+  border-radius: 4px;
+}
+input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 6px; border-radius: 3px;
+  background: #e0e0e0; outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--accent); border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--accent); border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+
+/* Chart area */
+.charts-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1rem; margin-bottom: 1.2rem;
+}
+@media (max-width: 700px) {
+  .charts-grid { grid-template-columns: 1fr; }
+}
+.chart-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1rem 1.2rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.chart-title {
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; margin-bottom: 0.5rem;
+}
+.chart-title.step { color: var(--accent); }
+.chart-title.impulse { color: var(--accent2); }
+.chart-wrap { position: relative; height: 260px; }
+
+/* Info section */
+.info-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1.2rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  margin-bottom: 1rem;
+}
+.info-title {
+  font-weight: 700; font-size: 0.95rem; margin-bottom: 0.5rem;
+  display: flex; align-items: center; gap: 0.4rem;
+}
+.info-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 0.5rem 2rem; font-size: 0.88rem;
+}
+@media (max-width: 500px) { .info-grid { grid-template-columns: 1fr; } }
+.info-item { display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid #f0f0f0; }
+.info-item-label { color: var(--text2); }
+.info-item-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600; color: var(--text);
+}
+
+/* Equation reference */
+.eq-card {
+  background: #f8fafc; border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1rem 1.5rem;
+  font-size: 0.88rem; line-height: 1.8;
+}
+.eq-card h3 {
+  font-size: 0.85rem; font-weight: 700; margin-bottom: 0.4rem;
+}
+.eq-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem; background: var(--code-bg);
+  color: #c8d1db; padding: 0.8rem 1rem;
+  border-radius: 8px; margin: 0.5rem 0;
+  overflow-x: auto; white-space: pre;
+}
+
+.footer {
+  text-align: center; padding: 1.5rem;
+  color: var(--text2); font-size: 0.75rem;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>1次系のステップ応答・インパルス応答</h1>
+  <p>伝達関数 G(s) = K / (Ts + 1) のパラメータをスライダーで変更し、応答波形の変化を観察する</p>
+</div>
+
+<div class="main">
+
+  <!-- Transfer function -->
+  <div class="tf-box">
+    <div class="tf-label">伝達関数</div>
+    <div class="tf-math">
+      G(s) = 
+      <span class="frac">
+        <span class="frac-num"><span class="param" id="tf-K">1.00</span></span>
+        <span class="frac-den"><span class="param" id="tf-T">1.00</span> s + 1</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="controls-title">パラメータ設定</div>
+    <div class="slider-group">
+      <div class="slider-label">
+        <span>ゲイン K</span>
+        <span class="slider-value" id="val-K">1.00</span>
+      </div>
+      <input type="range" id="slider-K" min="0.1" max="5.0" step="0.1" value="1.0">
+    </div>
+    <div class="slider-group">
+      <div class="slider-label">
+        <span>時定数 T [s]</span>
+        <span class="slider-value" id="val-T">1.00</span>
+      </div>
+      <input type="range" id="slider-T" min="0.1" max="5.0" step="0.1" value="1.0">
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title step">ステップ応答 y(t)</div>
+      <div class="chart-wrap"><canvas id="chart-step"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title impulse">インパルス応答 g(t)</div>
+      <div class="chart-wrap"><canvas id="chart-impulse"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Computed values -->
+  <div class="info-card">
+    <div class="info-title">📊 応答特性値</div>
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-item-label">定常値 K</span>
+        <span class="info-item-value" id="info-steady">1.00</span>
+      </div>
+      <div class="info-item">
+        <span class="info-item-label">時定数 T</span>
+        <span class="info-item-value" id="info-tau">1.00 s</span>
+      </div>
+      <div class="info-item">
+        <span class="info-item-label">63.2%到達時間 (= T)</span>
+        <span class="info-item-value" id="info-t63">1.00 s</span>
+      </div>
+      <div class="info-item">
+        <span class="info-item-label">95%到達時間 (≈ 3T)</span>
+        <span class="info-item-value" id="info-t95">3.00 s</span>
+      </div>
+      <div class="info-item">
+        <span class="info-item-label">99%到達時間 (≈ 5T)</span>
+        <span class="info-item-value" id="info-t99">5.00 s</span>
+      </div>
+      <div class="info-item">
+        <span class="info-item-label">初期傾き K/T</span>
+        <span class="info-item-value" id="info-slope">1.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Equations reference -->
+  <div class="eq-card">
+    <h3>📖 数式リファレンス</h3>
+    <div class="eq-code">ステップ応答:  y(t) = K (1 - e^(-t/T))
+インパルス応答: g(t) = (K/T) e^(-t/T)
+定常値:        lim y(t) = K  (t → ∞)
+時定数:        y(T) = 0.632 K</div>
+  </div>
+
+</div>
+
+<div class="footer">制御工学 インタラクティブ教材 — 1次系の応答</div>
+
+<script>
+(function() {
+  const sliderK = document.getElementById('slider-K');
+  const sliderT = document.getElementById('slider-T');
+  const valK = document.getElementById('val-K');
+  const valT = document.getElementById('val-T');
+
+  const NUM_POINTS = 300;
+  // Fixed axis ranges — デフォルト K=1, T=1 で見栄えよく
+  const T_AXIS_MAX = 8;      // 時間軸: 5T=5sが中心に見える
+  const Y_STEP_MAX = 5.5;    // ステップ応答縦軸
+  const Y_IMPULSE_MAX = 12;  // インパルス応答縦軸: K/T_min=5/0.1=50だが通常域を見やすく
+
+  function createChart(canvasId, label, color, yMax) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    return new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: label,
+          data: [],
+          borderColor: color,
+          borderWidth: 2.5,
+          pointRadius: 0,
+          fill: false,
+          tension: 0.1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 150 },
+        scales: {
+          x: {
+            type: 'linear',
+            min: 0,
+            max: T_AXIS_MAX,
+            title: { display: true, text: '時間 t [s]', font: { size: 12, weight: '600' } },
+            ticks: { stepSize: 1, font: { family: "'JetBrains Mono', monospace", size: 11 } },
+            grid: { color: '#f0f0f0' }
+          },
+          y: {
+            min: 0,
+            max: yMax,
+            title: { display: true, text: label, font: { size: 12, weight: '600' } },
+            ticks: { font: { family: "'JetBrains Mono', monospace", size: 11 } },
+            grid: { color: '#f0f0f0' }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: function(items) { return 't = ' + Number(items[0].parsed.x).toFixed(2) + ' s'; },
+              label: function(item) { return item.dataset.label + ' = ' + Number(item.parsed.y).toFixed(4); }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  const chartStep = createChart('chart-step', 'y(t)', '#2563eb', Y_STEP_MAX);
+  const chartImpulse = createChart('chart-impulse', 'g(t)', '#dc2626', Y_IMPULSE_MAX);
+
+  function update() {
+    const K = parseFloat(sliderK.value);
+    const T = parseFloat(sliderT.value);
+
+    valK.textContent = K.toFixed(2);
+    valT.textContent = T.toFixed(2);
+    document.getElementById('tf-K').textContent = K.toFixed(2);
+    document.getElementById('tf-T').textContent = T.toFixed(2);
+
+    const dt = T_AXIS_MAX / NUM_POINTS;
+    const stepData = [];
+    const impulseData = [];
+
+    for (let i = 0; i <= NUM_POINTS; i++) {
+      const t = i * dt;
+      stepData.push({ x: t, y: K * (1 - Math.exp(-t / T)) });
+      impulseData.push({ x: t, y: (K / T) * Math.exp(-t / T) });
+    }
+
+    chartStep.data.datasets[0].data = stepData;
+    chartStep.update();
+
+    chartImpulse.data.datasets[0].data = impulseData;
+    chartImpulse.update();
+
+    document.getElementById('info-steady').textContent = K.toFixed(2);
+    document.getElementById('info-tau').textContent = T.toFixed(2) + ' s';
+    document.getElementById('info-t63').textContent = T.toFixed(2) + ' s';
+    document.getElementById('info-t95').textContent = (3 * T).toFixed(2) + ' s';
+    document.getElementById('info-t99').textContent = (5 * T).toFixed(2) + ' s';
+    document.getElementById('info-slope').textContent = (K / T).toFixed(3);
+  }
+
+  sliderK.addEventListener('input', update);
+  sliderT.addEventListener('input', update);
+  update();
+})();
+</script>
+
+</body>
+</html>

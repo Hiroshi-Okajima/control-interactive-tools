@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PID制御 — インタラクティブ可視化</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;
+  --blue:#2563eb;--red:#dc2626;--purple:#7c3aed;--green:#059669;--orange:#ea580c;--teal:#0891b2;
+  --border:#e2e0dc;--r:10px;--r-lg:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+
+.header{background:linear-gradient(135deg,#1e1040,#4c1d95,#7c3aed);color:#fff;padding:1.4rem 1.5rem 1.1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.4rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.7;}
+.main{max-width:1120px;margin:0 auto;padding:1rem;}
+
+/* Layout */
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:850px){.layout{grid-template-columns:1fr;}}
+.left-col,.right-col{display:flex;flex-direction:column;gap:0.7rem;}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.3rem;}
+
+/* Controls */
+.ctrl-group{margin-bottom:0.6rem;}
+.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.75rem;font-weight:600;color:var(--text2);margin-bottom:0.2rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{
+  font-family:'JetBrains Mono',monospace;font-weight:600;font-size:0.82rem;
+  color:var(--purple);background:#f3eeff;padding:0.12em 0.45em;border-radius:4px;
+  min-width:4.5em;text-align:center;
+}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--purple);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--purple);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+
+/* Chart areas */
+.chart-title{font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.3rem;}
+.chart-wrap{position:relative;}
+.chart-wrap.step-h{height:200px;}
+.chart-wrap.bode-h{height:165px;}
+
+/* Block diagram SVG */
+.block-svg{width:100%;max-width:480px;margin:0 auto;display:block;}
+
+/* Plant info badge */
+.plant-badge{
+  display:inline-flex;align-items:center;gap:0.3rem;
+  background:#f0fdfa;border:1px solid #99f6e4;color:#0d7377;
+  font-size:0.75rem;font-weight:600;padding:0.2em 0.7em;border-radius:5px;
+  margin-top:0.3rem;
+}
+
+/* Info strip */
+.info-strip{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:0.6rem 1rem;margin-top:0.7rem;
+  display:flex;flex-wrap:wrap;gap:0.4rem 1.5rem;font-size:0.8rem;
+  box-shadow:0 2px 6px rgba(0,0,0,0.03);
+}
+.info-item{display:flex;gap:0.3rem;align-items:baseline;}
+.info-lbl{color:var(--text2);font-size:0.75rem;}
+.info-val{font-family:'JetBrains Mono',monospace;font-weight:600;}
+
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>PID制御のステップ応答とボード線図</h1>
+  <p>1次遅れプラント P(s)=1/(Ts+1) に対するPIDフィードバック制御 — パラメータを変更して応答の変化を観察</p>
+</div>
+
+<div class="main">
+<div class="layout">
+
+<!-- ══════ LEFT COLUMN ══════ -->
+<div class="left-col">
+
+  <!-- Block diagram -->
+  <div class="card">
+    <div class="card-label" style="color:var(--text3);">フィードバック制御系</div>
+    <svg class="block-svg" viewBox="0 0 480 90" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="a1" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#444"/></marker>
+        <marker id="ab" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2563eb"/></marker>
+        <marker id="ar" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#dc2626"/></marker>
+      </defs>
+      <!-- r -->
+      <text x="6" y="40" font-size="13" font-weight="700" fill="#2563eb" font-family="'JetBrains Mono',monospace">r</text>
+      <line x1="22" y1="36" x2="50" y2="36" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ab)"/>
+      <!-- sum -->
+      <circle cx="62" cy="36" r="10" fill="#fff" stroke="#444" stroke-width="1.5"/>
+      <text x="62" y="40" text-anchor="middle" font-size="12" font-weight="700" fill="#444">Σ</text>
+      <text x="54" y="30" font-size="8" fill="#444">+</text>
+      <text x="54" y="50" font-size="8" fill="#444">−</text>
+      <!-- e -->
+      <line x1="72" y1="36" x2="115" y2="36" stroke="#444" stroke-width="1.5" marker-end="url(#a1)"/>
+      <text x="88" y="30" font-size="9" fill="#888" font-family="'JetBrains Mono',monospace">e</text>
+      <!-- C(s) -->
+      <rect x="117" y="20" width="68" height="32" rx="5" fill="#f5f0ff" stroke="#7c3aed" stroke-width="1.8"/>
+      <text x="151" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#7c3aed" font-family="'Noto Serif JP',serif">C(s)</text>
+      <text x="151" y="62" text-anchor="middle" font-size="8" fill="#999" font-family="'JetBrains Mono',monospace">PID</text>
+      <!-- arrow C→P -->
+      <line x1="185" y1="36" x2="230" y2="36" stroke="#444" stroke-width="1.5" marker-end="url(#a1)"/>
+      <!-- P(s) -->
+      <rect x="232" y="20" width="68" height="32" rx="5" fill="#f0fdfa" stroke="#0891b2" stroke-width="1.8"/>
+      <text x="266" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#0891b2" font-family="'Noto Serif JP',serif">P(s)</text>
+      <text x="266" y="62" text-anchor="middle" font-size="8" fill="#999" font-family="'JetBrains Mono',monospace" id="plant-label">1/(s+1)</text>
+      <!-- y -->
+      <line x1="300" y1="36" x2="370" y2="36" stroke="#dc2626" stroke-width="1.5" marker-end="url(#ar)"/>
+      <text x="377" y="40" font-size="13" font-weight="700" fill="#dc2626" font-family="'JetBrains Mono',monospace">y</text>
+      <!-- feedback path -->
+      <line x1="350" y1="36" x2="350" y2="82" stroke="#888" stroke-width="1.2"/>
+      <line x1="350" y1="82" x2="62" y2="82" stroke="#888" stroke-width="1.2"/>
+      <line x1="62" y1="82" x2="62" y2="46" stroke="#888" stroke-width="1.2" marker-end="url(#a1)"/>
+    </svg>
+    <div style="text-align:center;">
+      <span class="plant-badge" id="plant-badge">P(s) = 1/(1.00s + 1)  [固定]</span>
+    </div>
+  </div>
+
+  <!-- PID parameter sliders -->
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">PIDコントローラ C(s) = Kp + Ki/s + Kd·s</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">比例ゲイン Kp</div>
+      <div class="ctrl-row">
+        <input type="range" id="slider-kp" min="0" max="20" step="0.1" value="2.0">
+        <span class="ctrl-val" id="val-kp">2.00</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">積分ゲイン Ki</div>
+      <div class="ctrl-row">
+        <input type="range" id="slider-ki" min="0" max="20" step="0.1" value="1.0">
+        <span class="ctrl-val" id="val-ki">1.00</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">微分ゲイン Kd</div>
+      <div class="ctrl-row">
+        <input type="range" id="slider-kd" min="0" max="5" step="0.01" value="0.5">
+        <span class="ctrl-val" id="val-kd">0.50</span>
+      </div>
+    </div>
+    <div class="ctrl-group" style="margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid #eee;">
+      <div class="ctrl-label" style="color:var(--teal);">プラント時定数 T [s]（参考調整用）</div>
+      <div class="ctrl-row">
+        <input type="range" id="slider-T" min="0.1" max="5.0" step="0.1" value="1.0">
+        <span class="ctrl-val" id="val-T" style="color:var(--teal);background:#f0fdfa;">1.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step response -->
+  <div class="card">
+    <div class="chart-title" style="color:var(--red);">ステップ応答 — r(t)=1, y(t)</div>
+    <div class="chart-wrap step-h"><canvas id="chart-step"></canvas></div>
+  </div>
+
+</div>
+
+<!-- ══════ RIGHT COLUMN ══════ -->
+<div class="right-col">
+
+  <!-- C(s) Bode -->
+  <div class="card">
+    <div class="chart-title" style="color:var(--purple);">C(s) ゲイン線図 [dB]</div>
+    <div class="chart-wrap bode-h"><canvas id="chart-c-gain"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="chart-title" style="color:var(--purple);">C(s) 位相線図 [deg]</div>
+    <div class="chart-wrap bode-h"><canvas id="chart-c-phase"></canvas></div>
+  </div>
+
+  <!-- Closed-loop Bode -->
+  <div class="card">
+    <div class="chart-title" style="color:var(--green);">閉ループ T(s) ゲイン線図 [dB]</div>
+    <div class="chart-wrap bode-h"><canvas id="chart-t-gain"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="chart-title" style="color:var(--green);">閉ループ T(s) 位相線図 [deg]</div>
+    <div class="chart-wrap bode-h"><canvas id="chart-t-phase"></canvas></div>
+  </div>
+
+</div>
+
+</div><!-- layout -->
+
+<!-- Info -->
+<div class="info-strip">
+  <div class="info-item"><span class="info-lbl">定常偏差:</span><span class="info-val" id="info-ess">0</span></div>
+  <div class="info-item"><span class="info-lbl">オーバーシュート:</span><span class="info-val" id="info-os">—</span></div>
+  <div class="info-item"><span class="info-lbl">整定時間(±2%):</span><span class="info-val" id="info-ts">—</span></div>
+  <div class="info-item"><span class="info-lbl">立上り時間(10→90%):</span><span class="info-val" id="info-tr">—</span></div>
+</div>
+
+</div>
+
+<div class="footer">制御工学 インタラクティブ教材 — PID制御</div>
+
+<script>
+(function(){
+  const sKp = document.getElementById('slider-kp');
+  const sKi = document.getElementById('slider-ki');
+  const sKd = document.getElementById('slider-kd');
+  const sT  = document.getElementById('slider-T');
+
+  // ── Complex arithmetic helpers ──
+  function cAdd(a,b){return{re:a.re+b.re,im:a.im+b.im};}
+  function cMul(a,b){return{re:a.re*b.re-a.im*b.im,im:a.re*b.im+a.im*b.re};}
+  function cDiv(a,b){const d=b.re*b.re+b.im*b.im;return{re:(a.re*b.re+a.im*b.im)/d,im:(a.im*b.re-a.re*b.im)/d};}
+  function cMag(a){return Math.sqrt(a.re*a.re+a.im*a.im);}
+  function cPhase(a){return Math.atan2(a.im,a.re)*180/Math.PI;}
+
+  // ── Frequency response ──
+  // C(jw) = Kp + Ki/(jw) + Kd*(jw)
+  function Cjw(w,Kp,Ki,Kd){
+    // Ki/(jw) = -jKi/w, Kd*jw = jKd*w
+    return{re:Kp, im:-Ki/(w+1e-15)+Kd*w};
+  }
+  // P(jw) = 1/(jwT+1) = (1-jwT)/(1+w²T²)
+  function Pjw(w,T){
+    const d=1+w*w*T*T;
+    return{re:1/d, im:-w*T/d};
+  }
+  // T(jw) = C*P/(1+C*P)
+  function Tjw(w,Kp,Ki,Kd,T){
+    const C=Cjw(w,Kp,Ki,Kd);
+    const P=Pjw(w,T);
+    const CP=cMul(C,P);
+    const one={re:1,im:0};
+    return cDiv(CP,cAdd(one,CP));
+  }
+
+  // ── Step response via RK4 simulation ──
+  // Closed-loop: P(s)=1/(Ts+1), C(s)=Kp+Ki/s+Kd*s
+  // State-space: let x1=plant output, x2=integral of error
+  // Plant: T*dx1/dt = -x1 + u_plant,  u_plant = Kp*e + Ki*x2 + Kd*de/dt
+  // e = r - x1, de/dt = -dx1/dt
+  // dx2/dt = e
+  //
+  // Substituting:  T*dx1/dt = -x1 + Kp*(r-x1) + Ki*x2 + Kd*(-(dx1/dt))
+  //   (T+Kd)*dx1/dt = -x1*(1+Kp) + Kp*r + Ki*x2
+  //   dx1/dt = [ -(1+Kp)*x1 + Kp*r + Ki*x2 ] / (T+Kd)
+  //   dx2/dt = r - x1
+  function simulateStep(Kp,Ki,Kd,T,tMax,dt){
+    const n=Math.floor(tMax/dt);
+    const ys=[],ts=[];
+    let x1=0,x2=0; // x1=y(plant output), x2=integral of e
+    const r=1; // step input
+    const Td=T+Kd; // effective denominator
+
+    function f1(x1,x2){return(-(1+Kp)*x1+Kp*r+Ki*x2)/Td;}
+    function f2(x1){return r-x1;}
+
+    for(let i=0;i<=n;i++){
+      ts.push(i*dt);
+      ys.push(x1);
+      // RK4
+      const k1a=f1(x1,x2), k1b=f2(x1);
+      const k2a=f1(x1+0.5*dt*k1a, x2+0.5*dt*k1b), k2b=f2(x1+0.5*dt*k1a);
+      const k3a=f1(x1+0.5*dt*k2a, x2+0.5*dt*k2b), k3b=f2(x1+0.5*dt*k2a);
+      const k4a=f1(x1+dt*k3a, x2+dt*k3b), k4b=f2(x1+dt*k3a);
+      x1 += dt/6*(k1a+2*k2a+2*k3a+k4a);
+      x2 += dt/6*(k1b+2*k2b+2*k3b+k4b);
+    }
+    return{ts,ys};
+  }
+
+  // ── Charts ──
+  const BODE_PTS=300;
+  const W_MIN_LOG=-2, W_MAX_LOG=2.5;
+
+  function ds(label,color,w,dash){return{label,data:[],borderColor:color,borderWidth:w||2,borderDash:dash||[],pointRadius:0,fill:false,tension:0.05};}
+
+  function bodeChart(canvasId,yMin,yMax,yStep,yLabel){
+    return new Chart(document.getElementById(canvasId).getContext('2d'),{
+      type:'line',data:{datasets:[ds('',canvasId.includes('-c-')?'#7c3aed':'#059669',2.2)]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:80},
+        scales:{
+          x:{type:'logarithmic',min:Math.pow(10,W_MIN_LOG),max:Math.pow(10,W_MAX_LOG),
+            title:{display:true,text:'ω [rad/s]',font:{size:10,weight:'600'}},
+            ticks:{font:{family:"'JetBrains Mono'",size:9},callback:function(v){const l=Math.log10(v);if(Math.abs(l-Math.round(l))<0.01)return v>=1?v.toFixed(0):v<0.01?v.toExponential(0):v.toFixed(2);return'';}},
+            grid:{color:'#f0f0f0'}},
+          y:{min:yMin,max:yMax,title:{display:true,text:yLabel||'',font:{size:10,weight:'600'}},
+            ticks:{stepSize:yStep,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+
+  const chCGain  = bodeChart('chart-c-gain', -20, 50, 10, '[dB]');
+  const chCPhase = bodeChart('chart-c-phase', -100, 100, 30, '[deg]');
+  const chTGain  = bodeChart('chart-t-gain', -40, 10, 10, '[dB]');
+  const chTPhase = bodeChart('chart-t-phase', -200, 10, 45, '[deg]');
+
+  // Step response chart
+  const chStep = new Chart(document.getElementById('chart-step').getContext('2d'),{
+    type:'line',
+    data:{datasets:[
+      ds('r(t)','#2563eb',1.5,[6,4]),
+      ds('y(t)','#dc2626',2.2)
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:80},
+      scales:{
+        x:{type:'linear',min:0,max:15,title:{display:true,text:'t [s]',font:{size:10,weight:'600'}},
+          ticks:{stepSize:2,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+        y:{min:-0.5,max:2.0,title:{display:true,text:'',font:{size:10,weight:'600'}},
+          ticks:{stepSize:0.5,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+      },
+      plugins:{legend:{labels:{font:{size:10},usePointStyle:true,pointStyle:'line'}},tooltip:{enabled:false}}
+    }
+  });
+
+  // ── Update ──
+  function update(){
+    const Kp=parseFloat(sKp.value);
+    const Ki=parseFloat(sKi.value);
+    const Kd=parseFloat(sKd.value);
+    const T =parseFloat(sT.value);
+
+    document.getElementById('val-kp').textContent=Kp.toFixed(2);
+    document.getElementById('val-ki').textContent=Ki.toFixed(2);
+    document.getElementById('val-kd').textContent=Kd.toFixed(2);
+    document.getElementById('val-T').textContent=T.toFixed(2);
+    document.getElementById('plant-badge').textContent='P(s) = 1/('+T.toFixed(2)+'s + 1)';
+    document.getElementById('plant-label').textContent='1/('+T.toFixed(1)+'s+1)';
+
+    // ── Bode data ──
+    const cGain=[],cPh=[],tGain=[],tPh=[];
+    for(let i=0;i<=BODE_PTS;i++){
+      const wl=W_MIN_LOG+(W_MAX_LOG-W_MIN_LOG)*i/BODE_PTS;
+      const w=Math.pow(10,wl);
+      const C=Cjw(w,Kp,Ki,Kd);
+      const Tc=Tjw(w,Kp,Ki,Kd,T);
+      cGain.push({x:w,y:20*Math.log10(Math.max(cMag(C),1e-12))});
+      cPh.push({x:w,y:cPhase(C)});
+      tGain.push({x:w,y:20*Math.log10(Math.max(cMag(Tc),1e-12))});
+      tPh.push({x:w,y:cPhase(Tc)});
+    }
+    chCGain.data.datasets[0].data=cGain; chCGain.update();
+    chCPhase.data.datasets[0].data=cPh; chCPhase.update();
+    chTGain.data.datasets[0].data=tGain; chTGain.update();
+    chTPhase.data.datasets[0].data=tPh; chTPhase.update();
+
+    // ── Step response ──
+    const tMax=15;
+    const dt=0.005;
+    const sim=simulateStep(Kp,Ki,Kd,T,tMax,dt);
+    const stepRef=[],stepY=[];
+    // Downsample for chart
+    const skip=Math.max(1,Math.floor(sim.ts.length/500));
+    for(let i=0;i<sim.ts.length;i+=skip){
+      stepRef.push({x:sim.ts[i],y:1});
+      stepY.push({x:sim.ts[i],y:sim.ys[i]});
+    }
+    chStep.data.datasets[0].data=stepRef;
+    chStep.data.datasets[1].data=stepY;
+    chStep.update();
+
+    // ── Performance metrics ──
+    // Steady-state error
+    const yFinal=sim.ys[sim.ys.length-1];
+    const ess=Math.abs(1-yFinal);
+    document.getElementById('info-ess').textContent= Ki>0 ? '0 (Ki>0)' : ess.toFixed(3);
+
+    // Overshoot
+    let yMax2=0;
+    for(const v of sim.ys) if(v>yMax2) yMax2=v;
+    const os=Math.max(0,(yMax2-1)*100);
+    document.getElementById('info-os').textContent= os<0.1?'0 %':os.toFixed(1)+' %';
+
+    // Settling time (±2%)
+    let tSettle='—';
+    for(let i=sim.ys.length-1;i>=0;i--){
+      if(Math.abs(sim.ys[i]-1)>0.02){tSettle=(sim.ts[i]).toFixed(2)+' s';break;}
+    }
+    document.getElementById('info-ts').textContent=tSettle;
+
+    // Rise time (10%→90%)
+    let t10='—',t90='—';
+    for(let i=0;i<sim.ys.length;i++){
+      if(t10==='—'&&sim.ys[i]>=0.1) t10=sim.ts[i];
+      if(t10!=='—'&&sim.ys[i]>=0.9){t90=sim.ts[i];break;}
+    }
+    document.getElementById('info-tr').textContent= (typeof t10==='number'&&typeof t90==='number')?(t90-t10).toFixed(3)+' s':'—';
+  }
+
+  sKp.addEventListener('input',update);
+  sKi.addEventListener('input',update);
+  sKd.addEventListener('input',update);
+  sT.addEventListener('input',update);
+  update();
+})();
+</script>
+
+</body>
+</html>

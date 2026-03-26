@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ボード線図と入出力波形 — 2次系インタラクティブ可視化</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #f5f4f0;
+  --card: #ffffff;
+  --text: #1a1a2e;
+  --text2: #5a5a7a;
+  --text3: #9a9ab0;
+  --accent: #2563eb;
+  --accent2: #dc2626;
+  --purple: #7c3aed;
+  --green: #059669;
+  --orange: #ea580c;
+  --border: #e2e0dc;
+  --code-bg: #1e1e2e;
+  --r: 10px;
+  --r-lg: 14px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+
+/* Header */
+.header{background:linear-gradient(135deg,#0c1a30,#1e3a5f,#2563eb);color:#fff;padding:1.5rem 1.5rem 1.2rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.2rem;}
+.header p{font-size:0.8rem;opacity:0.7;}
+
+.main{max-width:1100px;margin:0 auto;padding:1rem;}
+
+/* Controls bar */
+.ctrl-bar{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:1rem 1.3rem;margin-bottom:1rem;box-shadow:0 2px 8px rgba(0,0,0,0.04);
+  display:flex;flex-wrap:wrap;gap:1rem;align-items:end;
+}
+.ctrl-group{flex:1;min-width:180px;}
+.ctrl-label{font-size:0.75rem;font-weight:700;color:var(--text2);margin-bottom:0.25rem;letter-spacing:0.05em;}
+.ctrl-row{display:flex;align-items:center;gap:0.6rem;}
+.ctrl-val{
+  font-family:'JetBrains Mono',monospace;font-weight:600;font-size:0.85rem;
+  color:var(--accent);background:#eef2ff;padding:0.15em 0.5em;border-radius:4px;
+  min-width:5.5em;text-align:center;
+}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--accent);border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.2);cursor:pointer;}
+input.purple::-webkit-slider-thumb{background:var(--purple);}
+input.purple::-moz-range-thumb{background:var(--purple);}
+input.orange::-webkit-slider-thumb{background:var(--orange);}
+input.orange::-moz-range-thumb{background:var(--orange);}
+
+/* Main grid: left (block+waves) | right (bode) */
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:800px){.layout{grid-template-columns:1fr;}}
+
+.left-col{display:flex;flex-direction:column;gap:0.8rem;}
+.right-col{display:flex;flex-direction:column;gap:0.8rem;}
+
+/* Block diagram */
+.block-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);text-align:center;
+}
+.block-svg{width:100%;max-width:380px;margin:0 auto;}
+
+/* Wave cards */
+.wave-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:0.7rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);flex:1;
+}
+.wave-title{font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.3rem;}
+.wave-title.input{color:var(--accent);}
+.wave-title.output{color:var(--accent2);}
+.wave-wrap{position:relative;height:140px;}
+
+/* Bode cards */
+.bode-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:0.7rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);flex:1;
+}
+.bode-title{font-size:0.7rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.3rem;}
+.bode-title.gain{color:var(--purple);}
+.bode-title.phase{color:var(--green);}
+.bode-wrap{position:relative;height:180px;}
+
+/* Info strip */
+.info-strip{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:0.7rem 1.2rem;margin-top:0.8rem;
+  display:flex;flex-wrap:wrap;gap:0.5rem 2rem;font-size:0.84rem;
+  box-shadow:0 2px 6px rgba(0,0,0,0.03);
+}
+.info-item{display:flex;gap:0.4rem;align-items:baseline;}
+.info-lbl{color:var(--text2);font-size:0.78rem;}
+.info-val{font-family:'JetBrains Mono',monospace;font-weight:600;}
+
+.footer{text-align:center;padding:1.2rem;color:var(--text3);font-size:0.72rem;margin-top:0.5rem;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>ボード線図と入出力波形の関係</h1>
+  <p>2次系 G(s) = ωₙ²/(s²+2ζωₙs+ωₙ²) — 角周波数を変化させ、ゲインと位相の変化を観察する</p>
+</div>
+
+<div class="main">
+
+<!-- Input frequency control (top bar) -->
+<div class="ctrl-bar">
+  <div class="ctrl-group" style="flex:1;min-width:250px;">
+    <div class="ctrl-label">入力角周波数 ω [rad/s]（対数スケール）</div>
+    <div class="ctrl-row">
+      <input type="range" id="slider-w" class="orange" min="-1.5" max="1.8" step="0.005" value="0">
+      <span class="ctrl-val" id="val-w">1.00 rad/s</span>
+    </div>
+  </div>
+</div>
+
+<!-- Main layout -->
+<div class="layout">
+
+  <!-- Left column -->
+  <div class="left-col">
+    <!-- Block diagram -->
+    <div class="block-card">
+      <svg class="block-svg" viewBox="0 0 360 70" xmlns="http://www.w3.org/2000/svg">
+        <!-- u arrow -->
+        <text x="10" y="42" font-size="15" font-weight="700" fill="#2563eb" font-family="'JetBrains Mono',monospace">u(t)</text>
+        <line x1="58" y1="38" x2="110" y2="38" stroke="#2563eb" stroke-width="2" marker-end="url(#arr-blue)"/>
+        <!-- G block -->
+        <rect x="112" y="18" width="80" height="40" rx="6" fill="#f8fafc" stroke="#1e293b" stroke-width="2"/>
+        <text x="152" y="44" text-anchor="middle" font-size="16" font-weight="700" fill="#1e293b" font-family="'Noto Serif JP',serif">G(s)</text>
+        <!-- y arrow -->
+        <line x1="194" y1="38" x2="260" y2="38" stroke="#dc2626" stroke-width="2" marker-end="url(#arr-red)"/>
+        <text x="268" y="42" font-size="15" font-weight="700" fill="#dc2626" font-family="'JetBrains Mono',monospace">y(t)</text>
+        <!-- TF text -->
+        <text x="152" y="66" text-anchor="middle" font-size="9" fill="#8888aa" font-family="'JetBrains Mono',monospace" id="tf-text">ωₙ²/(s²+2ζωₙs+ωₙ²)</text>
+        <!-- markers -->
+        <defs>
+          <marker id="arr-blue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#2563eb"/></marker>
+          <marker id="arr-red" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#dc2626"/></marker>
+        </defs>
+      </svg>
+    </div>
+
+    <!-- Plant parameter controls (under block diagram) -->
+    <div class="ctrl-bar" style="flex-direction:column;gap:0.7rem;">
+      <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);">プラント G(s) のパラメータ</div>
+      <div class="ctrl-group" style="width:100%;">
+        <div class="ctrl-label">固有角振動数 ωₙ [rad/s]</div>
+        <div class="ctrl-row">
+          <input type="range" id="slider-wn" min="0.2" max="10" step="0.1" value="2.0">
+          <span class="ctrl-val" id="val-wn">2.00</span>
+        </div>
+      </div>
+      <div class="ctrl-group" style="width:100%;">
+        <div class="ctrl-label">減衰比 ζ</div>
+        <div class="ctrl-row">
+          <input type="range" id="slider-zeta" class="purple" min="0.05" max="2.0" step="0.01" value="0.15">
+          <span class="ctrl-val" id="val-zeta">0.15</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input wave -->
+    <div class="wave-card">
+      <div class="wave-title input">入力 u(t) = sin(ωt)</div>
+      <div class="wave-wrap"><canvas id="chart-input"></canvas></div>
+    </div>
+
+    <!-- Output wave -->
+    <div class="wave-card">
+      <div class="wave-title output">出力 y(t) = |G(jω)| sin(ωt + ∠G(jω))</div>
+      <div class="wave-wrap"><canvas id="chart-output"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Right column: Bode -->
+  <div class="right-col">
+    <div class="bode-card">
+      <div class="bode-title gain">ゲイン線図 |G(jω)| [dB]</div>
+      <div class="bode-wrap"><canvas id="chart-gain"></canvas></div>
+    </div>
+    <div class="bode-card">
+      <div class="bode-title phase">位相線図 ∠G(jω) [deg]</div>
+      <div class="bode-wrap"><canvas id="chart-phase"></canvas></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Info strip -->
+<div class="info-strip">
+  <div class="info-item"><span class="info-lbl">ω =</span><span class="info-val" id="info-w">1.00 rad/s</span></div>
+  <div class="info-item"><span class="info-lbl">|G(jω)| =</span><span class="info-val" id="info-mag">1.000</span></div>
+  <div class="info-item"><span class="info-lbl">ゲイン =</span><span class="info-val" id="info-db">0.00 dB</span></div>
+  <div class="info-item"><span class="info-lbl">位相 =</span><span class="info-val" id="info-ph">-14.0°</span></div>
+  <div class="info-item"><span class="info-lbl">共振周波数 ωr =</span><span class="info-val" id="info-wr">—</span></div>
+  <div class="info-item"><span class="info-lbl">共振ピーク =</span><span class="info-val" id="info-mr">—</span></div>
+</div>
+
+</div>
+
+<div class="footer">制御工学 インタラクティブ教材 — ボード線図と周波数応答</div>
+
+<script>
+(function(){
+  const sliderW  = document.getElementById('slider-w');
+  const sliderWn = document.getElementById('slider-wn');
+  const sliderZ  = document.getElementById('slider-zeta');
+
+  // ── Bode computation ──
+  function bodeAt(w, wn, z) {
+    // G(jw) = wn^2 / ((jw)^2 + 2z*wn*(jw) + wn^2)
+    // = wn^2 / ( (wn^2 - w^2) + j*2*z*wn*w )
+    const re = wn*wn - w*w;
+    const im = 2*z*wn*w;
+    const magSq = re*re + im*im;
+    const mag = (wn*wn) / Math.sqrt(magSq);
+    const phase = -Math.atan2(im, re) * 180 / Math.PI; // degrees
+    return { mag, phase, db: 20*Math.log10(Math.max(mag, 1e-12)) };
+  }
+
+  // ── Charts ──
+  const BODE_POINTS = 300;
+  const W_MIN_LOG = -1.5, W_MAX_LOG = 1.8; // 10^-1.5 ~ 10^1.8
+
+  function makeLineDataset(label, color, width, dash) {
+    return { label, data:[], borderColor:color, borderWidth:width||2, borderDash:dash||[], pointRadius:0, fill:false, tension:0.05 };
+  }
+  function makeVertDataset() {
+    return { label:'ω marker', data:[], borderColor:'#ea580c', borderWidth:2.5, borderDash:[6,4], pointRadius:0, fill:false, tension:0 };
+  }
+
+  // Gain chart
+  const ctxGain = document.getElementById('chart-gain').getContext('2d');
+  const chartGain = new Chart(ctxGain, {
+    type:'line',
+    data:{ datasets:[ makeLineDataset('|G| [dB]','#7c3aed',2.5), makeVertDataset() ] },
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:{duration:80},
+      scales:{
+        x:{ type:'logarithmic', min:Math.pow(10,W_MIN_LOG), max:Math.pow(10,W_MAX_LOG),
+            title:{display:true,text:'ω [rad/s]',font:{size:11,weight:'600'}},
+            ticks:{font:{family:"'JetBrains Mono'",size:10},callback:function(v){
+              const l=Math.log10(v); if(Math.abs(l-Math.round(l))<0.01) return v>=1?v.toFixed(0):v.toFixed(2); return '';
+            }},
+            grid:{color:'#f0f0f0'}
+        },
+        y:{ min:-40, max:25,
+            title:{display:true,text:'[dB]',font:{size:11,weight:'600'}},
+            ticks:{stepSize:10,font:{family:"'JetBrains Mono'",size:10}},
+            grid:{color:'#f0f0f0'}
+        }
+      },
+      plugins:{legend:{display:false},tooltip:{enabled:false}}
+    }
+  });
+
+  // Phase chart
+  const ctxPhase = document.getElementById('chart-phase').getContext('2d');
+  const chartPhase = new Chart(ctxPhase, {
+    type:'line',
+    data:{ datasets:[ makeLineDataset('Phase [deg]','#059669',2.5), makeVertDataset() ] },
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:{duration:80},
+      scales:{
+        x:{ type:'logarithmic', min:Math.pow(10,W_MIN_LOG), max:Math.pow(10,W_MAX_LOG),
+            title:{display:true,text:'ω [rad/s]',font:{size:11,weight:'600'}},
+            ticks:{font:{family:"'JetBrains Mono'",size:10},callback:function(v){
+              const l=Math.log10(v); if(Math.abs(l-Math.round(l))<0.01) return v>=1?v.toFixed(0):v.toFixed(2); return '';
+            }},
+            grid:{color:'#f0f0f0'}
+        },
+        y:{ min:-200, max:10,
+            title:{display:true,text:'[deg]',font:{size:11,weight:'600'}},
+            ticks:{stepSize:45,font:{family:"'JetBrains Mono'",size:10}},
+            grid:{color:'#f0f0f0'}
+        }
+      },
+      plugins:{legend:{display:false},tooltip:{enabled:false}}
+    }
+  });
+
+  // Input/Output wave charts
+  function makeWaveChart(canvasId, color, yMin, yMax) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    return new Chart(ctx, {
+      type:'line',
+      data:{ datasets:[ makeLineDataset('',color,2) ] },
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:{duration:80},
+        scales:{
+          x:{ type:'linear', min:0, max:10,
+              title:{display:true,text:'t [s]',font:{size:10,weight:'600'}},
+              ticks:{font:{family:"'JetBrains Mono'",size:9}},
+              grid:{color:'#f0f0f0'}
+          },
+          y:{ min:yMin, max:yMax,
+              ticks:{stepSize:1,font:{family:"'JetBrains Mono'",size:9}},
+              grid:{color:'#f0f0f0'}
+          }
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chartInput  = makeWaveChart('chart-input',  '#2563eb', -1.5, 1.5);
+  const chartOutput = makeWaveChart('chart-output', '#dc2626', -4.5, 4.5);
+
+  // ── Update ──
+  function update() {
+    const wLog = parseFloat(sliderW.value);
+    const w  = Math.pow(10, wLog);
+    const wn = parseFloat(sliderWn.value);
+    const z  = parseFloat(sliderZ.value);
+
+    // Display
+    document.getElementById('val-w').textContent = w.toFixed(2) + ' rad/s';
+    document.getElementById('val-wn').textContent = wn.toFixed(2);
+    document.getElementById('val-zeta').textContent = z.toFixed(2);
+
+    // ── Bode curves ──
+    const gainData=[], phaseData=[];
+    for(let i=0;i<=BODE_POINTS;i++){
+      const wl = W_MIN_LOG + (W_MAX_LOG - W_MIN_LOG)*i/BODE_POINTS;
+      const ww = Math.pow(10, wl);
+      const b = bodeAt(ww, wn, z);
+      gainData.push({x:ww, y:b.db});
+      phaseData.push({x:ww, y:b.phase});
+    }
+
+    chartGain.data.datasets[0].data = gainData;
+    chartPhase.data.datasets[0].data = phaseData;
+
+    // Vertical marker at current ω
+    const bCurr = bodeAt(w, wn, z);
+    chartGain.data.datasets[1].data = [{x:w,y:-40},{x:w,y:25}];
+    chartPhase.data.datasets[1].data = [{x:w,y:-200},{x:w,y:10}];
+
+    chartGain.update();
+    chartPhase.update();
+
+    // ── Sinusoidal waves ──
+    const period = 2*Math.PI / w;
+    const tMax = Math.max(3 * period, 0.5);
+    const WAVE_PTS = 300;
+    const dt = tMax / WAVE_PTS;
+    const inData=[], outData=[];
+    for(let i=0;i<=WAVE_PTS;i++){
+      const t = i*dt;
+      inData.push({x:t, y:Math.sin(w*t)});
+      outData.push({x:t, y:bCurr.mag * Math.sin(w*t + bCurr.phase*Math.PI/180)});
+    }
+
+    chartInput.data.datasets[0].data = inData;
+    chartInput.options.scales.x.max = tMax;
+    // Adjust x tick for readability
+    if(tMax < 1) chartInput.options.scales.x.ticks.stepSize = 0.1;
+    else if(tMax < 5) chartInput.options.scales.x.ticks.stepSize = 0.5;
+    else if(tMax < 20) chartInput.options.scales.x.ticks.stepSize = 2;
+    else if(tMax < 100) chartInput.options.scales.x.ticks.stepSize = 10;
+    else chartInput.options.scales.x.ticks.stepSize = 50;
+    chartInput.update();
+
+    chartOutput.data.datasets[0].data = outData;
+    chartOutput.options.scales.x.max = tMax;
+    chartOutput.options.scales.x.ticks.stepSize = chartInput.options.scales.x.ticks.stepSize;
+    chartOutput.update();
+
+    // ── Info strip ──
+    document.getElementById('info-w').textContent = w.toFixed(3) + ' rad/s';
+    document.getElementById('info-mag').textContent = bCurr.mag.toFixed(3);
+    document.getElementById('info-db').textContent = bCurr.db.toFixed(1) + ' dB';
+    document.getElementById('info-ph').textContent = bCurr.phase.toFixed(1) + '°';
+
+    // Resonance frequency (only if underdamped, z < 1/sqrt(2))
+    if(z < 1/Math.sqrt(2)) {
+      const wr = wn * Math.sqrt(1 - 2*z*z);
+      const Mr = 1 / (2*z*Math.sqrt(1-z*z));
+      const MrdB = 20*Math.log10(Mr);
+      document.getElementById('info-wr').textContent = wr.toFixed(3) + ' rad/s';
+      document.getElementById('info-mr').textContent = MrdB.toFixed(1) + ' dB (' + Mr.toFixed(2) + ')';
+    } else {
+      document.getElementById('info-wr').textContent = '— (共振なし)';
+      document.getElementById('info-mr').textContent = '—';
+    }
+
+    // TF text in block diagram
+    document.getElementById('tf-text').textContent =
+      wn.toFixed(1)+'²/(s²+2·'+z.toFixed(2)+'·'+wn.toFixed(1)+'s+'+wn.toFixed(1)+'²)';
+  }
+
+  sliderW.addEventListener('input', update);
+  sliderWn.addEventListener('input', update);
+  sliderZ.addEventListener('input', update);
+  update();
+})();
+</script>
+
+</body>
+</html>

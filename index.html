@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>制御工学 インタラクティブ教材</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--border:#e2e0dc;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.7;}
+.hero{background:linear-gradient(135deg,#0f172a,#1e3a5f,#2563eb);color:#fff;padding:3rem 2rem;text-align:center;}
+.hero h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.3rem,3.5vw,2rem);font-weight:700;margin-bottom:0.5rem;}
+.hero p{font-size:0.9rem;opacity:0.75;max-width:600px;margin:0 auto;}
+.main{max-width:800px;margin:0 auto;padding:2rem 1.5rem;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1rem;margin-bottom:2rem;}
+.tool-card{
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:1.3rem 1.5rem;box-shadow:0 2px 8px rgba(0,0,0,0.04);
+  text-decoration:none;color:var(--text);transition:all 0.15s;
+  display:flex;flex-direction:column;gap:0.4rem;
+}
+.tool-card:hover{border-color:#2563eb;box-shadow:0 4px 16px rgba(37,99,235,0.12);transform:translateY(-2px);}
+.tool-num{font-family:'JetBrains Mono',monospace;font-size:0.68rem;font-weight:700;letter-spacing:0.08em;color:#2563eb;}
+.tool-name{font-family:'Noto Serif JP',serif;font-size:1.05rem;font-weight:700;}
+.tool-desc{font-size:0.83rem;color:var(--text2);line-height:1.6;}
+.tool-tags{display:flex;gap:0.3rem;flex-wrap:wrap;margin-top:0.2rem;}
+.tag{font-size:0.65rem;font-weight:700;padding:0.12em 0.5em;border-radius:3px;}
+.tag-step{background:#d1fae5;color:#065f46;}
+.tag-bode{background:#ede9fe;color:#5b21b6;}
+.tag-pid{background:#fef3c7;color:#92400e;}
+.tag-pole{background:#dbeafe;color:#1d4ed8;}
+.footer{text-align:center;padding:2rem;color:var(--text2);font-size:0.78rem;border-top:1px solid var(--border);}
+.footer a{color:#2563eb;}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>制御工学 インタラクティブ教材</h1>
+  <p>パラメータをスライダーで変更し、制御系の応答やボード線図の変化をリアルタイムに観察できる教材集</p>
+</div>
+
+<div class="main">
+  <div class="grid">
+
+    <a href="control_1st_order.html" class="tool-card">
+      <span class="tool-num">TOOL 01</span>
+      <span class="tool-name">1次系の応答</span>
+      <span class="tool-desc">G(s) = K/(Ts+1) のステップ応答・インパルス応答。ゲインKと時定数Tを変更して波形を観察。</span>
+      <span class="tool-tags"><span class="tag tag-step">ステップ応答</span><span class="tag tag-step">インパルス応答</span></span>
+    </a>
+
+    <a href="control_2nd_order.html" class="tool-card">
+      <span class="tool-num">TOOL 02</span>
+      <span class="tool-name">2次系の応答</span>
+      <span class="tool-desc">G(s) = Kωₙ²/(s²+2ζωₙs+ωₙ²) の応答。不足減衰・臨界減衰・過減衰の違いを観察。</span>
+      <span class="tool-tags"><span class="tag tag-step">ステップ応答</span><span class="tag tag-step">インパルス応答</span></span>
+    </a>
+
+    <a href="control_bode.html" class="tool-card">
+      <span class="tool-num">TOOL 03</span>
+      <span class="tool-name">ボード線図と入出力波形</span>
+      <span class="tool-desc">2次系のボード線図上で周波数マーカーを動かし、入出力正弦波のゲイン・位相変化を同時観察。</span>
+      <span class="tool-tags"><span class="tag tag-bode">ボード線図</span><span class="tag tag-step">周波数応答</span></span>
+    </a>
+
+    <a href="control_pid.html" class="tool-card">
+      <span class="tool-num">TOOL 04</span>
+      <span class="tool-name">PID制御</span>
+      <span class="tool-desc">1次遅れプラントに対するPIDフィードバック制御。Kp, Ki, Kdを変更してステップ応答とボード線図を観察。</span>
+      <span class="tool-tags"><span class="tag tag-pid">PID</span><span class="tag tag-step">ステップ応答</span><span class="tag tag-bode">ボード線図</span></span>
+    </a>
+
+    <a href="control_poles.html" class="tool-card">
+      <span class="tool-num">TOOL 05</span>
+      <span class="tool-name">3次系の極配置</span>
+      <span class="tool-desc">3重積分器プラントに状態フィードバック u=−Kx+r を適用。極配置によるゲインKの決定と応答を観察。</span>
+      <span class="tool-tags"><span class="tag tag-pole">極配置</span><span class="tag tag-step">ステップ応答</span><span class="tag tag-pole">状態フィードバック</span></span>
+    </a>
+
+  </div>
+</div>
+
+<div class="footer">
+  岡島研究室（熊本大学）— <a href="https://www.control-theory.com" target="_blank">control-theory.com</a><br>
+  <a href="https://github.com/Hiroshi-Okajima" target="_blank">GitHub</a> ・
+  <a href="https://blog.control-theory.com" target="_blank">制御工学ブログ</a> ・
+  <a href="https://www.youtube.com/@ControlEngineeringChannel" target="_blank">YouTube</a>
+</div>
+
+</body>
+</html>

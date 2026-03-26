@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>極配置と応答 — 3次系インタラクティブ可視化</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;
+  --blue:#2563eb;--red:#dc2626;--purple:#7c3aed;--green:#059669;--orange:#ea580c;--teal:#0891b2;
+  --border:#e2e0dc;--r:10px;--r-lg:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+
+.header{background:linear-gradient(135deg,#0c2a1e,#065f46,#059669);color:#fff;padding:1.4rem 1.5rem 1.1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.4rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.7;}
+.main{max-width:1100px;margin:0 auto;padding:1rem;}
+
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:850px){.layout{grid-template-columns:1fr;}}
+.left-col,.right-col{display:flex;flex-direction:column;gap:0.7rem;}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.3rem;}
+
+.ctrl-group{margin-bottom:0.6rem;}
+.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.75rem;font-weight:600;color:var(--text2);margin-bottom:0.2rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{
+  font-family:'JetBrains Mono',monospace;font-weight:600;font-size:0.82rem;
+  padding:0.12em 0.45em;border-radius:4px;min-width:5em;text-align:center;
+}
+.ctrl-val.real{color:var(--orange);background:#fff7ed;}
+.ctrl-val.sigma{color:var(--purple);background:#f3eeff;}
+.ctrl-val.omega{color:var(--teal);background:#f0fdfa;}
+
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input.sl-real::-webkit-slider-thumb{background:var(--orange);}
+input.sl-real::-moz-range-thumb{background:var(--orange);}
+input.sl-sigma::-webkit-slider-thumb{background:var(--purple);}
+input.sl-sigma::-moz-range-thumb{background:var(--purple);}
+input.sl-omega::-webkit-slider-thumb{background:var(--teal);}
+input.sl-omega::-moz-range-thumb{background:var(--teal);}
+
+.chart-title{font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.3rem;}
+.chart-wrap{position:relative;}
+.splane-wrap{height:320px;}
+.step-wrap{height:280px;}
+
+/* Matrix display */
+.mat-section{margin-top:0.3rem;}
+.mat-label{font-size:0.7rem;font-weight:700;color:var(--text2);margin-bottom:0.3rem;letter-spacing:0.08em;}
+.mat-grid{display:flex;gap:1.2rem;flex-wrap:wrap;align-items:flex-start;}
+.mat-block{font-family:'JetBrains Mono',monospace;font-size:0.78rem;line-height:1.8;display:flex;align-items:center;gap:0.3rem;}
+.mat-name{font-weight:700;font-size:0.85rem;white-space:nowrap;}
+.mat-name.a-col{color:var(--green);}
+.mat-name.b-col{color:var(--blue);}
+.mat-name.c-col{color:var(--red);}
+.mat-bracket{
+  display:inline-flex;flex-direction:column;
+  border-left:2.5px solid #666;border-right:2.5px solid #666;
+  padding:0.3rem 0.6rem;border-radius:3px;background:#fafaf8;
+}
+.mat-row{white-space:pre;display:block;line-height:1.7;}
+
+/* Transfer function */
+.tf-box{
+  margin-top:0.4rem;padding:0.5rem 0.8rem;
+  background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);
+  font-family:'JetBrains Mono',monospace;font-size:0.8rem;text-align:center;
+  line-height:2;
+}
+.tf-frac{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;}
+.tf-num{border-bottom:2px solid var(--text);padding:0 0.4rem 0.1rem;}
+.tf-den{padding:0.1rem 0.4rem 0;}
+
+/* Char poly */
+.char-poly{
+  margin-top:0.3rem;font-family:'JetBrains Mono',monospace;
+  font-size:0.8rem;color:var(--text2);text-align:center;
+  padding:0.3rem;background:#fafaf8;border-radius:var(--r);border:1px solid var(--border);
+}
+
+/* Info strip */
+.info-strip{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:0.6rem 1rem;margin-top:0.7rem;
+  display:flex;flex-wrap:wrap;gap:0.4rem 1.5rem;font-size:0.8rem;
+  box-shadow:0 2px 6px rgba(0,0,0,0.03);
+}
+.info-item{display:flex;gap:0.3rem;align-items:baseline;}
+.info-lbl{color:var(--text2);font-size:0.75rem;}
+.info-val{font-family:'JetBrains Mono',monospace;font-weight:600;}
+
+/* Stability badge */
+.stab-badge{
+  display:inline-block;font-size:0.72rem;font-weight:700;
+  padding:0.15em 0.6em;border-radius:4px;margin-left:0.3rem;
+}
+.stab-badge.stable{background:#d1fae5;color:#065f46;}
+.stab-badge.unstable{background:#fee2e2;color:#991b1b;}
+.stab-badge.marginal{background:#fef3c7;color:#92400e;}
+
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>3次系の極配置とステップ応答</h1>
+  <p>3重積分器プラントに状態フィードバック u=−Kx+r を適用 — 極配置でKを決定し、応答を観察</p>
+</div>
+
+<div class="main">
+<div class="layout">
+
+<!-- ══════ LEFT ══════ -->
+<div class="left-col">
+
+  <!-- Sliders -->
+  <div class="card">
+    <div class="card-label" style="color:var(--green);">極の配置 <span class="stab-badge stable" id="stab-badge">安定</span></div>
+
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--orange);">実極 p₁ (実軸上)</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-p1" class="sl-real" min="-10" max="2" step="0.1" value="-1">
+        <span class="ctrl-val real" id="val-p1">-1.00</span>
+      </div>
+    </div>
+
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--purple);">共役複素極 実部 σ</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-sigma" class="sl-sigma" min="-10" max="2" step="0.1" value="-2">
+        <span class="ctrl-val sigma" id="val-sigma">-2.00</span>
+      </div>
+    </div>
+
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--teal);">共役複素極 虚部 ω (≥ 0)</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-omega" class="sl-omega" min="0" max="10" step="0.1" value="3">
+        <span class="ctrl-val omega" id="val-omega">3.00</span>
+      </div>
+    </div>
+
+    <div style="font-size:0.78rem;color:var(--text2);margin-top:0.3rem;">
+      極: <span style="color:var(--orange);font-weight:600;" id="disp-p1">s = -1</span>,
+      <span style="color:var(--purple);font-weight:600;" id="disp-p23">s = -2 ± 3j</span>
+    </div>
+  </div>
+
+  <!-- s-plane -->
+  <div class="card">
+    <div class="chart-title" style="color:var(--green);">s平面（極配置図）</div>
+    <div class="chart-wrap splane-wrap"><canvas id="chart-splane"></canvas></div>
+  </div>
+
+  <!-- Characteristic polynomial & TF -->
+  <div class="card">
+    <div class="card-label" style="color:var(--text3);">特性多項式 & 伝達関数</div>
+    <div class="char-poly" id="char-poly">Δ(s) = s³ + 5.00s² + 17.00s + 13.00</div>
+    <div class="tf-box" id="tf-box">
+      G(s) = <span class="tf-frac"><span class="tf-num" id="tf-num">13.00</span><span class="tf-den" id="tf-den">s³ + 5.00s² + 17.00s + 13.00</span></span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════ RIGHT ══════ -->
+<div class="right-col">
+
+  <!-- Step response -->
+  <div class="card">
+    <div class="chart-title" style="color:var(--red);">ステップ応答 y(t)</div>
+    <div class="chart-wrap step-wrap"><canvas id="chart-step"></canvas></div>
+  </div>
+
+  <!-- State-space (A,B,C) and feedback gain K -->
+  <div class="card">
+    <div class="card-label" style="color:var(--text3);">可制御正準形 &amp; 状態フィードバックゲイン</div>
+
+    <div class="mat-section">
+      <div style="font-size:0.73rem;color:var(--text3);margin-bottom:0.4rem;">
+        開ループプラント: dx/dt = A<sub>p</sub>x + B<sub>p</sub>u, &nbsp; y = C<sub>p</sub>x
+      </div>
+      <div class="mat-grid">
+        <div class="mat-block">
+          <div class="mat-name a-col">A<sub>p</sub> =</div>
+          <span class="mat-bracket"><span class="mat-row" id="mat-ap-r1">  0     1     0</span>
+<span class="mat-row" id="mat-ap-r2">  0     0     1</span>
+<span class="mat-row" id="mat-ap-r3">  0     0     0</span></span>
+        </div>
+        <div class="mat-block">
+          <div class="mat-name b-col">B<sub>p</sub> =</div>
+          <span class="mat-bracket"><span class="mat-row"> 0 </span>
+<span class="mat-row"> 0 </span>
+<span class="mat-row"> 1 </span></span>
+        </div>
+        <div class="mat-block">
+          <div class="mat-name c-col">C<sub>p</sub> =</div>
+          <span class="mat-bracket"><span class="mat-row"> 1  0  0 </span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mat-section" style="margin-top:0.7rem;padding-top:0.6rem;border-top:1px solid #eee;">
+      <div style="font-size:0.73rem;color:var(--text3);margin-bottom:0.4rem;">
+        状態フィードバック: u = −Kx + r &nbsp;→&nbsp; 閉ループ: dx/dt = (A<sub>p</sub> − B<sub>p</sub>K)x + B<sub>p</sub>r
+      </div>
+      <div class="mat-grid">
+        <div class="mat-block">
+          <div class="mat-name" style="color:var(--orange);">K =</div>
+          <span class="mat-bracket"><span class="mat-row" id="mat-k"> 13.00   17.00   5.00 </span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="mat-section" style="margin-top:0.7rem;padding-top:0.6rem;border-top:1px solid #eee;">
+      <div style="font-size:0.73rem;color:var(--text3);margin-bottom:0.4rem;">
+        閉ループ行列: A<sub>cl</sub> = A<sub>p</sub> − B<sub>p</sub>K
+      </div>
+      <div class="mat-grid">
+        <div class="mat-block">
+          <div class="mat-name a-col">A<sub>cl</sub> =</div>
+          <span class="mat-bracket"><span class="mat-row" id="mat-acl-r1">    0       1       0</span>
+<span class="mat-row" id="mat-acl-r2">    0       0       1</span>
+<span class="mat-row" id="mat-acl-r3">-13.00  -17.00   -5.00</span></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Info -->
+  <div class="card">
+    <div class="card-label" style="color:var(--text3);">応答特性</div>
+    <div style="display:flex;flex-wrap:wrap;gap:0.3rem 1.5rem;font-size:0.82rem;">
+      <div class="info-item"><span class="info-lbl">オーバーシュート:</span><span class="info-val" id="info-os">—</span></div>
+      <div class="info-item"><span class="info-lbl">整定時間(±2%):</span><span class="info-val" id="info-ts">—</span></div>
+      <div class="info-item"><span class="info-lbl">立上り時間:</span><span class="info-val" id="info-tr">—</span></div>
+      <div class="info-item"><span class="info-lbl">定常値:</span><span class="info-val" id="info-ss">1.00</span></div>
+    </div>
+  </div>
+
+</div>
+
+</div><!-- layout -->
+</div>
+
+<div class="footer">制御工学 インタラクティブ教材 — 3次系の極配置</div>
+
+<script>
+(function(){
+  const slP1    = document.getElementById('sl-p1');
+  const slSigma = document.getElementById('sl-sigma');
+  const slOmega = document.getElementById('sl-omega');
+
+  // ── s-plane chart (scatter) ──
+  const ctxS = document.getElementById('chart-splane').getContext('2d');
+  const chartS = new Chart(ctxS, {
+    type: 'scatter',
+    data: {
+      datasets: [
+        { label:'実極', data:[], backgroundColor:'#ea580c', borderColor:'#ea580c', pointRadius:8, pointStyle:'crossRot', borderWidth:3 },
+        { label:'複素極', data:[], backgroundColor:'#7c3aed', borderColor:'#7c3aed', pointRadius:8, pointStyle:'crossRot', borderWidth:3 },
+        // Axes: jω axis and σ axis as lines
+        { label:'', data:[{x:0,y:-12},{x:0,y:12}], borderColor:'#ccc', borderWidth:1, pointRadius:0, showLine:true, borderDash:[4,4] },
+        { label:'', data:[{x:-12,y:0},{x:3,y:0}], borderColor:'#ccc', borderWidth:1, pointRadius:0, showLine:true, borderDash:[4,4] },
+        // Stability boundary
+        { label:'', data:[{x:0,y:-12},{x:0,y:12}], borderColor:'#fca5a5', borderWidth:2, pointRadius:0, showLine:true, borderDash:[2,2] }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false, animation:{duration:80},
+      scales:{
+        x:{ min:-11, max:3, title:{display:true,text:'Re (σ)',font:{size:11,weight:'600'}},
+            ticks:{stepSize:2,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f5f5f5'} },
+        y:{ min:-11, max:11, title:{display:true,text:'Im (jω)',font:{size:11,weight:'600'}},
+            ticks:{stepSize:2,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f5f5f5'} }
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label:function(c){ return c.dataset.label+': '+c.parsed.x.toFixed(2)+' + '+c.parsed.y.toFixed(2)+'j'; }
+          }
+        }
+      }
+    }
+  });
+
+  // ── Step response chart ──
+  const ctxStep = document.getElementById('chart-step').getContext('2d');
+  const chartStep = new Chart(ctxStep, {
+    type:'line',
+    data:{datasets:[
+      {label:'r(t)',data:[],borderColor:'#2563eb',borderWidth:1.5,borderDash:[6,4],pointRadius:0,fill:false},
+      {label:'y(t)',data:[],borderColor:'#dc2626',borderWidth:2.2,pointRadius:0,fill:false,tension:0.05}
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:{duration:80},
+      scales:{
+        x:{type:'linear',min:0,max:15,title:{display:true,text:'t [s]',font:{size:11,weight:'600'}},
+           ticks:{stepSize:2,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+        y:{min:-0.5,max:2.0,title:{display:true,text:'y(t)',font:{size:11,weight:'600'}},
+           ticks:{stepSize:0.5,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+      },
+      plugins:{legend:{labels:{font:{size:10},usePointStyle:true,pointStyle:'line'}},tooltip:{enabled:false}}
+    }
+  });
+
+  // ── System model ──
+  // Open-loop plant (triple integrator, controllable canonical form):
+  //   Ap = [0,1,0; 0,0,1; 0,0,0],  Bp = [0;0;1],  Cp = [1,0,0]
+  //
+  // State feedback: u = -Kx + r,  K = [k1, k2, k3]
+  // Closed-loop: Acl = Ap - Bp*K = [0,1,0; 0,0,1; -k1,-k2,-k3]
+  //
+  // Desired characteristic polynomial from pole placement:
+  //   (s-p1)(s^2 - 2σs + σ²+ω²) = s³ + a2·s² + a1·s + a0
+  //   K = [a0, a1, a2]
+  //
+  // Output: y = Cp*x = x1
+  // For unit DC gain: we scale input as r_scaled = a0 * r
+  //   so that y_ss = 1 when r = 1
+
+  function computeCoeffs(p1, sigma, omega) {
+    const a2 = -(p1 + 2*sigma);
+    const a1 = 2*p1*sigma + sigma*sigma + omega*omega;
+    const a0 = -p1*(sigma*sigma + omega*omega);
+    return {a0, a1, a2};
+  }
+
+  function simulate(p1, sigma, omega, tMax, dt) {
+    const {a0, a1, a2} = computeCoeffs(p1, sigma, omega);
+    const n = Math.floor(tMax / dt);
+    const ts=[], ys=[];
+    let x1=0, x2=0, x3=0;
+    // Scale input so steady-state y = 1: r_eff = a0 * 1
+    const r_eff = a0;
+
+    // Closed-loop dynamics:
+    // dx1/dt = x2
+    // dx2/dt = x3
+    // dx3/dt = -a0*x1 - a1*x2 - a2*x3 + r_eff
+    // y = x1
+    function f1(x1,x2,x3){ return x2; }
+    function f2(x1,x2,x3){ return x3; }
+    function f3(x1,x2,x3){ return -a0*x1 - a1*x2 - a2*x3 + r_eff; }
+
+    for(let i=0;i<=n;i++){
+      ts.push(i*dt);
+      ys.push(x1);
+
+      const k1a=f1(x1,x2,x3), k1b=f2(x1,x2,x3), k1c=f3(x1,x2,x3);
+      const k2a=f1(x1+.5*dt*k1a,x2+.5*dt*k1b,x3+.5*dt*k1c);
+      const k2b=f2(x1+.5*dt*k1a,x2+.5*dt*k1b,x3+.5*dt*k1c);
+      const k2c=f3(x1+.5*dt*k1a,x2+.5*dt*k1b,x3+.5*dt*k1c);
+      const k3a=f1(x1+.5*dt*k2a,x2+.5*dt*k2b,x3+.5*dt*k2c);
+      const k3b=f2(x1+.5*dt*k2a,x2+.5*dt*k2b,x3+.5*dt*k2c);
+      const k3c=f3(x1+.5*dt*k2a,x2+.5*dt*k2b,x3+.5*dt*k2c);
+      const k4a=f1(x1+dt*k3a,x2+dt*k3b,x3+dt*k3c);
+      const k4b=f2(x1+dt*k3a,x2+dt*k3b,x3+dt*k3c);
+      const k4c=f3(x1+dt*k3a,x2+dt*k3b,x3+dt*k3c);
+
+      x1+=dt/6*(k1a+2*k2a+2*k3a+k4a);
+      x2+=dt/6*(k1b+2*k2b+2*k3b+k4b);
+      x3+=dt/6*(k1c+2*k2c+2*k3c+k4c);
+
+      if(Math.abs(x1)>1e6 || Math.abs(x2)>1e6 || Math.abs(x3)>1e6){
+        for(let j=i+1;j<=n;j++){ ts.push(j*dt); ys.push(NaN); }
+        break;
+      }
+    }
+    return {ts, ys};
+  }
+
+  function fmt(v,d){
+    d=d||2;
+    const s=v.toFixed(d);
+    if(v>=0) return ' '+s;
+    return s;
+  }
+
+  function update(){
+    const p1    = parseFloat(slP1.value);
+    const sigma = parseFloat(slSigma.value);
+    const omega = parseFloat(slOmega.value);
+
+    document.getElementById('val-p1').textContent = p1.toFixed(2);
+    document.getElementById('val-sigma').textContent = sigma.toFixed(2);
+    document.getElementById('val-omega').textContent = omega.toFixed(2);
+
+    // Display poles
+    document.getElementById('disp-p1').textContent = 's = ' + p1.toFixed(2);
+    if(omega < 0.01){
+      document.getElementById('disp-p23').textContent = 's = ' + sigma.toFixed(2) + ' (重複実極)';
+    } else {
+      document.getElementById('disp-p23').textContent = 's = ' + sigma.toFixed(2) + ' ± ' + omega.toFixed(2) + 'j';
+    }
+
+    // Stability
+    const badge = document.getElementById('stab-badge');
+    const allStable = p1 < 0 && sigma < 0;
+    const marginal = (Math.abs(p1)<0.05 || Math.abs(sigma)<0.05) && p1<=0 && sigma<=0;
+    if(marginal){ badge.className='stab-badge marginal'; badge.textContent='限界安定'; }
+    else if(allStable){ badge.className='stab-badge stable'; badge.textContent='安定'; }
+    else { badge.className='stab-badge unstable'; badge.textContent='不安定'; }
+
+    // s-plane
+    chartS.data.datasets[0].data = [{x:p1, y:0}];
+    if(omega < 0.01){
+      chartS.data.datasets[1].data = [{x:sigma, y:0}];
+    } else {
+      chartS.data.datasets[1].data = [{x:sigma, y:omega}, {x:sigma, y:-omega}];
+    }
+    chartS.update();
+
+    // Coefficients of desired characteristic polynomial
+    // (s-p1)(s^2-2*sigma*s+sigma^2+omega^2) = s^3 + a2*s^2 + a1*s + a0
+    const {a0, a1, a2} = computeCoeffs(p1, sigma, omega);
+
+    // Characteristic polynomial display
+    document.getElementById('char-poly').textContent =
+      'Δ(s) = s³ + ' + a2.toFixed(2) + 's² + ' + a1.toFixed(2) + 's + ' + a0.toFixed(2);
+
+    // Transfer function
+    document.getElementById('tf-num').textContent = a0.toFixed(2);
+    document.getElementById('tf-den').textContent =
+      's³ + ' + a2.toFixed(2) + 's² + ' + a1.toFixed(2) + 's + ' + a0.toFixed(2);
+
+    // Feedback gain K = [a0, a1, a2] (for triple-integrator plant in controllable canonical form)
+    // Open-loop Ap: last row = [0,0,0], so K places it to [-a0, -a1, -a2]
+    const k1 = a0, k2 = a1, k3 = a2;
+    document.getElementById('mat-k').textContent =
+      fmt(k1,2) + '   ' + fmt(k2,2) + '   ' + fmt(k3,2);
+
+    // Closed-loop Acl = Ap - Bp*K: last row becomes [-k1, -k2, -k3] = [-a0, -a1, -a2]
+    document.getElementById('mat-acl-r1').textContent = '    0       1       0';
+    document.getElementById('mat-acl-r2').textContent = '    0       0       1';
+    document.getElementById('mat-acl-r3').textContent =
+      fmt(-a0,2) + '  ' + fmt(-a1,2) + '   ' + fmt(-a2,2);
+
+    // Step response simulation
+    const tMax = 15, dt = 0.003;
+    const sim = simulate(p1, sigma, omega, tMax, dt);
+    const skip = Math.max(1, Math.floor(sim.ts.length/600));
+    const refD=[], yD=[];
+    for(let i=0;i<sim.ts.length;i+=skip){
+      refD.push({x:sim.ts[i], y:1});
+      yD.push({x:sim.ts[i], y:sim.ys[i]});
+    }
+    chartStep.data.datasets[0].data = refD;
+    chartStep.data.datasets[1].data = yD;
+    chartStep.update();
+
+    // Performance metrics
+    const ysValid = sim.ys.filter(v=>!isNaN(v));
+    if(ysValid.length < 10){
+      document.getElementById('info-os').textContent = '— (発散)';
+      document.getElementById('info-ts').textContent = '—';
+      document.getElementById('info-tr').textContent = '—';
+      document.getElementById('info-ss').textContent = '—';
+      return;
+    }
+    const yFinal = ysValid[ysValid.length-1];
+    document.getElementById('info-ss').textContent = isFinite(yFinal)?yFinal.toFixed(3):'—';
+
+    let yPeak=0;
+    for(const v of ysValid) if(v>yPeak) yPeak=v;
+    const os = allStable ? Math.max(0,(yPeak-1)*100) : NaN;
+    document.getElementById('info-os').textContent = isFinite(os)?(os<0.1?'0 %':os.toFixed(1)+' %'):'—';
+
+    let tSettle='—';
+    if(allStable){
+      for(let i=ysValid.length-1;i>=0;i--){
+        if(Math.abs(ysValid[i]-1)>0.02){tSettle=(sim.ts[i]).toFixed(2)+' s';break;}
+      }
+    }
+    document.getElementById('info-ts').textContent = tSettle;
+
+    let t10=null,t90=null;
+    for(let i=0;i<ysValid.length;i++){
+      if(t10===null&&ysValid[i]>=0.1) t10=sim.ts[i];
+      if(t10!==null&&ysValid[i]>=0.9){t90=sim.ts[i];break;}
+    }
+    document.getElementById('info-tr').textContent = (t10!==null&&t90!==null)?(t90-t10).toFixed(3)+' s':'—';
+  }
+
+  slP1.addEventListener('input',update);
+  slSigma.addEventListener('input',update);
+  slOmega.addEventListener('input',update);
+  update();
+})();
+</script>
+
+</body>
+</html>
