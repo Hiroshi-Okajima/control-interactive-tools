@@ -125,9 +125,19 @@ input.sl-omega::-moz-range-thumb{background:var(--teal);}
 <!-- ══════ LEFT ══════ -->
 <div class="left-col">
 
-  <!-- Sliders -->
+  <!-- s-plane -->
   <div class="card">
-    <div class="card-label" style="color:var(--green);">極の配置 <span class="stab-badge stable" id="stab-badge">安定</span></div>
+    <div class="chart-title" style="color:var(--green);">s平面（極配置図） <span class="stab-badge stable" id="stab-badge">安定</span></div>
+    <div class="chart-wrap splane-wrap"><canvas id="chart-splane"></canvas></div>
+    <div style="font-size:0.78rem;color:var(--text2);margin-top:0.4rem;text-align:center;">
+      極: <span style="color:var(--orange);font-weight:600;" id="disp-p1">s = -1</span>,
+      <span style="color:var(--purple);font-weight:600;" id="disp-p23">s = -2 ± 3j</span>
+    </div>
+  </div>
+
+  <!-- Sliders (below s-plane) -->
+  <div class="card">
+    <div class="card-label" style="color:var(--green);">極の配置パラメータ</div>
 
     <div class="ctrl-group">
       <div class="ctrl-label" style="color:var(--orange);">実極 p₁ (実軸上)</div>
@@ -152,17 +162,6 @@ input.sl-omega::-moz-range-thumb{background:var(--teal);}
         <span class="ctrl-val omega" id="val-omega">3.00</span>
       </div>
     </div>
-
-    <div style="font-size:0.78rem;color:var(--text2);margin-top:0.3rem;">
-      極: <span style="color:var(--orange);font-weight:600;" id="disp-p1">s = -1</span>,
-      <span style="color:var(--purple);font-weight:600;" id="disp-p23">s = -2 ± 3j</span>
-    </div>
-  </div>
-
-  <!-- s-plane -->
-  <div class="card">
-    <div class="chart-title" style="color:var(--green);">s平面（極配置図）</div>
-    <div class="chart-wrap splane-wrap"><canvas id="chart-splane"></canvas></div>
   </div>
 
   <!-- Characteristic polynomial & TF -->
