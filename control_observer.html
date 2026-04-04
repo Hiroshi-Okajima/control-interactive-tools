@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>オブザーバ（状態推定器）— インタラクティブ可視化</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;
+  --blue:#2563eb;--red:#dc2626;--purple:#7c3aed;--green:#059669;--orange:#ea580c;--teal:#0891b2;
+  --border:#e2e0dc;--r:10px;--r-lg:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+
+.header{background:linear-gradient(135deg,#0c1a30,#1e3a5f,#0891b2);color:#fff;padding:1.5rem 1.5rem 1.2rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.4rem);font-weight:700;margin-bottom:0.2rem;}
+.header p{font-size:0.8rem;opacity:0.75;max-width:650px;margin:0 auto;}
+.main{max-width:1100px;margin:0 auto;padding:1rem;}
+
+/* Layout */
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:850px){.layout{grid-template-columns:1fr;}}
+.left-col,.right-col{display:flex;flex-direction:column;gap:0.7rem;}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.3rem;}
+
+/* Controls */
+.ctrl-group{margin-bottom:0.7rem;}
+.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.75rem;font-weight:600;color:var(--text2);margin-bottom:0.2rem;}
+.ctrl-sublabel{font-size:0.68rem;color:var(--text3);margin-top:0.1rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{
+  font-family:'JetBrains Mono',monospace;font-weight:600;font-size:0.82rem;
+  padding:0.12em 0.45em;border-radius:4px;min-width:4.5em;text-align:center;
+}
+.ctrl-val.gain{color:var(--teal);background:#f0fdfa;}
+.ctrl-val.noise{color:var(--orange);background:#fff7ed;}
+.ctrl-val.init{color:var(--purple);background:#f3eeff;}
+
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input.sl-gain::-webkit-slider-thumb{background:var(--teal);}
+input.sl-gain::-moz-range-thumb{background:var(--teal);}
+input.sl-noise::-webkit-slider-thumb{background:var(--orange);}
+input.sl-noise::-moz-range-thumb{background:var(--orange);}
+input.sl-init::-webkit-slider-thumb{background:var(--purple);}
+input.sl-init::-moz-range-thumb{background:var(--purple);}
+
+.btn-resim{
+  display:inline-block;padding:0.4em 1.2em;border:none;border-radius:6px;
+  background:var(--teal);color:#fff;font-weight:700;font-size:0.8rem;
+  cursor:pointer;margin-top:0.5rem;transition:background 0.15s;
+}
+.btn-resim:hover{background:#0e7490;}
+
+/* Chart */
+.chart-title{font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.3rem;}
+.chart-wrap{position:relative;}
+.chart-h{height:220px;}
+.chart-h-tall{height:200px;}
+
+/* Block diagram */
+.block-svg{width:100%;max-width:520px;margin:0 auto;display:block;}
+
+/* Matrix display */
+.mat-grid{display:flex;gap:1rem;flex-wrap:wrap;align-items:center;}
+.mat-block{font-family:'JetBrains Mono',monospace;font-size:0.75rem;line-height:1.8;display:flex;align-items:center;gap:0.3rem;}
+.mat-name{font-weight:700;font-size:0.82rem;white-space:nowrap;}
+.mat-bracket{
+  display:inline-flex;flex-direction:column;
+  border-left:2.5px solid #666;border-right:2.5px solid #666;
+  padding:0.25rem 0.5rem;border-radius:3px;background:#fafaf8;
+}
+.mat-row{white-space:pre;display:block;line-height:1.7;}
+
+/* Legend */
+.legend-row{display:flex;flex-wrap:wrap;gap:0.8rem;margin-bottom:0.4rem;font-size:0.78rem;}
+.legend-item{display:flex;align-items:center;gap:0.3rem;}
+.legend-line{width:20px;height:3px;border-radius:2px;}
+.legend-line.dashed{height:0;border-top:2.5px dashed;}
+
+/* Insight box */
+.insight{
+  background:linear-gradient(135deg,#f0fdfa,#ecfdf5);border:1px solid #a7f3d0;
+  border-radius:var(--r);padding:0.7rem 1rem;font-size:0.82rem;line-height:1.7;
+  color:#065f46;
+}
+.insight strong{color:#047857;}
+
+/* Info strip */
+.info-strip{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:0.6rem 1rem;margin-top:0.7rem;
+  display:flex;flex-wrap:wrap;gap:0.4rem 1.5rem;font-size:0.8rem;
+  box-shadow:0 2px 6px rgba(0,0,0,0.03);
+}
+.info-item{display:flex;gap:0.3rem;align-items:baseline;}
+.info-lbl{color:var(--text2);font-size:0.75rem;}
+.info-val{font-family:'JetBrains Mono',monospace;font-weight:600;}
+
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>オブザーバ（状態推定器）</h1>
+  <p>観測ノイズ下でのオブザーバゲインと推定精度のトレードオフを体験的に学ぶ — ゲインを大きくすると収束は早いがノイズに弱く、小さくすると収束は遅いがノイズに強い</p>
+</div>
+
+<div class="main">
+<div class="layout">
+
+<!-- ══════ LEFT ══════ -->
+<div class="left-col">
+
+  <!-- Block diagram -->
+  <div class="card">
+    <div class="card-label" style="color:var(--text3);">システム構成</div>
+    <svg class="block-svg" viewBox="0 0 520 130" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="a1" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#444"/></marker>
+        <marker id="ab" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#2563eb"/></marker>
+        <marker id="ar" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#dc2626"/></marker>
+        <marker id="at" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><path d="M0,0 L7,2.5 L0,5" fill="#0891b2"/></marker>
+      </defs>
+      <!-- Plant -->
+      <text x="8" y="35" font-size="11" font-weight="700" fill="#2563eb" font-family="'JetBrains Mono',monospace">u</text>
+      <line x1="24" y1="31" x2="60" y2="31" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ab)"/>
+      <rect x="62" y="16" width="90" height="32" rx="5" fill="#eef2ff" stroke="#2563eb" stroke-width="1.5"/>
+      <text x="107" y="36" text-anchor="middle" font-size="12" font-weight="700" fill="#2563eb" font-family="'Noto Serif JP',serif">プラント</text>
+      <text x="107" y="55" text-anchor="middle" font-size="8" fill="#888" font-family="'JetBrains Mono',monospace">ẋ=Ax+Bu</text>
+      <!-- x true -->
+      <line x1="152" y1="31" x2="195" y2="31" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ab)"/>
+      <text x="170" y="25" font-size="9" fill="#2563eb" font-weight="600" font-family="'JetBrains Mono',monospace">x</text>
+      <!-- C block -->
+      <rect x="197" y="18" width="40" height="26" rx="4" fill="#f8fafc" stroke="#888" stroke-width="1"/>
+      <text x="217" y="35" text-anchor="middle" font-size="11" font-weight="600" fill="#444">C</text>
+      <line x1="237" y1="31" x2="275" y2="31" stroke="#444" stroke-width="1.5" marker-end="url(#a1)"/>
+      <!-- Sum (noise) -->
+      <circle cx="285" cy="31" r="10" fill="#fff" stroke="#ea580c" stroke-width="1.5"/>
+      <text x="285" y="35" text-anchor="middle" font-size="11" font-weight="700" fill="#ea580c">+</text>
+      <line x1="285" y1="4" x2="285" y2="20" stroke="#ea580c" stroke-width="1.2" marker-end="url(#a1)"/>
+      <text x="292" y="11" font-size="9" font-weight="600" fill="#ea580c" font-family="'JetBrains Mono',monospace">v</text>
+      <!-- y_meas -->
+      <line x1="295" y1="31" x2="360" y2="31" stroke="#dc2626" stroke-width="1.5" marker-end="url(#ar)"/>
+      <text x="325" y="25" font-size="9" fill="#dc2626" font-weight="600" font-family="'JetBrains Mono',monospace">y=Cx+v</text>
+
+      <!-- Observer -->
+      <line x1="340" y1="31" x2="340" y2="85" stroke="#888" stroke-width="1"/>
+      <line x1="340" y1="85" x2="230" y2="85" stroke="#888" stroke-width="1" marker-end="url(#a1)"/>
+      <rect x="100" y="72" width="130" height="32" rx="5" fill="#f0fdfa" stroke="#0891b2" stroke-width="1.5"/>
+      <text x="165" y="92" text-anchor="middle" font-size="12" font-weight="700" fill="#0891b2" font-family="'Noto Serif JP',serif">オブザーバ</text>
+      <text x="165" y="112" text-anchor="middle" font-size="7.5" fill="#888" font-family="'JetBrains Mono',monospace">x̂̇=(A−LC)x̂+Bu+Ly</text>
+      <!-- x_hat out -->
+      <line x1="100" y1="88" x2="55" y2="88" stroke="#0891b2" stroke-width="1.5" marker-end="url(#at)"/>
+      <text x="60" y="83" font-size="9" fill="#0891b2" font-weight="600" font-family="'JetBrains Mono',monospace">x̂</text>
+      <!-- u into observer -->
+      <line x1="40" y1="31" x2="40" y2="78" stroke="#888" stroke-width="1"/>
+      <line x1="40" y1="78" x2="100" y2="78" stroke="#888" stroke-width="1" marker-end="url(#a1)"/>
+    </svg>
+  </div>
+
+  <!-- System matrices -->
+  <div class="card">
+    <div class="card-label" style="color:var(--text3);">システム行列（固定）</div>
+    <div class="mat-grid">
+      <div class="mat-block">
+        <span class="mat-name" style="color:var(--blue);">A =</span>
+        <span class="mat-bracket">
+          <span class="mat-row">  0    1 </span>
+          <span class="mat-row"> -2   -3 </span>
+        </span>
+      </div>
+      <div class="mat-block">
+        <span class="mat-name" style="color:var(--blue);">B =</span>
+        <span class="mat-bracket">
+          <span class="mat-row"> 0 </span>
+          <span class="mat-row"> 1 </span>
+        </span>
+      </div>
+      <div class="mat-block">
+        <span class="mat-name" style="color:var(--red);">C =</span>
+        <span class="mat-bracket">
+          <span class="mat-row"> 1  0 </span>
+        </span>
+      </div>
+    </div>
+    <div style="font-size:0.72rem;color:var(--text3);margin-top:0.3rem;">
+      開ループ極: s = −1, −2（安定） &nbsp;|&nbsp; 入力 u(t) = ステップ入力
+    </div>
+  </div>
+
+  <!-- Observer gain & parameters -->
+  <div class="card">
+    <div class="card-label" style="color:var(--teal);">オブザーバパラメータ</div>
+
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--teal);">オブザーバゲイン L₁</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-l1" class="sl-gain" min="0" max="50" step="0.5" value="5">
+        <span class="ctrl-val gain" id="val-l1">5.0</span>
+      </div>
+    </div>
+
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--teal);">オブザーバゲイン L₂</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-l2" class="sl-gain" min="0" max="80" step="0.5" value="8">
+        <span class="ctrl-val gain" id="val-l2">8.0</span>
+      </div>
+    </div>
+
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--orange);">観測ノイズレベル σ<sub>v</sub></div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-noise" class="sl-noise" min="0" max="3.0" step="0.02" value="0.1">
+        <span class="ctrl-val noise" id="val-noise">0.10</span>
+      </div>
+      <div class="ctrl-sublabel">v(t) 〜 N(0, σ<sub>v</sub>²) の白色ガウスノイズ</div>
+    </div>
+
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--purple);">プラント初期値 x(0)</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-x0" class="sl-init" min="-5" max="5" step="0.1" value="3">
+        <span class="ctrl-val init" id="val-x0">[ 3.0, 0.0 ]</span>
+      </div>
+      <div class="ctrl-sublabel">x₁(0) を変更（x₂(0)=0 固定、x̂(0)=[0,0] 固定）</div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:1rem;margin-top:0.3rem;">
+      <button class="btn-resim" id="btn-resim">🔄 再シミュレーション</button>
+      <span style="font-size:0.72rem;color:var(--text3);">ノイズの乱数を更新</span>
+    </div>
+  </div>
+
+  <!-- Observer gain matrix display -->
+  <div class="card">
+    <div class="card-label" style="color:var(--teal);">オブザーバゲイン & 推定器極</div>
+    <div class="mat-grid">
+      <div class="mat-block">
+        <span class="mat-name" style="color:var(--teal);">L =</span>
+        <span class="mat-bracket">
+          <span class="mat-row" id="mat-l1"> 5.0 </span>
+          <span class="mat-row" id="mat-l2"> 8.0 </span>
+        </span>
+      </div>
+      <div class="mat-block">
+        <span class="mat-name" style="color:var(--green);">A−LC =</span>
+        <span class="mat-bracket">
+          <span class="mat-row" id="mat-alc-r1"> -5.0    1.0 </span>
+          <span class="mat-row" id="mat-alc-r2"> -10.0  -3.0 </span>
+        </span>
+      </div>
+    </div>
+    <div style="font-size:0.75rem;color:var(--text2);margin-top:0.3rem;">
+      推定器極: <span id="obs-poles" style="font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--green);">s = −4.0 ± 1.0j</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════ RIGHT ══════ -->
+<div class="right-col">
+
+  <!-- State x1 -->
+  <div class="card">
+    <div class="chart-title" style="color:var(--blue);">状態 x₁ — 真値 vs 推定値</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="legend-line" style="background:#2563eb;"></span> x₁(真値)</span>
+      <span class="legend-item"><span class="legend-line dashed" style="border-color:#0891b2;"></span> x̂₁(推定)</span>
+      <span class="legend-item"><span class="legend-line" style="background:#fbbf24;opacity:0.5;height:6px;border-radius:3px;"></span> 観測 y</span>
+    </div>
+    <div class="chart-wrap chart-h"><canvas id="chart-x1"></canvas></div>
+  </div>
+
+  <!-- State x2 -->
+  <div class="card">
+    <div class="chart-title" style="color:var(--blue);">状態 x₂ — 真値 vs 推定値</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="legend-line" style="background:#2563eb;"></span> x₂(真値)</span>
+      <span class="legend-item"><span class="legend-line dashed" style="border-color:#0891b2;"></span> x̂₂(推定)</span>
+    </div>
+    <div class="chart-wrap chart-h"><canvas id="chart-x2"></canvas></div>
+  </div>
+
+  <!-- Estimation error -->
+  <div class="card">
+    <div class="chart-title" style="color:var(--red);">推定誤差 e = x − x̂</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="legend-line" style="background:#dc2626;"></span> e₁</span>
+      <span class="legend-item"><span class="legend-line" style="background:#f97316;"></span> e₂</span>
+    </div>
+    <div class="chart-wrap chart-h"><canvas id="chart-err"></canvas></div>
+  </div>
+
+  <!-- Insight -->
+  <div class="insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・ゲインLを<strong>大きく</strong>すると → 推定誤差の収束が<strong>速い</strong>が、観測ノイズの影響を<strong>大きく受ける</strong><br>
+    ・ゲインLを<strong>小さく</strong>すると → 推定誤差の収束が<strong>遅い</strong>が、ノイズに<strong>強い</strong><br>
+    ・このトレードオフの最適化がカルマンフィルタの設計思想につながる
+  </div>
+
+</div>
+
+</div><!-- layout -->
+
+<!-- Info strip -->
+<div class="info-strip">
+  <div class="info-item"><span class="info-lbl">|e₁| の最終値:</span><span class="info-val" id="info-e1">—</span></div>
+  <div class="info-item"><span class="info-lbl">|e₂| の最終値:</span><span class="info-val" id="info-e2">—</span></div>
+  <div class="info-item"><span class="info-lbl">e₁ 整定時間(±5%):</span><span class="info-val" id="info-ts1">—</span></div>
+  <div class="info-item"><span class="info-lbl">e₁ RMS (t>2s):</span><span class="info-val" id="info-rms">—</span></div>
+</div>
+
+</div>
+
+<div class="footer">制御工学 インタラクティブ教材 — オブザーバ（状態推定器）</div>
+
+<script>
+(function(){
+  const slL1    = document.getElementById('sl-l1');
+  const slL2    = document.getElementById('sl-l2');
+  const slNoise = document.getElementById('sl-noise');
+  const slX0    = document.getElementById('sl-x0');
+  const btnSim  = document.getElementById('btn-resim');
+
+  // Plant: A=[0,1;-2,-3], B=[0;1], C=[1,0]
+  const A = [[0,1],[-2,-3]];
+  const B = [0,1];
+  const C = [1,0];
+
+  // Gaussian random
+  function randn(){
+    let u=0,v=0;
+    while(u===0) u=Math.random();
+    while(v===0) v=Math.random();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+  }
+
+  // Pre-generate noise sequence (fixed for reproducibility until re-sim)
+  const T_MAX = 10, DT = 0.002;
+  const N_STEPS = Math.floor(T_MAX/DT);
+  let noiseSeq = [];
+  function generateNoise(){
+    noiseSeq = [];
+    for(let i=0;i<=N_STEPS;i++) noiseSeq.push(randn());
+  }
+  generateNoise();
+
+  // Charts
+  function ds(label,color,w,dash){
+    return{label,data:[],borderColor:color,borderWidth:w||2,borderDash:dash||[],pointRadius:0,fill:false,tension:0.05};
+  }
+  function makeChart(id,yMin,yMax,datasets){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets},
+      options:{
+        responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',min:0,max:T_MAX,title:{display:true,text:'t [s]',font:{size:10,weight:'600'}},
+            ticks:{stepSize:1,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{min:yMin,max:yMax,ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+
+  const chX1  = makeChart('chart-x1', -2, 4, [
+    ds('x₁','#2563eb',2),
+    ds('x̂₁','#0891b2',2,[6,3]),
+    ds('y','#fbbf24',1,[2,2])
+  ]);
+  const chX2  = makeChart('chart-x2', -4, 4, [
+    ds('x₂','#2563eb',2),
+    ds('x̂₂','#0891b2',2,[6,3])
+  ]);
+  const chErr = makeChart('chart-err', -4, 4, [
+    ds('e₁','#dc2626',2),
+    ds('e₂','#f97316',2)
+  ]);
+
+  function fmt(v,d){return v.toFixed(d||2);}
+
+  function simulate(){
+    const L1 = parseFloat(slL1.value);
+    const L2 = parseFloat(slL2.value);
+    const noiseSigma = parseFloat(slNoise.value);
+    const x10 = parseFloat(slX0.value);
+
+    // Display
+    document.getElementById('val-l1').textContent = L1.toFixed(1);
+    document.getElementById('val-l2').textContent = L2.toFixed(1);
+    document.getElementById('val-noise').textContent = noiseSigma.toFixed(2);
+    document.getElementById('val-x0').textContent = '[ '+x10.toFixed(1)+', 0.0 ]';
+
+    // L matrix display
+    document.getElementById('mat-l1').textContent = ' '+L1.toFixed(1)+' ';
+    document.getElementById('mat-l2').textContent = ' '+L2.toFixed(1)+' ';
+
+    // A-LC
+    const ALC = [
+      [A[0][0]-L1*C[0], A[0][1]-L1*C[1]],
+      [A[1][0]-L2*C[0], A[1][1]-L2*C[1]]
+    ];
+    document.getElementById('mat-alc-r1').textContent =
+      fmt(ALC[0][0],1).padStart(6) + '  ' + fmt(ALC[0][1],1).padStart(5);
+    document.getElementById('mat-alc-r2').textContent =
+      fmt(ALC[1][0],1).padStart(6) + '  ' + fmt(ALC[1][1],1).padStart(5);
+
+    // Observer poles: eigenvalues of A-LC (2x2)
+    const tr = ALC[0][0]+ALC[1][1];
+    const det = ALC[0][0]*ALC[1][1]-ALC[0][1]*ALC[1][0];
+    const disc = tr*tr - 4*det;
+    const polesEl = document.getElementById('obs-poles');
+    if(disc >= 0){
+      const p1 = (tr+Math.sqrt(disc))/2;
+      const p2 = (tr-Math.sqrt(disc))/2;
+      polesEl.textContent = 's = '+fmt(p1,2)+', '+fmt(p2,2);
+      polesEl.style.color = (p1<0&&p2<0)?'var(--green)':'var(--red)';
+    } else {
+      const re = tr/2;
+      const im = Math.sqrt(-disc)/2;
+      polesEl.textContent = 's = '+fmt(re,2)+' ± '+fmt(im,2)+'j';
+      polesEl.style.color = re<0?'var(--green)':'var(--red)';
+    }
+
+    // RK4 simulation
+    let x = [x10, 0];       // plant true state
+    let xh = [0, 0];        // observer estimate
+    const u_val = 1;         // step input
+
+    const d_x1=[],d_x1h=[],d_y=[];
+    const d_x2=[],d_x2h=[];
+    const d_e1=[],d_e2=[];
+
+    const skip = Math.max(1,Math.floor(N_STEPS/1000));
+
+    for(let i=0;i<=N_STEPS;i++){
+      const t = i*DT;
+      const v = noiseSigma * noiseSeq[i];
+      const y_meas = C[0]*x[0]+C[1]*x[1]+v;
+
+      if(i%skip===0){
+        d_x1.push({x:t,y:x[0]});   d_x1h.push({x:t,y:xh[0]});
+        d_x2.push({x:t,y:x[1]});   d_x2h.push({x:t,y:xh[1]});
+        d_y.push({x:t,y:y_meas});
+        d_e1.push({x:t,y:x[0]-xh[0]});
+        d_e2.push({x:t,y:x[1]-xh[1]});
+      }
+
+      // Plant: dx = Ax + Bu
+      function fPlant(xx){ return [A[0][0]*xx[0]+A[0][1]*xx[1]+B[0]*u_val, A[1][0]*xx[0]+A[1][1]*xx[1]+B[1]*u_val]; }
+      // Observer: dxh = (A-LC)xh + Bu + Ly
+      function fObs(xxh){
+        return [
+          ALC[0][0]*xxh[0]+ALC[0][1]*xxh[1]+B[0]*u_val+L1*y_meas,
+          ALC[1][0]*xxh[0]+ALC[1][1]*xxh[1]+B[1]*u_val+L2*y_meas
+        ];
+      }
+
+      // RK4 plant
+      const kp1=fPlant(x);
+      const kp2=fPlant([x[0]+.5*DT*kp1[0],x[1]+.5*DT*kp1[1]]);
+      const kp3=fPlant([x[0]+.5*DT*kp2[0],x[1]+.5*DT*kp2[1]]);
+      const kp4=fPlant([x[0]+DT*kp3[0],x[1]+DT*kp3[1]]);
+      x[0]+=DT/6*(kp1[0]+2*kp2[0]+2*kp3[0]+kp4[0]);
+      x[1]+=DT/6*(kp1[1]+2*kp2[1]+2*kp3[1]+kp4[1]);
+
+      // RK4 observer
+      const ko1=fObs(xh);
+      const ko2=fObs([xh[0]+.5*DT*ko1[0],xh[1]+.5*DT*ko1[1]]);
+      const ko3=fObs([xh[0]+.5*DT*ko2[0],xh[1]+.5*DT*ko2[1]]);
+      const ko4=fObs([xh[0]+DT*ko3[0],xh[1]+DT*ko3[1]]);
+      xh[0]+=DT/6*(ko1[0]+2*ko2[0]+2*ko3[0]+ko4[0]);
+      xh[1]+=DT/6*(ko1[1]+2*ko2[1]+2*ko3[1]+ko4[1]);
+    }
+
+    // Update charts
+    chX1.data.datasets[0].data=d_x1;
+    chX1.data.datasets[1].data=d_x1h;
+    chX1.data.datasets[2].data=d_y;
+    chX1.update();
+
+    chX2.data.datasets[0].data=d_x2;
+    chX2.data.datasets[1].data=d_x2h;
+    chX2.update();
+
+    chErr.data.datasets[0].data=d_e1;
+    chErr.data.datasets[1].data=d_e2;
+    chErr.update();
+
+    // Metrics
+    const eFinal1 = Math.abs(d_e1[d_e1.length-1].y);
+    const eFinal2 = Math.abs(d_e2[d_e2.length-1].y);
+    document.getElementById('info-e1').textContent = eFinal1.toFixed(4);
+    document.getElementById('info-e2').textContent = eFinal2.toFixed(4);
+
+    // Settling time for e1 (±5% of initial error)
+    const e1Init = Math.abs(d_e1[0].y);
+    const thresh = e1Init>0.01 ? 0.05*e1Init : 0.05;
+    let tSettle = '—';
+    for(let i=d_e1.length-1;i>=0;i--){
+      if(Math.abs(d_e1[i].y)>thresh){tSettle=d_e1[i].x.toFixed(2)+' s';break;}
+    }
+    document.getElementById('info-ts1').textContent = tSettle;
+
+    // RMS of e1 for t>2s (steady-state noise effect)
+    let sumSq=0,cnt=0;
+    for(const p of d_e1){if(p.x>2){sumSq+=p.y*p.y;cnt++;}}
+    const rms = cnt>0?Math.sqrt(sumSq/cnt):0;
+    document.getElementById('info-rms').textContent = rms.toFixed(4);
+  }
+
+  function update(){simulate();}
+
+  slL1.addEventListener('input',update);
+  slL2.addEventListener('input',update);
+  slNoise.addEventListener('input',update);
+  slX0.addEventListener('input',update);
+  btnSim.addEventListener('click',function(){generateNoise();update();});
+
+  update();
+})();
+</script>
+
+</body>
+</html>
