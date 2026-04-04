@@ -11,6 +11,7 @@
 | 03 | ボード線図と入出力波形 | 2次系の周波数応答と正弦波入出力 | `control_bode.html` |
 | 04 | PID制御 | PIDフィードバック制御のステップ応答・ボード線図 | `control_pid.html` |
 | 05 | 3次系の極配置 | 状態フィードバックによる極配置とステップ応答 | `control_poles.html` |
+| 06 | 状態推定 | 観測ノイズと速応性の状態推定におけるTrade off | `control_observer.html` |
 
 ## GitHub Pages URL
 
@@ -26,6 +27,7 @@ https://hiroshi-okajima.github.io/control-interactive-tools/
 - [ボード線図](https://hiroshi-okajima.github.io/control-interactive-tools/control_bode.html)
 - [PID制御](https://hiroshi-okajima.github.io/control-interactive-tools/control_pid.html)
 - [極配置](https://hiroshi-okajima.github.io/control-interactive-tools/control_poles.html)
+- [状態オブザーバ](https://hiroshi-okajima.github.io/control-interactive-tools/control_observer.html)
 
 ## 使い方
 
