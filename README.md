@@ -18,7 +18,7 @@
 | 10 | 部屋の温度制御 | 3つの条件の比較（目標温度18度） | `control_temperature.html` |
 ## GitHub Pages URL
 
-有効化後、以下のURLでアクセスできます：
+以下のURLでアクセスできます：
 
 ```
 https://hiroshi-okajima.github.io/control-interactive-tools/
