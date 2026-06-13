@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACC 追従制御 — インタラクティブ可視化</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;
+  --blue:#2563eb;--red:#dc2626;--purple:#7c3aed;--green:#059669;--orange:#ea580c;--teal:#0891b2;
+  --border:#e2e0dc;--r:10px;--r-lg:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#0c2a1e,#065f46,#059669);color:#fff;padding:1.4rem 1.5rem 1.1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.4rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.75;max-width:650px;margin:0 auto;}
+.main{max-width:1100px;margin:0 auto;padding:1rem;}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:850px){.layout{grid-template-columns:1fr;}}
+.left-col,.right-col{display:flex;flex-direction:column;gap:0.7rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.3rem;}
+.ctrl-group{margin-bottom:0.6rem;}
+.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.75rem;font-weight:600;color:var(--text2);margin-bottom:0.2rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:0.82rem;padding:0.12em 0.45em;border-radius:4px;min-width:4em;text-align:center;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--green);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--green);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+.btn-row{display:flex;gap:0.5rem;flex-wrap:wrap;}
+.btn{display:inline-flex;align-items:center;gap:0.3rem;padding:0.4em 1em;border:none;border-radius:6px;font-weight:700;font-size:0.78rem;cursor:pointer;transition:opacity 0.15s;}
+.btn:hover{opacity:0.85;}
+.btn-start{background:var(--green);color:#fff;}
+.btn-reset{background:#e5e5e5;color:#444;}
+/* Pattern selector */
+.pattern-btns{display:flex;gap:0.4rem;margin-bottom:0.6rem;}
+.pattern-btn{
+  flex:1;padding:0.5em 0.6em;border:2px solid var(--border);border-radius:var(--r);
+  background:var(--card);cursor:pointer;text-align:center;font-size:0.75rem;font-weight:600;
+  color:var(--text2);transition:all 0.15s;
+}
+.pattern-btn.active{border-color:var(--green);background:#ecfdf5;color:#065f46;}
+.pattern-btn:hover{border-color:var(--green);}
+.pattern-label{font-size:0.68rem;font-weight:700;color:var(--text3);margin-bottom:0.15rem;}
+.pattern-desc{font-family:'JetBrains Mono',monospace;font-size:0.7rem;line-height:1.5;}
+/* Canvas */
+.canvas-wrap{position:relative;background:#fafaf8;border-radius:var(--r);overflow:hidden;border:1px solid var(--border);}
+canvas#road-canvas{display:block;width:100%;}
+.state-display{font-family:'JetBrains Mono',monospace;font-size:0.78rem;display:flex;flex-wrap:wrap;gap:0.3rem 1rem;margin-top:0.4rem;}
+.state-item{display:flex;gap:0.3rem;}
+.state-lbl{color:var(--text3);}
+.state-v{font-weight:600;}
+/* Chart */
+.chart-title{font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.3rem;}
+.chart-wrap{position:relative;height:180px;}
+/* Legend */
+.legend-row{display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:0.3rem;font-size:0.75rem;}
+.legend-item{display:flex;align-items:center;gap:0.3rem;}
+.legend-line{width:16px;height:3px;border-radius:2px;}
+.legend-line.dashed{height:0;border-top:2.5px dashed;}
+/* Equation */
+.eq-box{font-family:'JetBrains Mono',monospace;font-size:0.78rem;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.5rem 0.8rem;line-height:1.8;}
+/* Insight */
+.insight{background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #a7f3d0;border-radius:var(--r);padding:0.7rem 1rem;font-size:0.82rem;line-height:1.7;color:#065f46;}
+.insight strong{color:#047857;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>ACC 追従制御（アダプティブクルーズコントロール）</h1>
+  <p>前方車両との車間距離を一定に保つ制御 — ゲインa,bを調整して追従性能を観察</p>
+</div>
+<div class="main">
+<div class="layout">
+
+<!-- LEFT -->
+<div class="left-col">
+
+  <!-- Road animation -->
+  <div class="card">
+    <div class="card-label" style="color:var(--green);">走行アニメーション</div>
+    <div class="canvas-wrap"><canvas id="road-canvas"></canvas></div>
+    <div class="state-display">
+      <span class="state-item"><span class="state-lbl">t=</span><span class="state-v" id="disp-t">0.00</span><span style="font-size:0.65rem;color:var(--text3);"> s</span></span>
+      <span class="state-item"><span class="state-lbl">v₁=</span><span class="state-v" id="disp-v1" style="color:var(--blue);">10.0</span><span style="font-size:0.65rem;color:var(--text3);"> m/s</span></span>
+      <span class="state-item"><span class="state-lbl">v₂=</span><span class="state-v" id="disp-v2" style="color:var(--red);">10.0</span><span style="font-size:0.65rem;color:var(--text3);"> m/s</span></span>
+      <span class="state-item"><span class="state-lbl">車間=</span><span class="state-v" id="disp-dist" style="color:var(--green);">10.0</span><span style="font-size:0.65rem;color:var(--text3);"> m</span></span>
+    </div>
+  </div>
+
+  <!-- Speed pattern selector -->
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">車両1（前方車）の目標速度パターン v<sub>r</sub>(t)</div>
+    <div class="pattern-btns">
+      <div class="pattern-btn active" id="pat1" onclick="selectPattern(1)">
+        <div class="pattern-label">パターン1</div>
+        <div class="pattern-desc">20→50 m/s</div>
+      </div>
+      <div class="pattern-btn" id="pat2" onclick="selectPattern(2)">
+        <div class="pattern-label">パターン2</div>
+        <div class="pattern-desc">50→30→50→70</div>
+      </div>
+    </div>
+    <div class="eq-box" id="pattern-detail">t &lt; 10s: v<sub>r</sub> = 20 m/s<br>t ≥ 10s: v<sub>r</sub> = 50 m/s</div>
+  </div>
+
+  <!-- Gains -->
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">車両2の制御（ACC）</div>
+    <div class="eq-box" style="margin-bottom:0.6rem;">u₂ = −<span style="color:var(--green);font-weight:700;">a</span>(ẋ₂−ẋ₁) − <span style="color:var(--purple);font-weight:700;">b</span>(x₂−x₁+d)<br><span style="font-size:0.7rem;color:var(--text3);">d = 30m（目標車間距離）</span></div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--green);">ゲイン a（相対速度に比例）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-a" min="0" max="5" step="0.1" value="1.0">
+        <span class="ctrl-val" id="val-a" style="color:var(--green);background:#ecfdf5;">1.0</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--purple);">ゲイン b（相対距離に比例）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-b" min="0" max="5" step="0.1" value="1.0">
+        <span class="ctrl-val" id="val-b" style="color:var(--purple);background:#f3eeff;">1.0</span>
+      </div>
+    </div>
+    <div class="btn-row" style="margin-top:0.5rem;">
+      <button class="btn btn-start" id="btn-start">▶ 開始</button>
+      <button class="btn btn-reset" id="btn-reset">↺ リセット</button>
+    </div>
+  </div>
+
+  <!-- System model -->
+  <div class="card">
+    <div class="card-label" style="color:var(--text3);">システムモデル</div>
+    <div class="eq-box">
+      状態: x = [x₁, ẋ₁, x₂, ẋ₂]ᵀ<br>
+      車両1（前方車）: ẍ₁ = u₁ = −ẋ₁ + v<sub>r</sub>（目標速度 v<sub>r</sub> に追従）<br>
+      車両2（自車・ACC）: ẍ₂ = u₂ = −a(ẋ₂−ẋ₁) − b(x₂−x₁+d)
+    </div>
+  </div>
+
+</div>
+
+<!-- RIGHT -->
+<div class="right-col">
+
+  <!-- Inter-vehicle distance -->
+  <div class="card">
+    <div class="chart-title" style="color:var(--green);">車間距離 x₁−x₂ [m]</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="legend-line" style="background:#059669;"></span> 実車間距離</span>
+      <span class="legend-item"><span class="legend-line dashed" style="border-color:#dc2626;"></span> 目標 30m</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-dist"></canvas></div>
+  </div>
+
+  <!-- Speed -->
+  <div class="card">
+    <div class="chart-title" style="color:var(--blue);">車速 [m/s]</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="legend-line" style="background:#2563eb;"></span> 車両1</span>
+      <span class="legend-item"><span class="legend-line" style="background:#dc2626;"></span> 車両2</span>
+      <span class="legend-item"><span class="legend-line dashed" style="border-color:#888;"></span> 目標速度</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-speed"></canvas></div>
+  </div>
+
+  <!-- Insight -->
+  <div class="insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・<strong>a</strong> = 相対速度 (ẋ₂−ẋ₁) に比例するゲイン — 速度差を抑制<br>
+    ・<strong>b</strong> = 相対距離 (x₂−x₁+d) に比例するゲイン — 車間距離を目標値に近づける<br>
+    ・<strong>a=0</strong> にすると速度差のダンピングがなくなり振動的になる<br>
+    ・前方車両の速度変化に対して、車両2がどのように追従するかを観察しよう
+  </div>
+
+</div>
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — ACC追従制御</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('road-canvas');
+  const ctx = canvas.getContext('2d');
+  const slA = document.getElementById('sl-a');
+  const slB = document.getElementById('sl-b');
+  const btnStart = document.getElementById('btn-start');
+  const btnReset = document.getElementById('btn-reset');
+
+  const dt = 0.01, STEPS_PER_FRAME = 3, T_MAX = 25, D_TARGET = 30;
+  let patternId = 1;
+  let x1,v1,x2,v2,t;
+  let running=false, animId=null;
+  let histT=[],histDist=[],histV1=[],histV2=[],histVr=[];
+
+  // Speed pattern
+  function getVr(tt){
+    if(patternId===1){
+      return tt<10 ? 20 : 50;
+    } else {
+      if(tt<5) return 50;
+      if(tt<10) return 30;
+      if(tt<17) return 50;
+      return 70;
+    }
+  }
+
+  window.selectPattern = function(id){
+    patternId = id;
+    document.getElementById('pat1').className = 'pattern-btn' + (id===1?' active':'');
+    document.getElementById('pat2').className = 'pattern-btn' + (id===2?' active':'');
+    if(id===1){
+      document.getElementById('pattern-detail').innerHTML =
+        't &lt; 10s: v<sub>r</sub> = 20 m/s<br>t ≥ 10s: v<sub>r</sub> = 50 m/s';
+    } else {
+      document.getElementById('pattern-detail').innerHTML =
+        't &lt; 5s: v<sub>r</sub> = 50 m/s<br>5 ≤ t &lt; 10s: v<sub>r</sub> = 30 m/s<br>10 ≤ t &lt; 17s: v<sub>r</sub> = 50 m/s<br>t ≥ 17s: v<sub>r</sub> = 70 m/s';
+    }
+    if(!running) resetState();
+  };
+
+  // Charts
+  function ds(label,color,w,dash){return{label,data:[],borderColor:color,borderWidth:w||2,borderDash:dash||[],pointRadius:0,fill:false,tension:0.05};}
+  function makeChart(id,yMin,yMax,datasets){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',min:0,max:T_MAX,title:{display:true,text:'t [s]',font:{size:10,weight:'600'}},
+            ticks:{stepSize:5,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{min:yMin,max:yMax,ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chDist = makeChart('chart-dist', 0, 50, [
+    ds('車間距離','#059669',2.5),
+    ds('目標','#dc2626',1.5,[6,4])
+  ]);
+  const chSpeed = makeChart('chart-speed', -10, 80, [
+    ds('v₁','#2563eb',2.5),
+    ds('v₂','#dc2626',2.5),
+    ds('v_r','#888',1.5,[5,3])
+  ]);
+
+  // Canvas
+  function resizeCanvas(){
+    const rect=canvas.parentElement.getBoundingClientRect();
+    canvas.width=rect.width; canvas.height=160;
+  }
+  resizeCanvas();
+  window.addEventListener('resize',resizeCanvas);
+
+  function drawRoad(){
+    const W=canvas.width, H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+
+    // Background (grass)
+    ctx.fillStyle='#f0fdf4'; ctx.fillRect(0,0,W,H);
+
+    // Road surface
+    const roadY=H/2, roadH=50;
+    ctx.fillStyle='#374151';
+    ctx.fillRect(0,roadY-roadH/2,W,roadH);
+
+    // Road edges (white lines)
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(0,roadY-roadH/2); ctx.lineTo(W,roadY-roadH/2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,roadY+roadH/2); ctx.lineTo(W,roadY+roadH/2); ctx.stroke();
+
+    // Scrolling center line (dashed orange) — scrolls with V2's speed
+    const dashLen=20, gapLen=15, totalLen=dashLen+gapLen;
+    const scrollOffset = (x2 * 4) % totalLen; // 4 pixels per meter scroll
+    ctx.fillStyle='#fbbf24';
+    for(let px = -scrollOffset - totalLen; px < W + totalLen; px += totalLen){
+      ctx.fillRect(px, roadY-1.5, dashLen, 3);
+    }
+
+    // Vehicle layout: V2 fixed at left, V1 moves based on actual distance
+    const carW=42, carH=22;
+    const v2ScreenX = W * 0.2; // V2 fixed at 20% from left
+    const distScale = 5; // fixed: 5 pixels per meter (60m ≈ 300px)
+    const v1ScreenX = v2ScreenX + (x1-x2) * distScale;
+    const carY = roadY - 8;
+
+    function drawCar(px, color, label){
+      // Body
+      ctx.fillStyle = color;
+      if(ctx.roundRect){
+        ctx.beginPath(); ctx.roundRect(px-carW/2, carY-carH/2, carW, carH, 5); ctx.fill();
+      } else { ctx.fillRect(px-carW/2, carY-carH/2, carW, carH); }
+
+      // Windshield
+      ctx.fillStyle='rgba(255,255,255,0.4)';
+      ctx.fillRect(px+carW/2-13, carY-carH/2+3, 11, carH-6);
+
+      // Wheels
+      ctx.fillStyle='#111';
+      [[px-carW/2+5, carY-carH/2-3],[px+carW/2-13, carY-carH/2-3],
+       [px-carW/2+5, carY+carH/2-1],[px+carW/2-13, carY+carH/2-1]].forEach(([wx,wy])=>{
+        ctx.fillRect(wx,wy,8,4);
+      });
+
+      // Label
+      ctx.fillStyle='#fff'; ctx.font="bold 9px 'JetBrains Mono',monospace";
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(label, px-2, carY);
+    }
+
+    // Distance bracket line
+    const dist = x1-x2;
+    const bY = roadY + 30;
+    ctx.strokeStyle='#10b981'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]);
+    ctx.beginPath();
+    ctx.moveTo(v2ScreenX+carW/2, bY);
+    ctx.lineTo(v1ScreenX-carW/2, bY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Distance label
+    ctx.fillStyle='#059669'; ctx.font="bold 11px 'JetBrains Mono',monospace";
+    ctx.textAlign='center';
+    ctx.fillText(dist.toFixed(1)+' m', (v2ScreenX+v1ScreenX)/2, bY+14);
+
+    // Target distance reference
+    ctx.fillStyle='#dc2626'; ctx.font="9px 'JetBrains Mono',monospace";
+    ctx.fillText('(目標 '+D_TARGET+'m)', (v2ScreenX+v1ScreenX)/2, bY+26);
+
+    // Draw cars
+    drawCar(v2ScreenX, '#dc2626', 'V2');
+    drawCar(v1ScreenX, '#2563eb', 'V1');
+
+    // Speed labels above cars
+    ctx.font="bold 10px 'JetBrains Mono',monospace";
+    ctx.textAlign='center';
+    ctx.fillStyle='#dc2626';
+    ctx.fillText(v2.toFixed(0)+' m/s', v2ScreenX, carY-carH/2-8);
+    ctx.fillStyle='#2563eb';
+    ctx.fillText(v1.toFixed(0)+' m/s', v1ScreenX, carY-carH/2-8);
+
+    // Direction arrow
+    ctx.fillStyle='#9ca3af'; ctx.font="9px 'Noto Sans JP',sans-serif";
+    ctx.textAlign='right'; ctx.fillText('→ 進行方向', W-8, 14);
+  }
+
+  // Dynamics (RK4)
+  function dynamics(state, a_gain, b_gain, vr){
+    const [xx1,vv1,xx2,vv2] = state;
+    const u1 = -vv1 + vr;
+    const u2 = -a_gain*(vv2-vv1) - b_gain*(xx2-xx1+D_TARGET);
+    return [vv1, u1, vv2, u2];
+  }
+  function rk4(state, a_gain, b_gain, vr, h){
+    const k1=dynamics(state,a_gain,b_gain,vr);
+    const s2=state.map((v,i)=>v+0.5*h*k1[i]);
+    const k2=dynamics(s2,a_gain,b_gain,vr);
+    const s3=state.map((v,i)=>v+0.5*h*k2[i]);
+    const k3=dynamics(s3,a_gain,b_gain,vr);
+    const s4=state.map((v,i)=>v+h*k3[i]);
+    const k4=dynamics(s4,a_gain,b_gain,vr);
+    return state.map((v,i)=>v+h/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]));
+  }
+
+  function resetState(){
+    // Pattern 1: both start at 20m/s, 25m gap
+    // Pattern 2: both start at 50m/s, 25m gap
+    const v0 = (patternId===1) ? 20 : 50;
+    x1=25; v1=v0; x2=0; v2=v0; t=0;
+    histT=[]; histDist=[]; histV1=[]; histV2=[]; histVr=[];
+    updateDisplays(); updateCharts(); drawRoad();
+  }
+
+  function updateDisplays(){
+    document.getElementById('val-a').textContent = parseFloat(slA.value).toFixed(1);
+    document.getElementById('val-b').textContent = parseFloat(slB.value).toFixed(1);
+    document.getElementById('disp-t').textContent = t.toFixed(2);
+    document.getElementById('disp-v1').textContent = v1.toFixed(1);
+    document.getElementById('disp-v2').textContent = v2.toFixed(1);
+    document.getElementById('disp-dist').textContent = (x1-x2).toFixed(1);
+  }
+
+  function updateCharts(){
+    const skip=Math.max(1,Math.floor(histT.length/500));
+    const dD=[],dT=[],dV1=[],dV2=[],dVr=[];
+    for(let i=0;i<histT.length;i+=skip){
+      dD.push({x:histT[i],y:histDist[i]});
+      dT.push({x:histT[i],y:D_TARGET});
+      dV1.push({x:histT[i],y:histV1[i]});
+      dV2.push({x:histT[i],y:histV2[i]});
+      dVr.push({x:histT[i],y:histVr[i]});
+    }
+    chDist.data.datasets[0].data=dD;
+    chDist.data.datasets[1].data=dT;
+    chSpeed.data.datasets[0].data=dV1;
+    chSpeed.data.datasets[1].data=dV2;
+    chSpeed.data.datasets[2].data=dVr;
+    chDist.update(); chSpeed.update();
+  }
+
+  function simStep(){
+    const a_gain=parseFloat(slA.value);
+    const b_gain=parseFloat(slB.value);
+    for(let i=0;i<STEPS_PER_FRAME;i++){
+      const vr=getVr(t);
+      const s=rk4([x1,v1,x2,v2],a_gain,b_gain,vr,dt);
+      x1=s[0]; v1=s[1]; x2=s[2]; v2=s[3]; t+=dt;
+      if(Math.round(t/dt)%5===0){
+        histT.push(t); histDist.push(x1-x2);
+        histV1.push(v1); histV2.push(v2); histVr.push(vr);
+      }
+    }
+  }
+
+  function animLoop(){
+    if(!running) return;
+    if(t>=T_MAX){stop();return;}
+    simStep(); updateDisplays(); drawRoad();
+    if(Math.round(t/dt)%20===0) updateCharts();
+    animId=requestAnimationFrame(animLoop);
+  }
+
+  function start(){
+    if(running)return;
+    if(t>=T_MAX-0.1) resetState();
+    running=true; btnStart.disabled=true; animLoop();
+  }
+  function stop(){running=false; btnStart.disabled=false; if(animId)cancelAnimationFrame(animId); updateCharts();}
+  function reset(){stop(); resetState();}
+
+  btnStart.addEventListener('click',start);
+  btnReset.addEventListener('click',reset);
+  [slA,slB].forEach(s=>s.addEventListener('input',updateDisplays));
+
+  resetState();
+})();
+</script>
+</body>
+</html>
