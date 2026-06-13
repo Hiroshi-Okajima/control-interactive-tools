@@ -15,7 +15,7 @@
 | 07 | 振れ止め制御 | クレーンの振れ止めアニメーション（コンテスト） | `control_crane.html` |
 | 08 | 適応クルーズ制御 | ビークルのクルーズコントロール（状態FB） | `control_acc.html` |
 | 09 | 倒立振子 | 倒立振子の目標値追従制御（状態FB） | `control_invpend.html` |
-
+| 10 | 部屋の温度制御 | 3つの条件の比較（目標温度18度） | `control_temperature.html` |
 ## GitHub Pages URL
 
 有効化後、以下のURLでアクセスできます：
@@ -33,7 +33,9 @@ https://hiroshi-okajima.github.io/control-interactive-tools/
 - [状態オブザーバ](https://hiroshi-okajima.github.io/control-interactive-tools/control_observer.html)
 - [クレーン振れ止め](https://hiroshi-okajima.github.io/control-interactive-tools/control_crane.html)
 - [適応クルーズ制御](https://hiroshi-okajima.github.io/control-interactive-tools/control_acc.html)
-- [倒立振子の制御](https://hiroshi-okajima.github.io/control-interactive-tools/control_invpend.html)
+- [倒立振子の制御](https://hiroshi-okajima.github.io/control-interactive-tools/control_invpend.html) 
+- [部屋の温度制御](https://hiroshi-okajima.github.io/control-interactive-tools/control_temperature.html)
+
 
 ## 使い方
 
