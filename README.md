@@ -13,6 +13,7 @@
 | 05 | 3次系の極配置 | 状態フィードバックによる極配置とステップ応答 | `control_poles.html` |
 | 06 | 状態推定 | 観測ノイズと速応性の状態推定におけるTrade off | `control_observer.html` |
 | 07 | 振れ止め制御 | クレーンの振れ止めアニメーション（コンテスト） | `control_crane.html` |
+| 08 | 適応クルーズ制御 | ビークルのクルーズコントロール（状態FB） | `control_acc.html` |
 
 ## GitHub Pages URL
 
@@ -30,6 +31,7 @@ https://hiroshi-okajima.github.io/control-interactive-tools/
 - [極配置](https://hiroshi-okajima.github.io/control-interactive-tools/control_poles.html)
 - [状態オブザーバ](https://hiroshi-okajima.github.io/control-interactive-tools/control_observer.html)
 - [クレーン振れ止め](https://hiroshi-okajima.github.io/control-interactive-tools/control_crane.html)
+- [適応クルーズ制御](https://hiroshi-okajima.github.io/control-interactive-tools/control_acc.html)
 
 ## 使い方
 
