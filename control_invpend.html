@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>倒立振子制御 — インタラクティブ可視化</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--purple:#7c3aed;--green:#059669;--orange:#ea580c;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#1e1040,#4c1d95,#7c3aed);color:#fff;padding:1.4rem 1.5rem 1.1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.4rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.75;max-width:650px;margin:0 auto;}
+.main{max-width:1100px;margin:0 auto;padding:1rem;}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:850px){.layout{grid-template-columns:1fr;}}
+.left-col,.right-col{display:flex;flex-direction:column;gap:0.7rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.3rem;}
+.ctrl-group{margin-bottom:0.5rem;}.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.75rem;font-weight:600;color:var(--text2);margin-bottom:0.15rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:600;font-size:0.8rem;padding:0.1em 0.4em;border-radius:4px;min-width:4.5em;text-align:center;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--purple);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--purple);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+.btn-row{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem;}
+.btn{display:inline-flex;align-items:center;gap:0.3rem;padding:0.4em 1em;border:none;border-radius:6px;font-weight:700;font-size:0.78rem;cursor:pointer;transition:opacity 0.15s;}
+.btn:hover{opacity:0.85;}
+.btn-start{background:var(--green);color:#fff;}
+.btn-reset{background:#e5e5e5;color:#444;}
+.canvas-wrap{position:relative;background:#fafaf8;border-radius:var(--r);overflow:hidden;border:1px solid var(--border);}
+canvas#pend-canvas{display:block;width:100%;}
+.state-display{font-family:'JetBrains Mono',monospace;font-size:0.76rem;display:flex;flex-wrap:wrap;gap:0.2rem 0.8rem;margin-top:0.3rem;}
+.state-item{display:flex;gap:0.25rem;}.state-lbl{color:var(--text3);}.state-v{font-weight:600;}
+.chart-title{font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.3rem;}
+.chart-wrap{position:relative;height:160px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.2rem;font-size:0.72rem;}
+.legend-item{display:flex;align-items:center;gap:0.25rem;}
+.legend-line{width:14px;height:3px;border-radius:2px;}
+.legend-line.dashed{height:0;border-top:2px dashed;}
+.eq-box{font-family:'JetBrains Mono',monospace;font-size:0.76rem;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.4rem 0.7rem;line-height:1.7;}
+.mat-grid{display:flex;gap:0.8rem;flex-wrap:wrap;align-items:center;}
+.mat-block{font-family:'JetBrains Mono',monospace;font-size:0.68rem;line-height:1.6;display:flex;align-items:center;gap:0.2rem;}
+.mat-name{font-weight:700;font-size:0.75rem;white-space:nowrap;}
+.mat-bracket{display:inline-flex;flex-direction:column;border-left:2px solid #666;border-right:2px solid #666;padding:0.15rem 0.35rem;border-radius:2px;background:#fafaf8;}
+.mat-row{white-space:pre;display:block;line-height:1.5;}
+.insight{background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:1px solid #c4b5fd;border-radius:var(--r);padding:0.6rem 0.9rem;font-size:0.8rem;line-height:1.7;color:#4c1d95;}
+.insight strong{color:#5b21b6;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>倒立振子の状態フィードバック制御</h1>
+  <p>台車上の振子を直立に保ちながら目標位置に移動する — ゲインを調整して安定化と位置追従を実現せよ</p>
+</div>
+<div class="main">
+<div class="layout">
+
+<!-- LEFT -->
+<div class="left-col">
+
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">倒立振子アニメーション</div>
+    <div class="canvas-wrap"><canvas id="pend-canvas"></canvas></div>
+    <div class="state-display">
+      <span class="state-item"><span class="state-lbl">t=</span><span class="state-v" id="disp-t">0.00</span></span>
+      <span class="state-item"><span class="state-lbl">x=</span><span class="state-v" id="disp-x">1.00</span></span>
+      <span class="state-item"><span class="state-lbl">θ=</span><span class="state-v" id="disp-th">0.00</span><span style="font-size:0.6rem;color:var(--text3);">°</span></span>
+      <span class="state-item"><span class="state-lbl">u=</span><span class="state-v" id="disp-u">0.00</span></span>
+      <span class="state-item"><span class="state-lbl">目標=</span><span class="state-v" id="disp-tgt" style="color:var(--green);">1.00</span></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">フィードバックゲイン u = F·(x−x<sub>ref</sub>)</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">F₁（位置偏差ゲイン）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-f1" min="0" max="150" step="0.5" value="47.7">
+        <span class="ctrl-val" id="val-f1" style="color:var(--blue);background:#eef2ff;">47.7</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">F₂（台車速度ゲイン）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-f2" min="0" max="120" step="0.5" value="42.1">
+        <span class="ctrl-val" id="val-f2" style="color:var(--teal);background:#f0fdfa;">42.1</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">F₃（振子角度ゲイン）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-f3" min="0" max="400" step="1" value="192">
+        <span class="ctrl-val" id="val-f3" style="color:var(--red);background:#fff5f5;">192</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">F₄（角速度ゲイン）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-f4" min="0" max="150" step="0.5" value="60.3">
+        <span class="ctrl-val" id="val-f4" style="color:var(--orange);background:#fff7ed;">60.3</span>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-start" id="btn-start">▶ 開始</button>
+      <button class="btn btn-reset" id="btn-reset">↺ リセット</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--text3);">線形化モデル（動作点: θ=0）</div>
+    <div class="mat-grid">
+      <div class="mat-block">
+        <span class="mat-name" style="color:var(--blue);">A =</span>
+        <span class="mat-bracket">
+          <span class="mat-row"> 0     1      0      0</span>
+          <span class="mat-row"> 0     0   -1.73    0</span>
+          <span class="mat-row"> 0     0      0      1</span>
+          <span class="mat-row"> 0     0   11.53    0</span>
+        </span>
+      </div>
+      <div class="mat-block">
+        <span class="mat-name" style="color:var(--blue);">B =</span>
+        <span class="mat-bracket">
+          <span class="mat-row">    0  </span>
+          <span class="mat-row">  1.18</span>
+          <span class="mat-row">    0  </span>
+          <span class="mat-row"> -1.18</span>
+        </span>
+      </div>
+    </div>
+    <div class="eq-box" style="margin-top:0.4rem;">
+      x = [x, ẋ, θ, θ̇]ᵀ &nbsp;|&nbsp; M=0.8, m=0.2, L=1.5, g=9.8<br>
+      開ループ極: 0, 0, ±3.40 &nbsp;|&nbsp; 零点: ±3.13（非最小位相）<br>
+      目標パターン: 0〜1s: x=1 → 1〜7s: x=0 → 7s〜: x=1
+    </div>
+  </div>
+
+</div>
+
+<!-- RIGHT -->
+<div class="right-col">
+
+  <div class="card">
+    <div class="chart-title" style="color:var(--blue);">台車位置 x(t) [m]</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="legend-line" style="background:#2563eb;"></span> x(t)</span>
+      <span class="legend-item"><span class="legend-line dashed" style="border-color:#059669;"></span> 目標</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-x"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="chart-title" style="color:var(--red);">振子角度 θ(t) [deg]</div>
+    <div class="chart-wrap"><canvas id="chart-th"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="chart-title" style="color:var(--text2);">制御入力 u(t) [N]</div>
+    <div class="chart-wrap"><canvas id="chart-u"></canvas></div>
+  </div>
+
+  <div class="insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・倒立振子は<strong>不安定系</strong>（開ループ極 ±3.40）かつ<strong>非最小位相系</strong>（不安定零点 ±3.13）<br>
+    ・<strong>全てのゲインが正</strong>: 位置偏差が正のとき、まず台車を<strong>逆方向に動かして</strong>振子を傾け、その反動で目標に向かう（非最小位相系の特徴）<br>
+    ・<strong>F₃, F₄</strong> が小さすぎると振子が<strong>倒れる</strong>（不安定化）<br>
+    ・<strong>F₁, F₂</strong> が小さすぎると位置追従が<strong>遅くなる</strong><br>
+    ・極配置: [-10, -5.5, -3±j] → F = [47.7, 42.1, 191.8, 60.3]
+  </div>
+
+</div>
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — 倒立振子制御</div>
+
+<script>
+(function(){
+  const canvas=document.getElementById('pend-canvas');
+  const ctx=canvas.getContext('2d');
+  const slF1=document.getElementById('sl-f1'),slF2=document.getElementById('sl-f2');
+  const slF3=document.getElementById('sl-f3'),slF4=document.getElementById('sl-f4');
+  const btnStart=document.getElementById('btn-start'),btnReset=document.getElementById('btn-reset');
+
+  // Physical parameters (matching MATLAB)
+  const M_cart=0.8, m_pend=0.2, L_pend=1.5, grav=9.8;
+  const dt=0.005, STEPS_PER_FRAME=4, T_MAX=12;
+
+  // Linearized model coefficients
+  const denom=4*M_cart+m_pend; // 3.4
+  const a23=-3*m_pend*grav/denom;   // -1.7294
+  const a43=6*grav*(M_cart+m_pend)/(L_pend*denom); // 11.5294
+  const b2=4/denom;    // 1.1765
+  const b4=-6/(L_pend*denom); // -1.1765
+
+  let xc,vc,th,om,t;
+  let running=false,animId=null;
+  let histT=[],histX=[],histTh=[],histU=[],histTgt=[];
+
+  function getTarget(tt){
+    if(tt<1) return 1;
+    if(tt<7) return 0;
+    return 1;
+  }
+
+  function getF(){
+    return [parseFloat(slF1.value),parseFloat(slF2.value),parseFloat(slF3.value),parseFloat(slF4.value)];
+  }
+
+  function control(xx,vv,thh,omm,tgt){
+    const F=getF();
+    return F[0]*(xx-tgt)+F[1]*vv+F[2]*thh+F[3]*omm;
+  }
+
+  // Linearized dynamics: ẋ=Ax+Bu
+  function dynamics(s,uu){
+    return [
+      s[1],                          // ẋ = v
+      a23*s[2]+b2*uu,                // v̇ = a23*θ + b2*u
+      s[3],                          // θ̇ = ω
+      a43*s[2]+b4*uu                 // ω̇ = a43*θ + b4*u
+    ];
+  }
+  function rk4(s,uu,h){
+    const k1=dynamics(s,uu);
+    const s2=s.map((v,i)=>v+.5*h*k1[i]);
+    const k2=dynamics(s2,uu);
+    const s3=s.map((v,i)=>v+.5*h*k2[i]);
+    const k3=dynamics(s3,uu);
+    const s4=s.map((v,i)=>v+h*k3[i]);
+    const k4=dynamics(s4,uu);
+    return s.map((v,i)=>v+h/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]));
+  }
+
+  // Charts
+  function ds(label,color,w,dash){return{label,data:[],borderColor:color,borderWidth:w||2,borderDash:dash||[],pointRadius:0,fill:false,tension:0.05};}
+  function makeChart(id,yMin,yMax,datasets){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',min:0,max:T_MAX,title:{display:true,text:'t [s]',font:{size:10,weight:'600'}},ticks:{stepSize:2,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{min:yMin,max:yMax,ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chX=makeChart('chart-x',-0.5,1.5,[ds('x','#2563eb',2.5),ds('tgt','#059669',1.5,[6,4])]);
+  const chTh=makeChart('chart-th',-30,30,[ds('θ','#dc2626',2.5)]);
+  const chU=makeChart('chart-u',-50,50,[ds('u','#666',2)]);
+
+  // Canvas
+  function resizeCanvas(){const r=canvas.parentElement.getBoundingClientRect();canvas.width=r.width;canvas.height=320;}
+  resizeCanvas();
+  window.addEventListener('resize',resizeCanvas);
+
+  function drawPendulum(){
+    const W=canvas.width,H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+
+    // Background
+    ctx.fillStyle='#fafaf8';ctx.fillRect(0,0,W,H);
+
+    // Coordinate mapping: x in [-0.5, 1.5] → screen
+    const xMin=-0.6,xMax=1.6,xRange=xMax-xMin;
+    const scale=W/xRange;
+    const groundY=H*0.7;
+    function toScreenX(mx){return (mx-xMin)*scale;}
+
+    // Ground
+    ctx.fillStyle='#d4d4d4';ctx.fillRect(0,groundY,W,H-groundY);
+    ctx.strokeStyle='#a3a3a3';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(0,groundY);ctx.lineTo(W,groundY);ctx.stroke();
+
+    // Ground hatching
+    ctx.strokeStyle='#bbb';ctx.lineWidth=0.8;
+    for(let gx=0;gx<W;gx+=12){
+      ctx.beginPath();ctx.moveTo(gx,groundY);ctx.lineTo(gx-8,groundY+10);ctx.stroke();
+    }
+
+    // Target line
+    const tgt=getTarget(t);
+    const tgtPx=toScreenX(tgt);
+    ctx.strokeStyle='#22c55e';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+    ctx.beginPath();ctx.moveTo(tgtPx,groundY-10);ctx.lineTo(tgtPx,40);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#22c55e';ctx.font="bold 10px 'JetBrains Mono',monospace";
+    ctx.textAlign='center';ctx.fillText('目標',tgtPx,35);
+
+    // Cart
+    const cartPx=toScreenX(xc);
+    const cartW=60,cartH=28;
+    const cartTop=groundY-cartH-12;
+
+    // Wheels
+    ctx.fillStyle='#374151';
+    ctx.beginPath();ctx.arc(cartPx-18,groundY-6,8,0,2*Math.PI);ctx.fill();
+    ctx.beginPath();ctx.arc(cartPx+18,groundY-6,8,0,2*Math.PI);ctx.fill();
+    ctx.strokeStyle='#555';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(cartPx-18,groundY-6,8,0,2*Math.PI);ctx.stroke();
+    ctx.beginPath();ctx.arc(cartPx+18,groundY-6,8,0,2*Math.PI);ctx.stroke();
+
+    // Cart body
+    ctx.fillStyle='#334155';
+    if(ctx.roundRect){ctx.beginPath();ctx.roundRect(cartPx-cartW/2,cartTop,cartW,cartH,4);ctx.fill();}
+    else{ctx.fillRect(cartPx-cartW/2,cartTop,cartW,cartH);}
+
+    // Pivot point (top of cart)
+    const pivotX=cartPx,pivotY=cartTop;
+
+    // Pendulum rod
+    const rodLen=L_pend*scale*0.55; // visual length
+    const bobX=pivotX+rodLen*Math.sin(th);
+    const bobY=pivotY-rodLen*Math.cos(th); // upward
+
+    ctx.strokeStyle='#7c3aed';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(pivotX,pivotY);ctx.lineTo(bobX,bobY);ctx.stroke();
+
+    // Bob (color changes with angle)
+    const absDeg=Math.abs(th)*180/Math.PI;
+    let bobColor;
+    if(absDeg<5) bobColor='#22c55e'; // green (stable)
+    else if(absDeg<20) bobColor='#f59e0b'; // amber
+    else bobColor='#dc2626'; // red (unstable)
+
+    ctx.fillStyle=bobColor;
+    ctx.beginPath();ctx.arc(bobX,bobY,14,0,2*Math.PI);ctx.fill();
+    ctx.strokeStyle='#333';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(bobX,bobY,14,0,2*Math.PI);ctx.stroke();
+
+    // Pivot dot
+    ctx.fillStyle='#555';
+    ctx.beginPath();ctx.arc(pivotX,pivotY,4,0,2*Math.PI);ctx.fill();
+
+    // Force arrow
+    const uu=control(xc,vc,th,om,tgt);
+    const arrowScale=2;
+    const arrowLen=Math.min(Math.abs(uu)*arrowScale,80);
+    if(Math.abs(uu)>0.3){
+      const dir=uu>0?1:-1;
+      const ax1=cartPx+dir*(cartW/2+3),ax2=ax1+dir*arrowLen;
+      const ay=cartTop+cartH/2;
+      ctx.strokeStyle='#dc2626';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(ax1,ay);ctx.lineTo(ax2,ay);ctx.stroke();
+      ctx.fillStyle='#dc2626';
+      ctx.beginPath();ctx.moveTo(ax2,ay-4);ctx.lineTo(ax2+dir*7,ay);ctx.lineTo(ax2,ay+4);ctx.fill();
+    }
+
+    // Title
+    ctx.fillStyle='#666';ctx.font="10px 'Noto Sans JP',sans-serif";ctx.textAlign='left';
+    ctx.fillText('倒立振子制御',8,H-5);
+
+    // Angle indicator
+    if(absDeg>1){
+      ctx.fillStyle=bobColor;ctx.font="bold 10px 'JetBrains Mono',monospace";ctx.textAlign='center';
+      ctx.fillText((th*180/Math.PI).toFixed(1)+'°',bobX,bobY-20);
+    }
+  }
+
+  function resetState(){
+    xc=1;vc=0;th=0;om=0;t=0;
+    histT=[];histX=[];histTh=[];histU=[];histTgt=[];
+    updateDisplays();updateCharts();drawPendulum();
+  }
+
+  function updateDisplays(){
+    ['f1','f2','f3','f4'].forEach(id=>{
+      document.getElementById('val-'+id).textContent=parseFloat(document.getElementById('sl-'+id).value);
+    });
+    document.getElementById('disp-t').textContent=t.toFixed(2);
+    document.getElementById('disp-x').textContent=xc.toFixed(3);
+    document.getElementById('disp-th').textContent=(th*180/Math.PI).toFixed(1);
+    document.getElementById('disp-u').textContent=control(xc,vc,th,om,getTarget(t)).toFixed(1);
+    document.getElementById('disp-tgt').textContent=getTarget(t).toFixed(1);
+  }
+
+  function updateCharts(){
+    const skip=Math.max(1,Math.floor(histT.length/500));
+    const dX=[],dTgt=[],dTh=[],dU=[];
+    for(let i=0;i<histT.length;i+=skip){
+      dX.push({x:histT[i],y:histX[i]});
+      dTgt.push({x:histT[i],y:histTgt[i]});
+      dTh.push({x:histT[i],y:histTh[i]*180/Math.PI});
+      dU.push({x:histT[i],y:histU[i]});
+    }
+    chX.data.datasets[0].data=dX;chX.data.datasets[1].data=dTgt;
+    chTh.data.datasets[0].data=dTh;chU.data.datasets[0].data=dU;
+    chX.update();chTh.update();chU.update();
+  }
+
+  function simStep(){
+    for(let i=0;i<STEPS_PER_FRAME;i++){
+      const tgt=getTarget(t);
+      const uu=control(xc,vc,th,om,tgt);
+      const s=rk4([xc,vc,th,om],uu,dt);
+      xc=s[0];vc=s[1];th=s[2];om=s[3];t+=dt;
+      // Clamp divergence for display
+      if(Math.abs(th)>Math.PI){th=Math.sign(th)*Math.PI;om=0;}
+      if(Math.round(t/dt)%4===0){
+        histT.push(t);histX.push(xc);histTh.push(th);histU.push(uu);histTgt.push(tgt);
+      }
+    }
+  }
+
+  function animLoop(){
+    if(!running)return;
+    if(t>=T_MAX){stop();return;}
+    simStep();updateDisplays();drawPendulum();
+    if(Math.round(t/dt)%16===0)updateCharts();
+    animId=requestAnimationFrame(animLoop);
+  }
+
+  function start(){if(running)return;if(t>=T_MAX-0.1)resetState();running=true;btnStart.disabled=true;animLoop();}
+  function stop(){running=false;btnStart.disabled=false;if(animId)cancelAnimationFrame(animId);updateCharts();}
+  function reset(){stop();resetState();}
+
+  btnStart.addEventListener('click',start);
+  btnReset.addEventListener('click',reset);
+  [slF1,slF2,slF3,slF4].forEach(s=>s.addEventListener('input',updateDisplays));
+
+  resetState();
+})();
+</script>
+</body>
+</html>
