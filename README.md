@@ -14,6 +14,7 @@
 | 06 | 状態推定 | 観測ノイズと速応性の状態推定におけるTrade off | `control_observer.html` |
 | 07 | 振れ止め制御 | クレーンの振れ止めアニメーション（コンテスト） | `control_crane.html` |
 | 08 | 適応クルーズ制御 | ビークルのクルーズコントロール（状態FB） | `control_acc.html` |
+| 09 | 倒立振子 | 倒立振子の目標値追従制御（状態FB） | `control_inverted.html` |
 
 ## GitHub Pages URL
 
@@ -32,6 +33,7 @@ https://hiroshi-okajima.github.io/control-interactive-tools/
 - [状態オブザーバ](https://hiroshi-okajima.github.io/control-interactive-tools/control_observer.html)
 - [クレーン振れ止め](https://hiroshi-okajima.github.io/control-interactive-tools/control_crane.html)
 - [適応クルーズ制御](https://hiroshi-okajima.github.io/control-interactive-tools/control_acc.html)
+- [倒立振子の制御](https://hiroshi-okajima.github.io/control-interactive-tools/control_inverted.html)
 
 ## 使い方
 
