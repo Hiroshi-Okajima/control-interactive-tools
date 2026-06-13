@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>クレーン振れ止め制御 — インタラクティブ可視化</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;
+  --blue:#2563eb;--red:#dc2626;--purple:#7c3aed;--green:#059669;--orange:#ea580c;--teal:#0891b2;
+  --border:#e2e0dc;--r:10px;--r-lg:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#1a0a00,#78350f,#ea580c);color:#fff;padding:1.4rem 1.5rem 1.1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.4rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.75;max-width:650px;margin:0 auto;}
+.main{max-width:1100px;margin:0 auto;padding:1rem;}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:850px){.layout{grid-template-columns:1fr;}}
+.left-col,.right-col{display:flex;flex-direction:column;gap:0.7rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.3rem;}
+.ctrl-group{margin-bottom:0.6rem;}
+.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.75rem;font-weight:600;color:var(--text2);margin-bottom:0.2rem;}
+.ctrl-sublabel{font-size:0.68rem;color:var(--text3);margin-top:0.1rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{
+  font-family:'JetBrains Mono',monospace;font-weight:600;font-size:0.82rem;
+  padding:0.12em 0.45em;border-radius:4px;min-width:4em;text-align:center;
+}
+.ctrl-val.kp{color:var(--blue);background:#eef2ff;}
+.ctrl-val.kv{color:var(--teal);background:#f0fdfa;}
+.ctrl-val.kt{color:var(--purple);background:#f3eeff;}
+.ctrl-val.kw{color:var(--green);background:#ecfdf5;}
+.ctrl-val.init{color:var(--orange);background:#fff7ed;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input.sl-kp::-webkit-slider-thumb,input.sl-kp::-moz-range-thumb{background:var(--blue);}
+input.sl-kv::-webkit-slider-thumb,input.sl-kv::-moz-range-thumb{background:var(--teal);}
+input.sl-kt::-webkit-slider-thumb,input.sl-kt::-moz-range-thumb{background:var(--purple);}
+input.sl-kw::-webkit-slider-thumb,input.sl-kw::-moz-range-thumb{background:var(--green);}
+input.sl-init::-webkit-slider-thumb,input.sl-init::-moz-range-thumb{background:var(--orange);}
+.btn-row{display:flex;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap;}
+.btn{display:inline-flex;align-items:center;gap:0.3rem;padding:0.4em 1em;border:none;border-radius:6px;font-weight:700;font-size:0.78rem;cursor:pointer;transition:opacity 0.15s;}
+.btn:hover{opacity:0.85;}
+.btn-start{background:var(--green);color:#fff;}
+.btn-reset{background:#e5e5e5;color:#444;}
+.canvas-wrap{position:relative;background:#fafaf8;border-radius:var(--r);overflow:hidden;border:1px solid var(--border);}
+canvas#crane-canvas{display:block;width:100%;}
+.chart-title{font-size:0.68rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.3rem;}
+.chart-wrap{position:relative;height:150px;}
+.state-display{font-family:'JetBrains Mono',monospace;font-size:0.78rem;display:flex;flex-wrap:wrap;gap:0.3rem 1rem;margin-top:0.4rem;}
+.state-item{display:flex;gap:0.3rem;}
+.state-lbl{color:var(--text3);}
+.state-v{font-weight:600;}
+.sys-info{font-size:0.78rem;line-height:1.7;color:var(--text2);}
+.sys-info code{font-family:'JetBrains Mono',monospace;font-size:0.76rem;background:#f0f0ed;padding:0.1em 0.3em;border-radius:3px;}
+.insight{background:linear-gradient(135deg,#fff7ed,#fffbeb);border:1px solid #fed7aa;border-radius:var(--r);padding:0.7rem 1rem;font-size:0.82rem;line-height:1.7;color:#78350f;}
+.insight strong{color:#9a3412;}
+.mat-grid{display:flex;gap:1rem;flex-wrap:wrap;align-items:center;}
+.mat-block{font-family:'JetBrains Mono',monospace;font-size:0.72rem;line-height:1.7;display:flex;align-items:center;gap:0.3rem;}
+.mat-name{font-weight:700;font-size:0.8rem;white-space:nowrap;}
+.mat-bracket{display:inline-flex;flex-direction:column;border-left:2.5px solid #666;border-right:2.5px solid #666;padding:0.2rem 0.4rem;border-radius:3px;background:#fafaf8;}
+.mat-row{white-space:pre;display:block;line-height:1.6;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>クレーン振れ止め制御</h1>
+  <p>台車＋吊り荷の状態フィードバック制御 — 10秒以内に整定しつつ、振れ角を最小化するゲインを探索せよ</p>
+</div>
+<div class="main">
+<div class="layout">
+
+<!-- LEFT -->
+<div class="left-col">
+
+  <div class="card">
+    <div class="card-label" style="color:var(--orange);">クレーンアニメーション</div>
+    <div class="canvas-wrap"><canvas id="crane-canvas"></canvas></div>
+    <div class="state-display">
+      <span class="state-item"><span class="state-lbl">p=</span><span class="state-v" id="disp-p">5.00</span></span>
+      <span class="state-item"><span class="state-lbl">θ=</span><span class="state-v" id="disp-th">0.00</span></span>
+      <span class="state-item"><span class="state-lbl">ṗ=</span><span class="state-v" id="disp-v">0.00</span></span>
+      <span class="state-item"><span class="state-lbl">θ̇=</span><span class="state-v" id="disp-w">0.00</span></span>
+      <span class="state-item"><span class="state-lbl">u=</span><span class="state-v" id="disp-u">0.00</span></span>
+      <span class="state-item"><span class="state-lbl">t=</span><span class="state-v" id="disp-t">0.00</span></span>
+    </div>
+    <div style="margin-top:0.4rem;padding-top:0.4rem;border-top:1px solid #eee;display:flex;flex-wrap:wrap;gap:0.3rem 1.2rem;font-size:0.8rem;">
+      <span class="state-item"><span class="state-lbl">|θ|<sub>max</sub>=</span><span class="state-v" id="disp-thmax" style="color:var(--red);">0.000</span><span style="font-size:0.7rem;color:var(--text3);"> rad</span></span>
+      <span class="state-item"><span class="state-lbl">整定時間=</span><span class="state-v" id="disp-tsettle" style="color:var(--blue);">—</span></span>
+      <span class="state-item" id="judge-wrap" style="display:none;"><span id="disp-judge" style="font-weight:700;font-size:0.78rem;padding:0.1em 0.5em;border-radius:4px;"></span></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">フィードバックゲイン u = −[Kp Kθ Kv Kω] x</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--blue);">Kp（位置ゲイン）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-kp" class="sl-kp" min="0" max="10" step="0.1" value="5">
+        <span class="ctrl-val kp" id="val-kp">5.0</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--purple);">Kθ（振れ角ゲイン）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-kt" class="sl-kt" min="0" max="50" step="0.5" value="0">
+        <span class="ctrl-val kt" id="val-kt">0.0</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--teal);">Kv（速度ゲイン）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-kv" class="sl-kv" min="0" max="20" step="0.1" value="10">
+        <span class="ctrl-val kv" id="val-kv">10.0</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--green);">Kω（振れ角速度ゲイン）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-kw" class="sl-kw" min="0" max="30" step="0.5" value="0">
+        <span class="ctrl-val kw" id="val-kw">0.0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--orange);">初期条件 &amp; 操作</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">台車初期位置 p(0) [m]</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-p0" class="sl-init" min="-2" max="12" step="0.5" value="10">
+        <span class="ctrl-val init" id="val-p0">10.0</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">振れ角初期値 θ(0) [rad]</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-th0" class="sl-init" min="-0.5" max="0.5" step="0.01" value="0.0">
+        <span class="ctrl-val init" id="val-th0">0.00</span>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-start" id="btn-start">▶ 開始</button>
+      <button class="btn btn-reset" id="btn-reset">↺ リセット</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--text3);">線形化モデル（MATLABと同一）</div>
+    <div class="mat-grid">
+      <div class="mat-block">
+        <span class="mat-name" style="color:var(--blue);">A =</span>
+        <span class="mat-bracket">
+          <span class="mat-row"> 0     0    1    0 </span>
+          <span class="mat-row"> 0     0    0    1 </span>
+          <span class="mat-row"> 0     0    0    0 </span>
+          <span class="mat-row"> 0  -g/l   0    0 </span>
+        </span>
+      </div>
+      <div class="mat-block">
+        <span class="mat-name" style="color:var(--blue);">B =</span>
+        <span class="mat-bracket">
+          <span class="mat-row">  0  </span>
+          <span class="mat-row">  0  </span>
+          <span class="mat-row">  1  </span>
+          <span class="mat-row"> 1/l </span>
+        </span>
+      </div>
+    </div>
+    <div class="sys-info" style="margin-top:0.4rem;">
+      状態: x = [p, θ, ṗ, θ̇]ᵀ &nbsp;|&nbsp; <code>l = <span id="disp-l">5.0</span> m</code>, <code>g = 9.81 m/s²</code><br>
+      非線形: ẍ = u, &nbsp; θ̈ = (−g sinθ + u cosθ)/l
+    </div>
+  </div>
+
+</div>
+
+<!-- RIGHT -->
+<div class="right-col">
+
+  <div class="card">
+    <div class="chart-title" style="color:var(--blue);">台車位置 p(t) [m]</div>
+    <div class="chart-wrap"><canvas id="chart-p"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="chart-title" style="color:var(--purple);">振れ角 θ(t) [rad]</div>
+    <div class="chart-wrap"><canvas id="chart-th"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="chart-title" style="color:var(--red);">制御入力 u(t) [N/kg]</div>
+    <div class="chart-wrap"><canvas id="chart-u"></canvas></div>
+  </div>
+
+  <div class="insight" style="border-color:#fca5a5;background:linear-gradient(135deg,#fff1f2,#ffe4e6);">
+    <strong>🎯 制御課題</strong><br>
+    台車位置 p(t) が<strong>10秒以内に整定</strong>（|p| ≤ 0.5m）する条件のもとで、<strong>振れ角の最大値 |θ|<sub>max</sub> を最小</strong>にするゲインを試行錯誤で見つけよ。
+  </div>
+
+  <div class="insight" style="border-color:#c4b5fd;background:linear-gradient(135deg,#f5f3ff,#ede9fe);color:#4c1d95;">
+    <strong style="color:#5b21b6;">🚀 発展課題</strong><br>
+    上記に加えて、<strong>制御入力 |u(t)| ≤ 4</strong> の制約を満たした上で、振れ角の最大値を最小化するゲインを見つけよ。（uのグラフで±4を超えていないか確認すること）
+  </div>
+
+  <div class="insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・各ゲインの意味: <strong>Kp</strong>=位置誤差に比例、<strong>Kv</strong>=台車速度に比例、<strong>Kθ</strong>=振れ角に比例、<strong>Kω</strong>=振れ角速度に比例するフィードバック<br>
+    ・<strong>Kp, Kv を大きくする</strong>と目標位置への収束は速くなる<br>
+    ・ただし位置＆速度フィードバックのみでは<strong>角度偏差を無視する</strong>ため、<strong>大きな振れ角</strong>が生じる<br>
+    ・<strong>4つのゲインのバランスが鍵</strong> — 各ゲインを変えると何が起きるか、自分で試して確かめよう
+  </div>
+
+</div>
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — クレーン振れ止め制御</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('crane-canvas');
+  const ctx = canvas.getContext('2d');
+  const btnStart = document.getElementById('btn-start');
+  const btnReset = document.getElementById('btn-reset');
+  const slKp=document.getElementById('sl-kp'), slKv=document.getElementById('sl-kv');
+  const slKt=document.getElementById('sl-kt'), slKw=document.getElementById('sl-kw');
+  const slP0=document.getElementById('sl-p0'), slTh0=document.getElementById('sl-th0');
+
+  // Parameters (matching MATLAB model)
+  const LL = 5.0;  // rope length [m]
+  const g = 9.81;
+  const dt = 0.01;
+  const STEPS_PER_FRAME = 3;
+  const T_MAX = 15;
+
+  document.getElementById('disp-l').textContent = LL.toFixed(1);
+
+  let p, th, v, om, t;
+  let running = false, animId = null;
+  let histT=[], histP=[], histTh=[], histU=[];
+  let maxTheta = 0;  // max |θ| tracker
+  let settleTime = null; // position settling time (|p|<=0.5)
+
+  function getK(){ return { kp:parseFloat(slKp.value), kt:parseFloat(slKt.value), kv:parseFloat(slKv.value), kw:parseFloat(slKw.value) }; }
+
+  function control(pp,thh,vv,omm){
+    const K=getK();
+    return -(K.kp*pp + K.kt*thh + K.kv*vv + K.kw*omm);
+  }
+
+  // Nonlinear dynamics matching MATLAB linearization:
+  //   p̈ = u
+  //   θ̈ = -(g sinθ + u cosθ)/l
+  // State: [p, θ, ṗ, θ̇]
+  function dynamics(s, uu){
+    const sinT = Math.sin(s[1]), cosT = Math.cos(s[1]);
+    const pdd = uu;
+    const thdd = (-g*sinT + uu*cosT)/LL;
+    return [s[2], s[3], pdd, thdd];
+  }
+
+  function rk4(s, uu, h){
+    const k1=dynamics(s,uu);
+    const s2=s.map((v,i)=>v+0.5*h*k1[i]);
+    const k2=dynamics(s2,uu);
+    const s3=s.map((v,i)=>v+0.5*h*k2[i]);
+    const k3=dynamics(s3,uu);
+    const s4=s.map((v,i)=>v+h*k3[i]);
+    const k4=dynamics(s4,uu);
+    return s.map((v,i)=>v+h/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]));
+  }
+
+  // Charts
+  function ds(label,color,w){return{label,data:[],borderColor:color,borderWidth:w||2,pointRadius:0,fill:false,tension:0.05};}
+  function makeChart(id,yMin,yMax,color,label){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[ds(label,color,2)]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',min:0,max:T_MAX,title:{display:true,text:'t [s]',font:{size:10,weight:'600'}},ticks:{stepSize:2,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{min:yMin,max:yMax,ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chP  = makeChart('chart-p',  -2, 12, '#2563eb','p');
+  const chTh = makeChart('chart-th', -0.5, 0.5, '#7c3aed','θ');
+  const chU  = makeChart('chart-u',  -8, 8, '#dc2626','u');
+
+  // Canvas
+  function resizeCanvas(){
+    const rect=canvas.parentElement.getBoundingClientRect();
+    canvas.width=rect.width; canvas.height=280;
+  }
+  resizeCanvas();
+  window.addEventListener('resize',resizeCanvas);
+
+  function drawCrane(){
+    const W=canvas.width, H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+
+    // scale: map meters to pixels. Show range -2 to 12 m
+    const VIEW_MIN=-2, VIEW_MAX=12, VIEW_RANGE=VIEW_MAX-VIEW_MIN;
+    const scale = W / VIEW_RANGE;
+    const originX = (-VIEW_MIN)*scale; // p=0 position in pixels
+    const railY = 50;
+
+    // Background
+    const grad=ctx.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0,'#f8fafc'); grad.addColorStop(1,'#fafaf8');
+    ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+
+    // Rail
+    ctx.strokeStyle='#aaa'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(0,railY); ctx.lineTo(W,railY); ctx.stroke();
+
+    // Rail ticks
+    ctx.strokeStyle='#ccc'; ctx.lineWidth=1;
+    ctx.font="9px 'JetBrains Mono',monospace"; ctx.fillStyle='#aaa'; ctx.textAlign='center';
+    for(let pm=VIEW_MIN;pm<=VIEW_MAX;pm++){
+      const tx=originX+pm*scale;
+      if(tx<5||tx>W-5) continue;
+      ctx.beginPath(); ctx.moveTo(tx,railY-4); ctx.lineTo(tx,railY+4); ctx.stroke();
+      ctx.fillText(pm,tx,railY+15);
+    }
+
+    // Target line (p=0)
+    ctx.strokeStyle='#93c5fd'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(originX,railY-20); ctx.lineTo(originX,H-5); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#60a5fa'; ctx.font="10px 'Noto Sans JP',sans-serif";
+    ctx.fillText('目標位置',originX,railY-25);
+
+    // Initial position marker
+    const initPx = originX + parseFloat(slP0.value)*scale;
+    ctx.strokeStyle='#fdba74'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(initPx,railY-10); ctx.lineTo(initPx,railY+10); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Cart position in pixels
+    const cx = originX + p*scale;
+
+    // Cart body
+    const cartW=50, cartH=24;
+    ctx.fillStyle='#334155';
+    ctx.beginPath();
+    if(ctx.roundRect) ctx.roundRect(cx-cartW/2,railY-cartH,cartW,cartH,4);
+    else ctx.fillRect(cx-cartW/2,railY-cartH,cartW,cartH);
+    ctx.fill();
+
+    // Wheels
+    ctx.fillStyle='#64748b';
+    [cx-16,cx+16].forEach(wx=>{
+      ctx.beginPath(); ctx.arc(wx,railY+6,7,0,2*Math.PI); ctx.fill();
+      ctx.strokeStyle='#475569'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(wx,railY+6,7,0,2*Math.PI); ctx.stroke();
+    });
+
+    // Rope hinge
+    const hx=cx, hy=railY;
+
+    // Pendulum mass position
+    const ropePixels = LL*scale;
+    const mx = hx - ropePixels*Math.sin(th);
+    const my = hy + ropePixels*Math.cos(th);
+
+    // Rope
+    ctx.strokeStyle='#78716c'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(hx,hy); ctx.lineTo(mx,my); ctx.stroke();
+
+    // Load
+    ctx.fillStyle='#ea580c';
+    ctx.beginPath(); ctx.arc(mx,my,12,0,2*Math.PI); ctx.fill();
+    ctx.strokeStyle='#c2410c'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(mx,my,12,0,2*Math.PI); ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font="bold 9px 'JetBrains Mono',monospace";
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('m',mx,my);
+
+    // Force arrow
+    const u_val=control(p,th,v,om);
+    const arrowScale=4;
+    const arrowLen=Math.min(Math.abs(u_val)*arrowScale,60);
+    if(Math.abs(u_val)>0.05){
+      const dir=u_val>0?1:-1;
+      const ax1=cx+dir*(cartW/2+2), ax2=ax1+dir*arrowLen;
+      const ay=railY-cartH/2;
+      ctx.strokeStyle='#dc2626'; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.moveTo(ax1,ay); ctx.lineTo(ax2,ay); ctx.stroke();
+      ctx.fillStyle='#dc2626';
+      ctx.beginPath(); ctx.moveTo(ax2,ay-4); ctx.lineTo(ax2+dir*7,ay); ctx.lineTo(ax2,ay+4); ctx.fill();
+    }
+
+    // Info text
+    ctx.fillStyle='#666'; ctx.font="11px 'Noto Sans JP',sans-serif"; ctx.textAlign='left';
+    ctx.fillText('クレーン振れ止め制御',8,H-8);
+  }
+
+  function resetState(){
+    p=parseFloat(slP0.value); th=parseFloat(slTh0.value); v=0; om=0; t=0;
+    histT=[]; histP=[]; histTh=[]; histU=[];
+    maxTheta=0; settleTime=null;
+    document.getElementById('judge-wrap').style.display='none';
+    updateDisplays(); updateCharts(); drawCrane();
+  }
+
+  function updateDisplays(){
+    document.getElementById('val-kp').textContent=parseFloat(slKp.value).toFixed(2);
+    document.getElementById('val-kv').textContent=parseFloat(slKv.value).toFixed(1);
+    document.getElementById('val-kt').textContent=parseFloat(slKt.value).toFixed(1);
+    document.getElementById('val-kw').textContent=parseFloat(slKw.value).toFixed(1);
+    document.getElementById('val-p0').textContent=parseFloat(slP0.value).toFixed(1);
+    document.getElementById('val-th0').textContent=parseFloat(slTh0.value).toFixed(2);
+    document.getElementById('disp-p').textContent=p.toFixed(3);
+    document.getElementById('disp-th').textContent=th.toFixed(4);
+    document.getElementById('disp-v').textContent=v.toFixed(3);
+    document.getElementById('disp-w').textContent=om.toFixed(4);
+    document.getElementById('disp-u').textContent=control(p,th,v,om).toFixed(3);
+    document.getElementById('disp-t').textContent=t.toFixed(2);
+    // Max swing angle
+    document.getElementById('disp-thmax').textContent=maxTheta.toFixed(4);
+    // Settling time
+    const tsDisp = document.getElementById('disp-tsettle');
+    const judgeWrap = document.getElementById('judge-wrap');
+    const judgeEl = document.getElementById('disp-judge');
+    if(t >= T_MAX - 0.1){
+      // Simulation finished — show final judgment
+      const settled = (settleTime !== null && settleTime < 10) || (settleTime === null);
+      const ts_val = settleTime !== null ? settleTime.toFixed(2)+' s' : '< 0.01 s';
+      tsDisp.textContent = ts_val;
+      judgeWrap.style.display = '';
+      if(settled && (settleTime===null || settleTime<10)){
+        judgeEl.textContent = '✓ 整定OK（|θ|max = '+maxTheta.toFixed(4)+' rad）';
+        judgeEl.style.background = '#d1fae5'; judgeEl.style.color = '#065f46';
+      } else {
+        judgeEl.textContent = '✗ 10秒以内に整定せず';
+        judgeEl.style.background = '#fee2e2'; judgeEl.style.color = '#991b1b';
+      }
+    } else if(settleTime !== null){
+      tsDisp.textContent = '> '+settleTime.toFixed(1)+' s';
+      judgeWrap.style.display = 'none';
+    } else {
+      tsDisp.textContent = '—';
+      judgeWrap.style.display = 'none';
+    }
+  }
+
+  function updateCharts(){
+    const skip=Math.max(1,Math.floor(histT.length/500));
+    const pD=[],thD=[],uD=[];
+    for(let i=0;i<histT.length;i+=skip){
+      pD.push({x:histT[i],y:histP[i]});
+      thD.push({x:histT[i],y:histTh[i]});
+      uD.push({x:histT[i],y:histU[i]});
+    }
+    chP.data.datasets[0].data=pD;
+    chTh.data.datasets[0].data=thD;
+    chU.data.datasets[0].data=uD;
+    chP.update(); chTh.update(); chU.update();
+  }
+
+  function simStep(){
+    for(let i=0;i<STEPS_PER_FRAME;i++){
+      const uu=control(p,th,v,om);
+      const s=rk4([p,th,v,om],uu,dt);
+      p=s[0]; th=s[1]; v=s[2]; om=s[3]; t+=dt;
+      // Track max |θ|
+      const absth=Math.abs(th);
+      if(absth>maxTheta) maxTheta=absth;
+      // Track settling: last time |p|>0.5
+      if(Math.abs(p)>0.5) settleTime=t;
+      if(Math.round(t/dt)%5===0){
+        histT.push(t); histP.push(p); histTh.push(th); histU.push(uu);
+      }
+    }
+  }
+
+  function animLoop(){
+    if(!running) return;
+    if(t>=T_MAX){stop();return;}
+    simStep(); updateDisplays(); drawCrane();
+    if(Math.round(t/dt)%20===0) updateCharts();
+    animId=requestAnimationFrame(animLoop);
+  }
+
+  function start(){if(running)return; if(t>=T_MAX-0.1){resetState();} running=true; btnStart.disabled=true; animLoop();}
+  function stop(){running=false; btnStart.disabled=false; if(animId)cancelAnimationFrame(animId); updateCharts();}
+  function reset(){stop(); resetState();}
+
+  btnStart.addEventListener('click',start);
+  btnReset.addEventListener('click',reset);
+  [slKp,slKv,slKt,slKw].forEach(s=>s.addEventListener('input',updateDisplays));
+  [slP0,slTh0].forEach(s=>s.addEventListener('input',function(){if(!running)resetState();else updateDisplays();}));
+
+  resetState();
+})();
+</script>
+</body>
+</html>
