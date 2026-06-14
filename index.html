@@ -13,8 +13,12 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .hero{background:linear-gradient(135deg,#0f172a,#1e3a5f,#2563eb);color:#fff;padding:3rem 2rem;text-align:center;}
 .hero h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.3rem,3.5vw,2rem);font-weight:700;margin-bottom:0.5rem;}
 .hero p{font-size:0.9rem;opacity:0.75;max-width:600px;margin:0 auto;}
-.main{max-width:800px;margin:0 auto;padding:2rem 1.5rem;}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1rem;margin-bottom:2rem;}
+.main{max-width:860px;margin:0 auto;padding:2rem 1.5rem;}
+.section-title{font-family:'Noto Serif JP',serif;font-size:1.15rem;font-weight:700;margin:1.8rem 0 0.9rem;padding-left:0.6rem;border-left:4px solid #2563eb;}
+.section-title:first-child{margin-top:0;}
+.section-title.applied{border-color:#059669;}
+.section-title.kids{border-color:#ea580c;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1rem;}
 .tool-card{
   background:var(--card);border:1px solid var(--border);border-radius:14px;
   padding:1.3rem 1.5rem;box-shadow:0 2px 8px rgba(0,0,0,0.04);
@@ -22,7 +26,9 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   display:flex;flex-direction:column;gap:0.4rem;
 }
 .tool-card:hover{border-color:#2563eb;box-shadow:0 4px 16px rgba(37,99,235,0.12);transform:translateY(-2px);}
+.tool-card.kids:hover{border-color:#ea580c;box-shadow:0 4px 16px rgba(234,88,12,0.12);}
 .tool-num{font-family:'JetBrains Mono',monospace;font-size:0.68rem;font-weight:700;letter-spacing:0.08em;color:#2563eb;}
+.tool-card.kids .tool-num{color:#ea580c;}
 .tool-name{font-family:'Noto Serif JP',serif;font-size:1.05rem;font-weight:700;}
 .tool-desc{font-size:0.83rem;color:var(--text2);line-height:1.6;}
 .tool-tags{display:flex;gap:0.3rem;flex-wrap:wrap;margin-top:0.2rem;}
@@ -31,7 +37,9 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .tag-bode{background:#ede9fe;color:#5b21b6;}
 .tag-pid{background:#fef3c7;color:#92400e;}
 .tag-pole{background:#dbeafe;color:#1d4ed8;}
-.footer{text-align:center;padding:2rem;color:var(--text2);font-size:0.78rem;border-top:1px solid var(--border);}
+.tag-anim{background:#fce7f3;color:#9d174d;}
+.tag-game{background:#ffedd5;color:#9a3412;}
+.footer{text-align:center;padding:2rem;color:var(--text2);font-size:0.78rem;border-top:1px solid var(--border);margin-top:2rem;}
 .footer a{color:#2563eb;}
 </style>
 </head>
@@ -43,6 +51,9 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 </div>
 
 <div class="main">
+
+  <!-- 基礎編 -->
+  <div class="section-title">基礎編 — 伝達関数と応答</div>
   <div class="grid">
 
     <a href="control_1st_order.html" class="tool-card">
@@ -80,7 +91,69 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
       <span class="tool-tags"><span class="tag tag-pole">極配置</span><span class="tag tag-step">ステップ応答</span><span class="tag tag-pole">状態フィードバック</span></span>
     </a>
 
+    <a href="control_observer.html" class="tool-card">
+      <span class="tool-num">TOOL 06</span>
+      <span class="tool-name">状態推定（オブザーバ）</span>
+      <span class="tool-desc">観測ノイズ下での状態推定。オブザーバゲインを変えると、収束の速さとノイズ感度のトレードオフが見える。</span>
+      <span class="tool-tags"><span class="tag tag-pole">状態推定</span><span class="tag tag-pole">オブザーバ</span></span>
+    </a>
+
   </div>
+
+  <!-- 応用編 -->
+  <div class="section-title applied">応用編 — 実システムの制御</div>
+  <div class="grid">
+
+    <a href="control_crane.html" class="tool-card">
+      <span class="tool-num">TOOL 07</span>
+      <span class="tool-name">クレーン振れ止め制御</span>
+      <span class="tool-desc">台車＋吊り荷の状態フィードバック制御。10秒以内整定の条件で振れ角を最小化するゲインを探索する課題付き。</span>
+      <span class="tool-tags"><span class="tag tag-anim">アニメーション</span><span class="tag tag-pole">状態フィードバック</span></span>
+    </a>
+
+    <a href="control_acc.html" class="tool-card">
+      <span class="tool-num">TOOL 08</span>
+      <span class="tool-name">適応クルーズ制御（ACC）</span>
+      <span class="tool-desc">前方車に追従し車間距離を一定に保つ制御。2つの目標速度パターンとゲインa,bで追従性能を観察。</span>
+      <span class="tool-tags"><span class="tag tag-anim">アニメーション</span><span class="tag tag-pole">状態フィードバック</span></span>
+    </a>
+
+    <a href="control_invpend.html" class="tool-card">
+      <span class="tool-num">TOOL 09</span>
+      <span class="tool-name">倒立振子の制御</span>
+      <span class="tool-desc">台車上の振子を直立に保ちつつ目標位置へ移動。非最小位相系の特徴と状態フィードバックを体験。</span>
+      <span class="tool-tags"><span class="tag tag-anim">アニメーション</span><span class="tag tag-pole">状態フィードバック</span></span>
+    </a>
+
+    <a href="control_temperature.html" class="tool-card">
+      <span class="tool-num">TOOL 10</span>
+      <span class="tool-name">部屋の温度制御</span>
+      <span class="tool-desc">3つの条件の部屋を同時にPI制御で比較（目標18℃）。広さや扉開放が応答に与える影響を観察。</span>
+      <span class="tool-tags"><span class="tag tag-pid">PI制御</span><span class="tag tag-anim">比較</span></span>
+    </a>
+
+  </div>
+
+  <!-- Kids編 -->
+  <div class="section-title kids">こども向けゲーム</div>
+  <div class="grid">
+
+    <a href="control_acc_game.html" class="tool-card kids">
+      <span class="tool-num">GAME 01</span>
+      <span class="tool-name">🚓 自動追跡パトカーチャレンジ</span>
+      <span class="tool-desc">ACCのゲインを調整して逃げる車を追跡！ぶつからず・見失わず40秒追えばクリア。車間の安定度でスコアが決まる。</span>
+      <span class="tool-tags"><span class="tag tag-game">ゲーム</span><span class="tag tag-game">スコア</span></span>
+    </a>
+
+    <a href="control_crane_game.html" class="tool-card kids">
+      <span class="tool-num">GAME 02</span>
+      <span class="tool-name">📦 荷物おとどけチャレンジ</span>
+      <span class="tool-desc">クレーンのつまみを調整して荷物をゆらさず目標へ！ふれ角が大きいと落下。ゆれの小ささでスコアと星を獲得。</span>
+      <span class="tool-tags"><span class="tag tag-game">ゲーム</span><span class="tag tag-game">スコア</span></span>
+    </a>
+
+  </div>
+
 </div>
 
 <div class="footer">
