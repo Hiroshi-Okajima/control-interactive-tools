@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>荷物おとどけチャレンジ！クレーン振れ止めゲーム</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#7c2d12,#c2410c,#f97316);color:#fff;padding:1.2rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.2rem,3vw,1.6rem);font-weight:700;margin-bottom:0.1rem;}
+.header p{font-size:0.8rem;opacity:0.85;}
+.main{max-width:1000px;margin:0 auto;padding:0.8rem;}
+.game-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0;box-shadow:0 2px 10px rgba(0,0,0,0.06);overflow:hidden;margin-bottom:0.8rem;}
+.canvas-wrap{position:relative;background:#e0f2fe;}
+canvas#game-canvas{display:block;width:100%;}
+.hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:0.6rem 0.9rem;pointer-events:none;}
+.hud-box{background:rgba(124,45,18,0.8);backdrop-filter:blur(4px);border-radius:8px;padding:0.4rem 0.7rem;color:#fff;font-family:'JetBrains Mono',monospace;}
+.hud-v{font-size:1.3rem;font-weight:700;line-height:1.1;}
+.hud-l{font-size:0.6rem;opacity:0.75;letter-spacing:0.05em;}
+.hud-timer .hud-v{color:#fde047;}
+.swing-meter{position:absolute;bottom:0;left:0;right:0;height:7px;background:linear-gradient(90deg,#22c55e 0%,#22c55e 50%,#f59e0b 75%,#dc2626 100%);}
+.swing-marker{position:absolute;bottom:0;width:3px;height:15px;background:#1e293b;box-shadow:0 0 4px rgba(255,255,255,0.8);transform:translateX(-50%);transition:left 0.05s;}
+.result-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(124,45,18,0.85);backdrop-filter:blur(3px);color:#fff;text-align:center;z-index:10;padding:0.8rem;overflow-y:auto;}
+.result-overlay.show{display:flex;}
+.result-title{font-family:'Noto Serif JP',serif;font-size:1.7rem;font-weight:800;margin-bottom:0.3rem;}
+.result-title.success{color:#86efac;}
+.result-title.fail{color:#fca5a5;}
+.result-stars{font-size:1.1rem;margin-bottom:0.4rem;letter-spacing:0.05em;}
+.result-msg{font-size:0.88rem;opacity:0.9;margin-bottom:0.8rem;max-width:400px;}
+.result-btn{pointer-events:auto;padding:0.5em 1.5em;border:none;border-radius:8px;background:#ea580c;color:#fff;font-weight:700;font-size:0.9rem;cursor:pointer;font-family:'Noto Sans JP',sans-serif;}
+.result-btn:hover{background:#c2410c;}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;}
+@media(max-width:700px){.controls{grid-template-columns:1fr;}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem;}
+.ctrl-group{margin-bottom:0.5rem;}.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.74rem;font-weight:600;color:var(--text2);margin-bottom:0.12rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.85rem;padding:0.1em 0.5em;border-radius:4px;min-width:3.5em;text-align:center;}
+.ctrl-val.kp{color:var(--blue);background:#eef2ff;}
+.ctrl-val.kv{color:var(--teal);background:#f0fdfa;}
+.ctrl-val.kt{color:var(--purple);background:#f3eeff;}
+.ctrl-val.kw{color:var(--green);background:#ecfdf5;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--orange);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--orange);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);cursor:pointer;}
+input.kp::-webkit-slider-thumb,input.kp::-moz-range-thumb{background:var(--blue);}
+input.kv::-webkit-slider-thumb,input.kv::-moz-range-thumb{background:var(--teal);}
+input.kt::-webkit-slider-thumb,input.kt::-moz-range-thumb{background:var(--purple);}
+input.kw::-webkit-slider-thumb,input.kw::-moz-range-thumb{background:var(--green);}
+.btn-row{display:flex;gap:0.5rem;margin-top:0.3rem;}
+.btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:0.3rem;padding:0.6em 1em;border:none;border-radius:8px;font-weight:700;font-size:0.9rem;cursor:pointer;transition:opacity 0.15s;}
+.btn:hover{opacity:0.88;}
+.btn-start{background:var(--orange);color:#fff;}
+.btn-reset{background:#e5e5e5;color:#444;}
+.rule-box{font-size:0.78rem;line-height:1.75;color:var(--text2);}
+.rule-box .ok{color:var(--green);font-weight:700;}
+.rule-box .ng{color:var(--red);font-weight:700;}
+.level-tabs{display:flex;gap:0.4rem;margin-bottom:0.5rem;}
+.level-tab{flex:1;padding:0.4em;border:2px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;text-align:center;font-size:0.72rem;font-weight:700;color:var(--text2);}
+.level-tab.active{border-color:var(--orange);background:#fff7ed;color:#c2410c;}
+.footer{text-align:center;padding:0.8rem;color:var(--text3);font-size:0.68rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>📦 荷物おとどけチャレンジ！🏗️</h1>
+  <p>クレーンを操って、荷物をゆらさず目標位置まで届けよう！</p>
+</div>
+<div class="main">
+
+<div class="game-card">
+  <div class="canvas-wrap">
+    <canvas id="game-canvas" width="960" height="340"></canvas>
+    <div class="hud">
+      <div class="hud-box"><div class="hud-l">台車位置</div><div class="hud-v" id="hud-pos">10.0 m</div></div>
+      <div class="hud-box"><div class="hud-l">ふれ角</div><div class="hud-v" id="hud-angle">0.0°</div></div>
+      <div class="hud-box hud-timer"><div class="hud-l">残り時間</div><div class="hud-v" id="hud-timer">20.0</div></div>
+    </div>
+    <div class="swing-marker" id="swing-marker" style="left:0%;"></div>
+    <div class="swing-meter"></div>
+    <div class="result-overlay" id="result">
+      <div class="result-title" id="result-title"></div>
+      <div class="result-stars" id="result-stars"></div>
+      <div class="result-msg" id="result-msg"></div>
+      <button class="result-btn" id="result-btn">もう一度</button>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+
+  <div class="card">
+    <div class="card-label" style="color:var(--orange);">クレーン調整つまみ u = −[Kp Kθ Kv Kω]x</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--blue);">Kp：目標へ向かう力</div>
+      <div class="ctrl-row"><input type="range" id="sl-kp" class="kp" min="0" max="10" step="0.1" value="3"><span class="ctrl-val kp" id="val-kp">3.0</span></div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--teal);">Kv：行きすぎを抑える力</div>
+      <div class="ctrl-row"><input type="range" id="sl-kv" class="kv" min="0" max="20" step="0.1" value="7"><span class="ctrl-val kv" id="val-kv">7.0</span></div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--purple);">Kθ：ゆれを戻す力</div>
+      <div class="ctrl-row"><input type="range" id="sl-kt" class="kt" min="0" max="50" step="0.5" value="0"><span class="ctrl-val kt" id="val-kt">0.0</span></div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--green);">Kω：ゆれを止める力</div>
+      <div class="ctrl-row"><input type="range" id="sl-kw" class="kw" min="0" max="30" step="0.5" value="0"><span class="ctrl-val kw" id="val-kw">0.0</span></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-start" id="btn-start">▶ スタート</button>
+      <button class="btn btn-reset" id="btn-reset">↺ リセット</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">あそびかた</div>
+    <div class="level-tabs">
+      <div class="level-tab active" id="lv1" onclick="setLevel(1)">かんたん</div>
+      <div class="level-tab" id="lv2" onclick="setLevel(2)">ふつう</div>
+      <div class="level-tab" id="lv3" onclick="setLevel(3)">むずかしい</div>
+    </div>
+    <div class="rule-box">
+      🎯 荷物を目標位置（緑の線）まで運ぶ<br>
+      <span class="ng">✗ ふれ角が大きすぎ</span>：荷物が落ちる！<br>
+      <span class="ok">✓ 目標で停止＋ゆれ小</span>：おとどけ成功！<br>
+      <span style="font-size:0.72rem;color:var(--text3);">最初はKθ=Kω=0。まずKpとKvだけで動かすと…大きくゆれる！Kθ・Kωを足してゆれを止めよう。ふれ角が小さいほど星が増える⭐</span>
+    </div>
+    <div style="font-size:0.7rem;color:var(--text3);margin-top:0.4rem;" id="level-cond">
+      かんたん：ふれ角±35°まで / 制限20秒
+    </div>
+  </div>
+
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — クレーン振れ止めゲーム</div>
+
+<script>
+(function(){
+  const canvas=document.getElementById('game-canvas');
+  const ctx=canvas.getContext('2d');
+  const slKp=document.getElementById('sl-kp'),slKv=document.getElementById('sl-kv');
+  const slKt=document.getElementById('sl-kt'),slKw=document.getElementById('sl-kw');
+  const btnStart=document.getElementById('btn-start'),btnReset=document.getElementById('btn-reset');
+  const resultEl=document.getElementById('result'),resultTitle=document.getElementById('result-title');
+  const resultStars=document.getElementById('result-stars'),resultMsg=document.getElementById('result-msg');
+  const resultBtn=document.getElementById('result-btn');
+
+  const LL=5.0, g=9.81, dt=0.01, STEPS_PER_FRAME=2;
+  const P_START=10, P_TARGET=0;
+
+  // Level settings
+  const LEVELS={
+    1:{maxAngle:35, timeLimit:20, label:'かんたん：ふれ角±35°まで / 制限20秒'},
+    2:{maxAngle:22, timeLimit:18, label:'ふつう：ふれ角±22°まで / 制限18秒'},
+    3:{maxAngle:14, timeLimit:15, label:'むずかしい：ふれ角±14°まで / 制限15秒'}
+  };
+  let level=1;
+
+  let p,th,v,om,t;
+  let running=false,animId=null,gameOver=false;
+  let maxAbsAngle=0, settledTime=null, clearedFlag=false;
+
+  window.setLevel=function(lv){
+    level=lv;
+    [1,2,3].forEach(i=>{document.getElementById('lv'+i).className='level-tab'+(i===lv?' active':'');});
+    document.getElementById('level-cond').textContent=LEVELS[lv].label;
+    if(!running) resetState();
+  };
+
+  function getK(){return{kp:parseFloat(slKp.value),kt:parseFloat(slKt.value),kv:parseFloat(slKv.value),kw:parseFloat(slKw.value)};}
+  function control(pp,thh,vv,omm){const K=getK();return -(K.kp*(pp-P_TARGET)+K.kt*thh+K.kv*vv+K.kw*omm);}
+
+  function dynamics(s,uu){
+    const sinT=Math.sin(s[1]),cosT=Math.cos(s[1]);
+    const pdd=uu;
+    const thdd=(-g*sinT+uu*cosT)/LL;
+    return [s[2],s[3],pdd,thdd];
+  }
+  function rk4(s,uu,h){
+    const k1=dynamics(s,uu);
+    const s2=s.map((v,i)=>v+.5*h*k1[i]);const k2=dynamics(s2,uu);
+    const s3=s.map((v,i)=>v+.5*h*k2[i]);const k3=dynamics(s3,uu);
+    const s4=s.map((v,i)=>v+h*k3[i]);const k4=dynamics(s4,uu);
+    return s.map((v,i)=>v+h/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]));
+  }
+
+  function resizeCanvas(){const r=canvas.parentElement.getBoundingClientRect();canvas.width=r.width;canvas.height=340;}
+  resizeCanvas();
+  window.addEventListener('resize',resizeCanvas);
+
+  function drawGame(){
+    const W=canvas.width,H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+
+    // Sky
+    const sky=ctx.createLinearGradient(0,0,0,H);
+    sky.addColorStop(0,'#bae6fd');sky.addColorStop(1,'#e0f2fe');
+    ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+
+    // Map: view -3..13m
+    const VMIN=-3,VMAX=13,VR=VMAX-VMIN;
+    const scale=W/VR;
+    const railY=70;
+    function sx(mx){return (mx-VMIN)*scale;}
+
+    // Rail
+    ctx.strokeStyle='#94a3b8';ctx.lineWidth=4;
+    ctx.beginPath();ctx.moveTo(0,railY);ctx.lineTo(W,railY);ctx.stroke();
+    // Rail支柱
+    ctx.fillStyle='#cbd5e1';
+    for(let mx=-2;mx<=12;mx+=2){const x=sx(mx);ctx.fillRect(x-2,railY-10,4,10);}
+
+    // Ground
+    ctx.fillStyle='#86efac';ctx.fillRect(0,H-30,W,30);
+    ctx.strokeStyle='#4ade80';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,H-30);ctx.lineTo(W,H-30);ctx.stroke();
+
+    // Target zone (green line + flag)
+    const tgtX=sx(P_TARGET);
+    ctx.strokeStyle='#22c55e';ctx.lineWidth=3;ctx.setLineDash([8,5]);
+    ctx.beginPath();ctx.moveTo(tgtX,railY);ctx.lineTo(tgtX,H-30);ctx.stroke();
+    ctx.setLineDash([]);
+    // Target zone band (±0.5m)
+    ctx.fillStyle='rgba(34,197,94,0.12)';
+    ctx.fillRect(sx(P_TARGET-0.5),railY,sx(P_TARGET+0.5)-sx(P_TARGET-0.5),H-30-railY);
+    // Flag
+    ctx.fillStyle='#16a34a';ctx.beginPath();
+    ctx.moveTo(tgtX,railY+8);ctx.lineTo(tgtX+22,railY+15);ctx.lineTo(tgtX,railY+22);ctx.fill();
+    ctx.fillStyle='#16a34a';ctx.font="bold 11px 'Noto Sans JP'";ctx.textAlign='center';
+    ctx.fillText('目標',tgtX,railY-8);
+
+    // Start position marker
+    const startX=sx(P_START);
+    ctx.strokeStyle='#fbbf24';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(startX,railY);ctx.lineTo(startX,H-30);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#d97706';ctx.font="10px 'Noto Sans JP'";ctx.fillText('スタート',startX,railY-8);
+
+    // Cart
+    const cartX=sx(p);
+    const cartW=52,cartH=26;
+    ctx.fillStyle='#475569';
+    if(ctx.roundRect){ctx.beginPath();ctx.roundRect(cartX-cartW/2,railY-cartH/2,cartW,cartH,4);ctx.fill();}
+    else ctx.fillRect(cartX-cartW/2,railY-cartH/2,cartW,cartH);
+    // Trolley wheels on rail
+    ctx.fillStyle='#1e293b';
+    ctx.beginPath();ctx.arc(cartX-15,railY-cartH/2,5,0,2*Math.PI);ctx.fill();
+    ctx.beginPath();ctx.arc(cartX+15,railY-cartH/2,5,0,2*Math.PI);ctx.fill();
+
+    // Rope + cargo (θ positive = swings left, matching mx = hx - l sinθ)
+    const hookX=cartX,hookY=railY+cartH/2;
+    const ropeLen=LL*scale*0.6;
+    const cargoX=hookX-ropeLen*Math.sin(th);
+    const cargoY=hookY+ropeLen*Math.cos(th);
+    ctx.strokeStyle='#78716c';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(hookX,hookY);ctx.lineTo(cargoX,cargoY);ctx.stroke();
+
+    // Cargo box (color by danger)
+    const absDeg=Math.abs(th)*180/Math.PI;
+    const maxA=LEVELS[level].maxAngle;
+    let boxColor;
+    if(absDeg<maxA*0.5) boxColor='#22c55e';
+    else if(absDeg<maxA*0.8) boxColor='#f59e0b';
+    else boxColor='#dc2626';
+    const bw=30;
+    ctx.save();
+    ctx.translate(cargoX,cargoY);
+    ctx.rotate(-th); // box hangs along rope
+    ctx.fillStyle=boxColor;
+    if(ctx.roundRect){ctx.beginPath();ctx.roundRect(-bw/2,-bw/2,bw,bw,3);ctx.fill();}
+    else ctx.fillRect(-bw/2,-bw/2,bw,bw);
+    ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=1.5;
+    ctx.strokeRect(-bw/2,-bw/2,bw,bw);
+    // Tape cross
+    ctx.strokeStyle='rgba(255,255,255,0.6)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(-bw/2,0);ctx.lineTo(bw/2,0);ctx.moveTo(0,-bw/2);ctx.lineTo(0,bw/2);ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font="13px serif";ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('📦',0,0);
+    ctx.restore();
+
+    // Danger flash when near limit
+    if(absDeg>maxA*0.8){
+      ctx.fillStyle='rgba(220,38,38,'+(0.15+0.15*Math.sin(t*15))+')';
+      ctx.fillRect(0,0,W,H);
+    }
+  }
+
+  function updateHUD(){
+    document.getElementById('hud-pos').textContent=p.toFixed(1)+' m';
+    const absDeg=Math.abs(th)*180/Math.PI;
+    document.getElementById('hud-angle').textContent=(th*180/Math.PI).toFixed(1)+'°';
+    const aEl=document.querySelector('#hud-angle');
+    const maxA=LEVELS[level].maxAngle;
+    if(absDeg>maxA*0.8)aEl.style.color='#fca5a5';
+    else if(absDeg>maxA*0.5)aEl.style.color='#fde047';
+    else aEl.style.color='#86efac';
+    document.getElementById('hud-timer').textContent=Math.max(0,LEVELS[level].timeLimit-t).toFixed(1);
+    // Swing meter marker (0..maxAngle → 0..100%)
+    const pct=Math.min(100,(absDeg/maxA)*100);
+    document.getElementById('swing-marker').style.left=pct+'%';
+  }
+
+  function endGame(success,stars,msg,score){
+    running=false;gameOver=true;
+    if(animId)cancelAnimationFrame(animId);
+    resultTitle.textContent=success?'🎉 おとどけ成功！':'💥 失敗…';
+    resultTitle.className='result-title '+(success?'success':'fail');
+    if(success && typeof score==='number'){
+      resultStars.innerHTML='スコア <span style="font-size:2rem;color:#fde047;">'+score+'</span> 点'+
+        '<div style="font-size:1.5rem;margin-top:0.1rem;">'+'⭐'.repeat(stars)+'☆'.repeat(3-stars)+'</div>';
+    } else {
+      resultStars.textContent='';
+    }
+    resultMsg.textContent=msg;
+    resultEl.classList.add('show');
+    btnStart.disabled=false;
+  }
+
+  function simAndDraw(){
+    if(!running)return;
+    const maxA=LEVELS[level].maxAngle;
+    const tLimit=LEVELS[level].timeLimit;
+    for(let i=0;i<STEPS_PER_FRAME;i++){
+      const uu=control(p,th,v,om);
+      const s=rk4([p,th,v,om],uu,dt);
+      p=s[0];th=s[1];v=s[2];om=s[3];t+=dt;
+      const absDeg=Math.abs(th)*180/Math.PI;
+      if(absDeg>maxAbsAngle)maxAbsAngle=absDeg;
+
+      // Fail: cargo falls
+      if(absDeg>maxA){
+        endGame(false,0,'ふれ角が'+maxA+'°を超えて荷物が落ちた！Kθ（ゆれを戻す力）やKω（ゆれを止める力）を上げてみよう。');
+        return;
+      }
+
+      // Check arrival at target with small swing
+      const atTarget=Math.abs(p-P_TARGET)<=0.5;
+      const slowCart=Math.abs(v)<0.3;
+      const smallSwing=absDeg<3 && Math.abs(om)<0.2;
+      if(atTarget&&slowCart&&smallSwing&&t>2){
+        // Score from max swing angle: ≤5°=100, 10°=80, maxA=0
+        let score;
+        const mAng=maxAbsAngle;
+        if(mAng<=5) score=100;
+        else if(mAng<=10) score=100-((mAng-5)/5)*20;   // 100→80
+        else if(mAng<=maxA) score=80-((mAng-10)/(maxA-10))*80; // 80→0
+        else score=0;
+        score=Math.max(0,Math.min(100,Math.round(score)));
+        let stars;
+        if(score>=80)stars=3;else if(score>=50)stars=2;else stars=1;
+        const msg='荷物を無事にとどけたよ！この挑戦の最大ふれ角は '+mAng.toFixed(1)+'°（小さいほど高得点）。'+
+          (stars===3?'ほとんどゆらさず完璧な操作！':stars===2?'なかなか上手！もっとゆれを小さくできるかな？':'クリア！次はゆれを小さくして点数を上げよう。');
+        endGame(true,stars,msg,score);
+        return;
+      }
+
+      // Time up without arriving
+      if(t>=tLimit){
+        endGame(false,0,'時間切れ！目標位置に止まれなかった。KpやKvを調整して、'+tLimit+'秒以内に目標で止まろう。');
+        return;
+      }
+    }
+    updateHUD();drawGame();
+    animId=requestAnimationFrame(simAndDraw);
+  }
+
+  function resetState(){
+    p=P_START;th=0;v=0;om=0;t=0;
+    maxAbsAngle=0;settledTime=null;clearedFlag=false;gameOver=false;
+    resultEl.classList.remove('show');
+    updateVals();updateHUD();drawGame();
+  }
+  function updateVals(){
+    document.getElementById('val-kp').textContent=parseFloat(slKp.value).toFixed(1);
+    document.getElementById('val-kv').textContent=parseFloat(slKv.value).toFixed(1);
+    document.getElementById('val-kt').textContent=parseFloat(slKt.value).toFixed(1);
+    document.getElementById('val-kw').textContent=parseFloat(slKw.value).toFixed(1);
+  }
+
+  function start(){if(running)return;if(gameOver)resetState();running=true;btnStart.disabled=true;simAndDraw();}
+  function reset(){running=false;if(animId)cancelAnimationFrame(animId);btnStart.disabled=false;resetState();}
+
+  btnStart.addEventListener('click',start);
+  btnReset.addEventListener('click',reset);
+  resultBtn.addEventListener('click',function(){reset();start();});
+  [slKp,slKv,slKt,slKw].forEach(s=>s.addEventListener('input',function(){updateVals();if(!running)drawGame();}));
+
+  resetState();
+})();
+</script>
+</body>
+</html>
