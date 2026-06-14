@@ -38,8 +38,8 @@ https://hiroshi-okajima.github.io/control-interactive-tools/
 - [適応クルーズ制御](https://hiroshi-okajima.github.io/control-interactive-tools/control_acc.html)
 - [倒立振子の制御](https://hiroshi-okajima.github.io/control-interactive-tools/control_invpend.html) 
 - [部屋の温度制御](https://hiroshi-okajima.github.io/control-interactive-tools/control_temperature.html)
-- [追跡パトカー](https://hiroshi-okajima.github.io/control-interactive-tools/control_acc_game.html)
-- [クレーン振れ止め](https://hiroshi-okajima.github.io/control-interactive-tools/control_crane_game.html)
+- [追跡パトカー（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_acc_game.html)
+- [荷物運び（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_crane_game.html)
 
 
 ## 使い方
