@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3連タンク 水位制御チャレンジ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--cyan:#06b6d4;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#083344,#0e7490,#06b6d4);color:#fff;padding:1.2rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.2rem,3vw,1.6rem);font-weight:700;margin-bottom:0.1rem;}
+.header p{font-size:0.8rem;opacity:0.85;}
+.main{max-width:1000px;margin:0 auto;padding:0.8rem;}
+.game-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0;box-shadow:0 2px 10px rgba(0,0,0,0.06);overflow:hidden;margin-bottom:0.8rem;}
+.canvas-wrap{position:relative;background:#ecfeff;}
+canvas#game-canvas{display:block;width:100%;}
+.hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:0.6rem 0.9rem;pointer-events:none;}
+.hud-box{background:rgba(8,51,68,0.8);backdrop-filter:blur(4px);border-radius:8px;padding:0.4rem 0.7rem;color:#fff;font-family:'JetBrains Mono',monospace;}
+.hud-v{font-size:1.3rem;font-weight:700;line-height:1.1;}
+.hud-l{font-size:0.6rem;opacity:0.75;letter-spacing:0.05em;}
+.hud-score .hud-v{color:#fde047;}
+.hud-timer .hud-v{color:#86efac;}
+.result-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(8,51,68,0.88);backdrop-filter:blur(3px);color:#fff;text-align:center;z-index:10;padding:0.8rem;overflow-y:auto;}
+.result-overlay.show{display:flex;}
+.result-title{font-family:'Noto Serif JP',serif;font-size:1.7rem;font-weight:800;margin-bottom:0.3rem;}
+.result-title.success{color:#86efac;}
+.result-title.fail{color:#fca5a5;}
+.result-score{font-size:1rem;font-weight:700;margin-bottom:0.6rem;}
+.result-msg{font-size:0.88rem;opacity:0.9;margin-bottom:0.8rem;max-width:400px;}
+.result-btn{pointer-events:auto;padding:0.5em 1.5em;border:none;border-radius:8px;background:#06b6d4;color:#fff;font-weight:700;font-size:0.9rem;cursor:pointer;font-family:'Noto Sans JP',sans-serif;}
+.result-btn:hover{background:#0891b2;}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;}
+@media(max-width:700px){.controls{grid-template-columns:1fr;}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem;}
+.ctrl-group{margin-bottom:0.5rem;}.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.74rem;font-weight:600;color:var(--text2);margin-bottom:0.12rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.85rem;padding:0.1em 0.5em;border-radius:4px;min-width:3.5em;text-align:center;}
+.ctrl-val.kp{color:var(--blue);background:#eef2ff;}
+.ctrl-val.ki{color:var(--purple);background:#f3eeff;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--cyan);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--cyan);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);cursor:pointer;}
+input.kp::-webkit-slider-thumb,input.kp::-moz-range-thumb{background:var(--blue);}
+input.ki::-webkit-slider-thumb,input.ki::-moz-range-thumb{background:var(--purple);}
+.btn-row{display:flex;gap:0.5rem;margin-top:0.3rem;}
+.btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:0.3rem;padding:0.6em 1em;border:none;border-radius:8px;font-weight:700;font-size:0.9rem;cursor:pointer;transition:opacity 0.15s;}
+.btn:hover{opacity:0.88;}
+.btn-start{background:var(--green);color:#fff;}
+.btn-reset{background:#e5e5e5;color:#444;}
+.rule-box{font-size:0.78rem;line-height:1.75;color:var(--text2);}
+.rule-box .ok{color:var(--green);font-weight:700;}
+.rule-box .ng{color:var(--red);font-weight:700;}
+.level-tabs{display:flex;gap:0.4rem;margin-bottom:0.5rem;}
+.level-tab{flex:1;padding:0.4em;border:2px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;text-align:center;font-size:0.72rem;font-weight:700;color:var(--text2);transition:all 0.15s;}
+.level-tab.active{border-color:var(--cyan);background:#ecfeff;color:#0e7490;}
+.level-tab:hover{border-color:var(--cyan);}
+.eq-mini{font-family:'JetBrains Mono',monospace;font-size:0.7rem;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:0.4rem 0.6rem;margin-top:0.4rem;color:var(--text2);line-height:1.6;}
+.footer{text-align:center;padding:0.8rem;color:var(--text3);font-size:0.68rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>💧 3連タンク 水位制御チャレンジ</h1>
+  <p>直接注水できないタンク3を、上流からの流れで目標水位に！あふれさせるな</p>
+</div>
+<div class="main">
+
+<div class="game-card">
+  <div class="canvas-wrap">
+    <canvas id="game-canvas" width="960" height="340"></canvas>
+    <div class="hud">
+      <div class="hud-box"><div class="hud-l">タンク3 水位</div><div class="hud-v" id="hud-h3">0.0</div></div>
+      <div class="hud-box"><div class="hud-l">目標水位</div><div class="hud-v" id="hud-target" style="color:#fdba74;">2.0</div></div>
+      <div class="hud-box hud-score"><div class="hud-l">スコア</div><div class="hud-v" id="hud-score">0</div></div>
+      <div class="hud-box hud-timer"><div class="hud-l">残り時間</div><div class="hud-v" id="hud-timer">40.0</div></div>
+    </div>
+    <div class="result-overlay" id="result">
+      <div class="result-title" id="result-title"></div>
+      <div class="result-score" id="result-score" style="display:none;"></div>
+      <div class="result-msg" id="result-msg"></div>
+      <button class="result-btn" id="result-btn">もう一度</button>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+
+  <div class="card">
+    <div class="card-label" style="color:var(--cyan);">PI制御ゲイン（タンク3の水位制御）</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--blue);">Kp：比例ゲイン（目標との差に反応）</div>
+      <div class="ctrl-row"><input type="range" id="sl-kp" class="kp" min="0" max="60" step="1" value="15"><span class="ctrl-val kp" id="val-kp">15</span></div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--purple);">Ki：積分ゲイン（定常のズレをなくす）</div>
+      <div class="ctrl-row"><input type="range" id="sl-ki" class="ki" min="0" max="15" step="0.5" value="3"><span class="ctrl-val ki" id="val-ki">3.0</span></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-start" id="btn-start">▶ スタート</button>
+      <button class="btn btn-reset" id="btn-reset">↺ リセット</button>
+    </div>
+    <div class="eq-mini"><div style="font-size:0.62rem;font-weight:700;letter-spacing:0.08em;color:var(--text3);margin-bottom:0.2rem;">コントローラーの数式</div>e = 目標 − h₃<br>u = Kp·e + Ki·∫e dt（流入量、0〜上限で飽和）</div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">難易度＆ルール</div>
+    <div class="level-tabs">
+      <div class="level-tab active" id="lv1" onclick="setLevel(1)">かんたん</div>
+      <div class="level-tab" id="lv2" onclick="setLevel(2)">ふつう</div>
+      <div class="level-tab" id="lv3" onclick="setLevel(3)">むずかしい</div>
+    </div>
+    <div class="rule-box">
+      🎯 <strong>タンク3</strong>を目標水位に合わせ続ける<br>
+      💡 タンク3には直接注水できない！<strong>タンク1→2→3</strong>の流れで間接的に制御<br>
+      <span class="ng">✗ どれかのタンクが水位10超</span>：あふれて失敗<br>
+      <span class="ok">✓ 目標に近いほど毎秒加点</span><br>
+      <span style="font-size:0.72rem;color:var(--text3);" id="level-hint">かんたん：目標は一定。じっくり合わせよう。</span>
+    </div>
+  </div>
+
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — 3連タンク水位制御</div>
+
+<script>
+(function(){
+  const canvas=document.getElementById('game-canvas');
+  const ctx=canvas.getContext('2d');
+  const slKp=document.getElementById('sl-kp'),slKi=document.getElementById('sl-ki');
+  const btnStart=document.getElementById('btn-start'),btnReset=document.getElementById('btn-reset');
+  const resultEl=document.getElementById('result'),resultTitle=document.getElementById('result-title');
+  const resultScore=document.getElementById('result-score'),resultMsg=document.getElementById('result-msg');
+  const resultBtn=document.getElementById('result-btn');
+
+  // Tank parameters (from MATLAB gen3.m)
+  const s1=5,s2=10,s3=5;
+  const r12=0.5,r23=0.5,r1=0.3,r2=0.4,r3=0.2;
+  const dt=0.02, STEPS_PER_FRAME=2;
+  const U_MAX=60;     // inflow saturation
+  const U1_RATIO=0.2; // u1 = U1_RATIO * u, u2 = u (bias to tank2)
+  const OVERFLOW=10;
+
+  // A matrix
+  function dynamics(x,u1,u2){
+    const [h1,h2,h3]=x;
+    const dh1=(-1/s1*(1/r1+1/r12))*h1 + (1/s1/r12)*h2 + (1/s1)*u1;
+    const dh2=(1/s2/r12)*h1 + (-1/s2*(1/r2+1/r12+1/r23))*h2 + (1/s2/r23)*h3 + (1/s2)*u2;
+    const dh3=(1/s3/r23)*h2 + (-1/s3*(1/r3+1/r23))*h3;
+    return [dh1,dh2,dh3];
+  }
+  function rk4(x,u1,u2,h){
+    const k1=dynamics(x,u1,u2);
+    const x2=x.map((v,i)=>v+.5*h*k1[i]);const k2=dynamics(x2,u1,u2);
+    const x3=x.map((v,i)=>v+.5*h*k2[i]);const k3=dynamics(x3,u1,u2);
+    const x4=x.map((v,i)=>v+h*k3[i]);const k4=dynamics(x4,u1,u2);
+    return x.map((v,i)=>v+h/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]));
+  }
+
+  const LEVELS={
+    1:{timeLimit:40,target:2.0,varying:false,label:'かんたん：目標は一定。じっくり合わせよう。'},
+    2:{timeLimit:40,target:2.0,varying:true,targets:[1.5,2.5,2.0,1.8,2.3],label:'ふつう：目標が時々変わる。追従し続けよう。'},
+    3:{timeLimit:35,target:2.5,varying:true,targets:[2.5,1.2,2.8,1.5,2.6],label:'むずかしい：目標の変化が大きい。あふれに注意！'}
+  };
+  let level=1;
+  window.setLevel=function(lv){
+    level=lv;
+    [1,2,3].forEach(i=>document.getElementById('lv'+i).className='level-tab'+(i===lv?' active':''));
+    document.getElementById('level-hint').textContent=LEVELS[lv].label;
+    if(!running)resetState();
+  };
+
+  let h,zInt,t,score,target,targetTimer,targetIdx;
+  let u1cur=0,u2cur=0;
+  let running=false,animId=null,gameOver=false;
+
+  function getGains(){return[parseFloat(slKp.value),parseFloat(slKi.value)];}
+
+  function resizeCanvas(){const rect=canvas.parentElement.getBoundingClientRect();canvas.width=rect.width;canvas.height=340;}
+  resizeCanvas();
+  window.addEventListener('resize',resizeCanvas);
+
+  function drawGame(){
+    const W=canvas.width,H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+    // Background
+    ctx.fillStyle='#ecfeff';ctx.fillRect(0,0,W,H);
+
+    const baseY=H-50;       // bottom of tanks
+    const tankH=200;         // tank height in px (represents level 0..12)
+    const levelScale=tankH/12; // px per unit level
+    const tankW=W*0.18;
+    const gap=W*0.06;
+    const totalW=tankW*3+gap*2;
+    const startX=(W-totalW)/2;
+
+    const tanks=[
+      {x:startX, label:'タンク1', h:h[0], color:'#60a5fa', canFill:true},
+      {x:startX+tankW+gap, label:'タンク2', h:h[1], color:'#22d3ee', canFill:true},
+      {x:startX+2*(tankW+gap), label:'タンク3', h:h[2], color:'#06b6d4', canFill:false, isTarget:true}
+    ];
+
+    // Inflow pipes from top (u1 to tank1, u2 to tank2)
+    function drawInflow(tx,active,label,amount){
+      const px=tx+tankW*0.5;
+      ctx.strokeStyle=active?'#3b82f6':'#cbd5e1';ctx.lineWidth=6;
+      ctx.beginPath();ctx.moveTo(px,8);ctx.lineTo(px,baseY-tankH);ctx.stroke();
+      // water drops if active
+      if(active && amount>0.5){
+        ctx.fillStyle='#60a5fa';
+        for(let k=0;k<3;k++){
+          const dy=((t*200+k*40)%((baseY-tankH)-12))+12;
+          ctx.beginPath();ctx.arc(px,dy,3,0,2*Math.PI);ctx.fill();
+        }
+      }
+      ctx.fillStyle=active?'#2563eb':'#94a3b8';ctx.font="bold 10px 'JetBrains Mono'";ctx.textAlign='center';
+      ctx.fillText(label+'='+amount.toFixed(0),px,6);
+    }
+
+    tanks.forEach((tk,idx)=>{
+      // Tank walls
+      ctx.strokeStyle='#475569';ctx.lineWidth=3;
+      ctx.beginPath();
+      ctx.moveTo(tk.x,baseY-tankH);ctx.lineTo(tk.x,baseY);
+      ctx.lineTo(tk.x+tankW,baseY);ctx.lineTo(tk.x+tankW,baseY-tankH);
+      ctx.stroke();
+
+      // Overflow danger line (level 10)
+      const ofY=baseY-OVERFLOW*levelScale;
+      ctx.strokeStyle='#fca5a5';ctx.lineWidth=1.5;ctx.setLineDash([5,3]);
+      ctx.beginPath();ctx.moveTo(tk.x,ofY);ctx.lineTo(tk.x+tankW,ofY);ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Water
+      const wlH=Math.max(0,Math.min(12,tk.h))*levelScale;
+      const danger=tk.h>OVERFLOW*0.85;
+      const grad=ctx.createLinearGradient(0,baseY-wlH,0,baseY);
+      grad.addColorStop(0,danger?'#f87171':tk.color);
+      grad.addColorStop(1,danger?'#dc2626':'#0e7490');
+      ctx.fillStyle=grad;
+      ctx.fillRect(tk.x+2,baseY-wlH,tankW-4,wlH);
+      // Water surface shimmer
+      ctx.fillStyle='rgba(255,255,255,0.3)';
+      ctx.fillRect(tk.x+2,baseY-wlH,tankW-4,2);
+
+      // Target line for tank3
+      if(tk.isTarget){
+        const tgY=baseY-target*levelScale;
+        ctx.strokeStyle='#ea580c';ctx.lineWidth=2.5;ctx.setLineDash([8,4]);
+        ctx.beginPath();ctx.moveTo(tk.x-5,tgY);ctx.lineTo(tk.x+tankW+5,tgY);ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle='#ea580c';ctx.font="bold 11px 'JetBrains Mono'";ctx.textAlign='left';
+        ctx.fillText('目標',tk.x+tankW+8,tgY+4);
+      }
+
+      // Label & level value
+      ctx.fillStyle='#1e293b';ctx.font="bold 12px 'Noto Sans JP'";ctx.textAlign='center';
+      ctx.fillText(tk.label,tk.x+tankW/2,baseY+18);
+      ctx.fillStyle='#0e7490';ctx.font="bold 13px 'JetBrains Mono'";
+      ctx.fillText(tk.h.toFixed(1),tk.x+tankW/2,baseY-wlH-6);
+
+      // Connection pipe to next tank
+      if(idx<2){
+        const py=baseY-12;
+        ctx.strokeStyle='#64748b';ctx.lineWidth=5;
+        ctx.beginPath();ctx.moveTo(tk.x+tankW,py);ctx.lineTo(tanks[idx+1].x,py);ctx.stroke();
+        // flow arrow
+        ctx.fillStyle='#0891b2';
+        const ax=(tk.x+tankW+tanks[idx+1].x)/2;
+        ctx.beginPath();ctx.moveTo(ax-4,py-4);ctx.lineTo(ax+4,py);ctx.lineTo(ax-4,py+4);ctx.fill();
+      }
+    });
+
+    // Inflows
+    drawInflow(tanks[0].x,u1cur>0.3,'u₁',u1cur);
+    drawInflow(tanks[1].x,u2cur>0.3,'u₂',u2cur);
+
+    // "no direct inflow" mark on tank3
+    const t3=tanks[2];
+    ctx.strokeStyle='#cbd5e1';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(t3.x+tankW*0.5,8);ctx.lineTo(t3.x+tankW*0.5,baseY-tankH);ctx.stroke();
+    ctx.strokeStyle='#dc2626';ctx.lineWidth=2;
+    const nx=t3.x+tankW*0.5, ny=20;
+    ctx.beginPath();ctx.arc(nx,ny,8,0,2*Math.PI);ctx.moveTo(nx-6,ny-6);ctx.lineTo(nx+6,ny+6);ctx.stroke();
+
+    // Overflow flash
+    if(h.some(v=>v>OVERFLOW*0.9)){
+      ctx.fillStyle='rgba(220,38,38,'+(0.1+0.1*Math.sin(t*15))+')';
+      ctx.fillRect(0,0,W,H);
+    }
+  }
+
+  function updateHUD(){
+    document.getElementById('hud-h3').textContent=h[2].toFixed(1);
+    document.getElementById('hud-target').textContent=target.toFixed(1);
+    document.getElementById('hud-score').textContent=score;
+    document.getElementById('hud-timer').textContent=Math.max(0,LEVELS[level].timeLimit-t).toFixed(1);
+  }
+
+  function endGame(success,msg){
+    running=false;gameOver=true;
+    if(animId)cancelAnimationFrame(animId);
+    resultTitle.textContent=success?'🎉 タイムアップ！':'💥 あふれた！';
+    resultTitle.className='result-title '+(success?'success':'fail');
+    let stars;
+    if(score>=3000)stars=3;else if(score>=1800)stars=2;else if(score>=600)stars=1;else stars=0;
+    resultScore.style.display='block';
+    resultScore.innerHTML='スコア <span style="font-size:2rem;color:#fde047;">'+score+'</span> 点'+
+      '<div style="font-size:1.3rem;margin-top:0.1rem;">'+'⭐'.repeat(stars)+'☆'.repeat(3-stars)+'</div>';
+    resultMsg.textContent=msg;
+    resultEl.classList.add('show');
+    btnStart.disabled=false;
+  }
+
+  function simAndDraw(){
+    if(!running)return;
+    const [Kp,Ki]=getGains();
+    const lv=LEVELS[level];
+    for(let i=0;i<STEPS_PER_FRAME;i++){
+      // Target update for varying levels
+      if(lv.varying){
+        targetTimer+=dt;
+        if(targetTimer>=8){targetTimer=0;targetIdx=(targetIdx+1)%lv.targets.length;target=lv.targets[targetIdx];}
+      }
+      const e=target-h[2];
+      zInt+=e*dt;
+      let u=Kp*e+Ki*zInt;
+      u=Math.max(0,Math.min(U_MAX,u));
+      u1cur=u*U1_RATIO; u2cur=u;
+      h=rk4(h,u1cur,u2cur,dt);
+      t+=dt;
+
+      // Overflow check
+      if(h.some(v=>v>OVERFLOW)){
+        endGame(false,'タンクがあふれた！ゲインが大きすぎたかも。Kp・Kiを下げて、ゆっくり水位を合わせよう。獲得スコア: '+score+'点');
+        return;
+      }
+      // Score: closer to target = more points (per step)
+      const err=Math.abs(h[2]-target);
+      if(err<0.5) score+=2;
+      else if(err<1.0) score+=1;
+
+      if(t>=lv.timeLimit){
+        endGame(true,'制限時間まで水位を保った！最終スコア '+score+'点。タンク3を上流から上手にコントロールできたね。');
+        return;
+      }
+    }
+    updateHUD();drawGame();
+    animId=requestAnimationFrame(simAndDraw);
+  }
+
+  function resetState(){
+    h=[0,0,0];zInt=0;t=0;score=0;
+    target=LEVELS[level].target;targetTimer=0;targetIdx=0;
+    u1cur=0;u2cur=0;gameOver=false;
+    resultEl.classList.remove('show');
+    updateVals();updateHUD();drawGame();
+  }
+  function updateVals(){
+    document.getElementById('val-kp').textContent=parseFloat(slKp.value).toFixed(0);
+    document.getElementById('val-ki').textContent=parseFloat(slKi.value).toFixed(1);
+  }
+
+  function start(){if(running)return;if(gameOver)resetState();running=true;btnStart.disabled=true;simAndDraw();}
+  function reset(){running=false;if(animId)cancelAnimationFrame(animId);btnStart.disabled=false;resetState();}
+
+  btnStart.addEventListener('click',start);
+  btnReset.addEventListener('click',reset);
+  resultBtn.addEventListener('click',function(){reset();start();});
+  [slKp,slKi].forEach(s=>s.addEventListener('input',function(){updateVals();if(!running)drawGame();}));
+
+  resetState();
+})();
+</script>
+</body>
+</html>
