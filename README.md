@@ -18,6 +18,7 @@
 | 10 | 部屋の温度制御 | 3つの条件の比較（目標温度18度） | `control_temperature.html` |
 | 11 | 追跡パトカー | 小学生向けゲーム | `control_acc_game.html` |
 | 12 | 荷物運び | 小学生向けゲーム | `control_crane_game.html` |
+| 13 | ボール＆ビーム | 小学生向けゲーム | `control_ballbeam_game.html` |
 
 ## GitHub Pages URL
 
@@ -40,7 +41,7 @@ https://hiroshi-okajima.github.io/control-interactive-tools/
 - [部屋の温度制御](https://hiroshi-okajima.github.io/control-interactive-tools/control_temperature.html)
 - [追跡パトカー（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_acc_game.html)
 - [荷物運び（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_crane_game.html)
-
+- [ボール＆ビーム（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_ballbeam_game.html)
 
 ## 使い方
 
