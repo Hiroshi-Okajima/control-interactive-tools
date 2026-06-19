@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ボール＆ビーム チャレンジ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#0c4a6e,#0369a1,#0ea5e9);color:#fff;padding:1.2rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.2rem,3vw,1.6rem);font-weight:700;margin-bottom:0.1rem;}
+.header p{font-size:0.8rem;opacity:0.85;}
+.main{max-width:1000px;margin:0 auto;padding:0.8rem;}
+.game-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0;box-shadow:0 2px 10px rgba(0,0,0,0.06);overflow:hidden;margin-bottom:0.8rem;}
+.canvas-wrap{position:relative;background:#e0f2fe;}
+canvas#game-canvas{display:block;width:100%;}
+.hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:0.6rem 0.9rem;pointer-events:none;}
+.hud-box{background:rgba(12,74,110,0.8);backdrop-filter:blur(4px);border-radius:8px;padding:0.4rem 0.7rem;color:#fff;font-family:'JetBrains Mono',monospace;}
+.hud-v{font-size:1.3rem;font-weight:700;line-height:1.1;}
+.hud-l{font-size:0.6rem;opacity:0.75;letter-spacing:0.05em;}
+.hud-score .hud-v{color:#fde047;}
+.hud-timer .hud-v{color:#86efac;}
+.result-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(12,74,110,0.88);backdrop-filter:blur(3px);color:#fff;text-align:center;z-index:10;padding:0.8rem;overflow-y:auto;}
+.result-overlay.show{display:flex;}
+.result-title{font-family:'Noto Serif JP',serif;font-size:1.7rem;font-weight:800;margin-bottom:0.3rem;}
+.result-title.success{color:#86efac;}
+.result-title.fail{color:#fca5a5;}
+.result-score{font-size:1rem;font-weight:700;margin-bottom:0.6rem;}
+.result-msg{font-size:0.88rem;opacity:0.9;margin-bottom:0.8rem;max-width:400px;}
+.result-btn{pointer-events:auto;padding:0.5em 1.5em;border:none;border-radius:8px;background:#0ea5e9;color:#fff;font-weight:700;font-size:0.9rem;cursor:pointer;font-family:'Noto Sans JP',sans-serif;}
+.result-btn:hover{background:#0284c7;}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;}
+@media(max-width:700px){.controls{grid-template-columns:1fr;}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem;}
+.ctrl-group{margin-bottom:0.5rem;}.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.74rem;font-weight:600;color:var(--text2);margin-bottom:0.12rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.85rem;padding:0.1em 0.5em;border-radius:4px;min-width:3.5em;text-align:center;}
+.ctrl-val.k1{color:var(--blue);background:#eef2ff;}
+.ctrl-val.k2{color:var(--purple);background:#f3eeff;}
+.ctrl-val.k3{color:var(--teal);background:#f0fdfa;}
+.ctrl-val.k4{color:var(--green);background:#ecfdf5;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--blue);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--blue);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);cursor:pointer;}
+input.k1::-webkit-slider-thumb,input.k1::-moz-range-thumb{background:var(--blue);}
+input.k2::-webkit-slider-thumb,input.k2::-moz-range-thumb{background:var(--purple);}
+input.k3::-webkit-slider-thumb,input.k3::-moz-range-thumb{background:var(--teal);}
+input.k4::-webkit-slider-thumb,input.k4::-moz-range-thumb{background:var(--green);}
+.btn-row{display:flex;gap:0.5rem;margin-top:0.3rem;}
+.btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:0.3rem;padding:0.6em 1em;border:none;border-radius:8px;font-weight:700;font-size:0.9rem;cursor:pointer;transition:opacity 0.15s;}
+.btn:hover{opacity:0.88;}
+.btn-start{background:var(--green);color:#fff;}
+.btn-reset{background:#e5e5e5;color:#444;}
+.rule-box{font-size:0.78rem;line-height:1.75;color:var(--text2);}
+.rule-box .ok{color:var(--green);font-weight:700;}
+.rule-box .ng{color:var(--red);font-weight:700;}
+.level-tabs{display:flex;gap:0.4rem;margin-bottom:0.5rem;}
+.level-tab{flex:1;padding:0.4em;border:2px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;text-align:center;font-size:0.72rem;font-weight:700;color:var(--text2);transition:all 0.15s;}
+.level-tab.active{border-color:#0ea5e9;background:#e0f2fe;color:#0369a1;}
+.level-tab:hover{border-color:#0ea5e9;}
+.eq-mini{font-family:'JetBrains Mono',monospace;font-size:0.7rem;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:0.4rem 0.6rem;margin-top:0.4rem;color:var(--text2);line-height:1.6;}
+.footer{text-align:center;padding:0.8rem;color:var(--text3);font-size:0.68rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>⚖️ ボール＆ビーム チャレンジ</h1>
+  <p>ビームを傾けてボールを目標位置へ！端から落とさずたくさん運ぼう</p>
+</div>
+<div class="main">
+
+<div class="game-card">
+  <div class="canvas-wrap">
+    <canvas id="game-canvas" width="960" height="320"></canvas>
+    <div class="hud">
+      <div class="hud-box"><div class="hud-l">ボール位置</div><div class="hud-v" id="hud-pos">3.0</div></div>
+      <div class="hud-box"><div class="hud-l">ビーム角</div><div class="hud-v" id="hud-angle">0.0°</div></div>
+      <div class="hud-box hud-score"><div class="hud-l">スコア</div><div class="hud-v" id="hud-score">0</div></div>
+      <div class="hud-box hud-timer"><div class="hud-l">残り時間</div><div class="hud-v" id="hud-timer">40.0</div></div>
+    </div>
+    <div class="result-overlay" id="result">
+      <div class="result-title" id="result-title"></div>
+      <div class="result-score" id="result-score" style="display:none;"></div>
+      <div class="result-msg" id="result-msg"></div>
+      <button class="result-btn" id="result-btn">もう一度</button>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">制御ゲイン u = −[K₁ K₂ K₃ K₄]x</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--blue);">K₁：ボール位置のゲイン</div>
+      <div class="ctrl-row"><input type="range" id="sl-k1" class="k1" min="-150" max="0" step="1" value="-100"><span class="ctrl-val k1" id="val-k1">-100</span></div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--purple);">K₂：ビーム角のゲイン</div>
+      <div class="ctrl-row"><input type="range" id="sl-k2" class="k2" min="0" max="250" step="1" value="160"><span class="ctrl-val k2" id="val-k2">160</span></div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--teal);">K₃：ボール速度のゲイン</div>
+      <div class="ctrl-row"><input type="range" id="sl-k3" class="k3" min="-60" max="0" step="0.5" value="-33"><span class="ctrl-val k3" id="val-k3">-33.0</span></div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--green);">K₄：ビーム角速度のゲイン</div>
+      <div class="ctrl-row"><input type="range" id="sl-k4" class="k4" min="0" max="120" step="1" value="60"><span class="ctrl-val k4" id="val-k4">60</span></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-start" id="btn-start">▶ スタート</button>
+      <button class="btn btn-reset" id="btn-reset">↺ リセット</button>
+    </div>
+    <div class="eq-mini"><div style="font-size:0.62rem;font-weight:700;letter-spacing:0.08em;color:var(--text3);margin-bottom:0.2rem;">コントローラーの数式</div>u = −(K₁·r + K₂·θ + K₃·ṙ + K₄·θ̇) + 目標項<br>状態 x = [r, θ, ṙ, θ̇]</div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">難易度＆ルール</div>
+    <div class="level-tabs">
+      <div class="level-tab active" id="lv1" onclick="setLevel(1)">かんたん</div>
+      <div class="level-tab" id="lv2" onclick="setLevel(2)">ふつう</div>
+      <div class="level-tab" id="lv3" onclick="setLevel(3)">むずかしい</div>
+    </div>
+    <div class="rule-box">
+      🎯 ボールを<strong>目標位置（緑の旗）</strong>へ運ぶ<br>
+      <span class="ok">✓ 目標に近づける</span>：到達でスコア＋次の目標へ<br>
+      <span class="ng">✗ ビーム端から落下</span>：ゲームオーバー<br>
+      <span style="font-size:0.72rem;color:var(--text3);" id="level-hint">かんたん：制限40秒。目標到達でどんどん加点！たくさん運ぼう。</span>
+    </div>
+  </div>
+
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — ボール＆ビーム チャレンジ</div>
+
+<script>
+(function(){
+  const canvas=document.getElementById('game-canvas');
+  const ctx=canvas.getContext('2d');
+  const slK1=document.getElementById('sl-k1'),slK2=document.getElementById('sl-k2');
+  const slK3=document.getElementById('sl-k3'),slK4=document.getElementById('sl-k4');
+  const btnStart=document.getElementById('btn-start'),btnReset=document.getElementById('btn-reset');
+  const resultEl=document.getElementById('result'),resultTitle=document.getElementById('result-title');
+  const resultScore=document.getElementById('result-score'),resultMsg=document.getElementById('result-msg');
+  const resultBtn=document.getElementById('result-btn');
+
+  // Parameters (from MATLAB gen4.m)
+  const J=15, M=5, DR=5, DTH=10, g=9.8, L=10;
+  const dt=0.01, STEPS_PER_FRAME=3;
+
+  // Linearized model: x=[r,θ,ṙ,θ̇]
+  // A=[0,0,1,0; 0,0,0,1; 0,-g,-dr/m,0; -m*g/j,0,0,-dth/j], B=[0;0;0;1/j]
+  function dynamics(s,uu){
+    const [r,th,dr_,dth_]=s;
+    return [
+      dr_,
+      dth_,
+      -g*th - (DR/M)*dr_,
+      -(M*g/J)*r - (DTH/J)*dth_ + (1/J)*uu
+    ];
+  }
+  function rk4(s,uu,h){
+    const k1=dynamics(s,uu);
+    const s2=s.map((v,i)=>v+.5*h*k1[i]);const k2=dynamics(s2,uu);
+    const s3=s.map((v,i)=>v+.5*h*k2[i]);const k3=dynamics(s3,uu);
+    const s4=s.map((v,i)=>v+h*k3[i]);const k4=dynamics(s4,uu);
+    return s.map((v,i)=>v+h/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]));
+  }
+
+  const LEVELS={
+    1:{timeLimit:40,reach:1.6,targets:[3,-2,2,-3,1,-1,3,0],label:'かんたん：制限40秒。目標到達でどんどん加点！たくさん運ぼう。'},
+    2:{timeLimit:35,reach:1.5,targets:[3,-2,3,-2,2,-1,3,-2,3,-1],label:'ふつう：制限35秒。目標がやや遠く、こまめな調整が必要。'},
+    3:{timeLimit:30,reach:1.2,targets:[4,-3,4,-4,5,-5,4,-4],label:'むずかしい：制限30秒。目標の振れ幅が大きく、ゲイン調整が鍵。落とさず正確に！'}
+  };
+  let level=1;
+  window.setLevel=function(lv){
+    level=lv;
+    [1,2,3].forEach(i=>document.getElementById('lv'+i).className='level-tab'+(i===lv?' active':''));
+    document.getElementById('level-hint').textContent=LEVELS[lv].label;
+    if(!running)resetState();
+  };
+
+  let r,th,dr_,dth_,t;
+  let running=false,animId=null,gameOver=false;
+  let score=0, targetIdx=0, targetPos=7, holdTime=0;
+
+  function getK(){return[parseFloat(slK1.value),parseFloat(slK2.value),parseFloat(slK3.value),parseFloat(slK4.value)];}
+  function control(){
+    const K=getK();
+    // u = -K*(x - x_ref), x_ref = [targetPos,0,0,0]
+    return -(K[0]*(r-targetPos)+K[1]*th+K[2]*dr_+K[3]*dth_);
+  }
+
+  function resizeCanvas(){const rect=canvas.parentElement.getBoundingClientRect();canvas.width=rect.width;canvas.height=320;}
+  resizeCanvas();
+  window.addEventListener('resize',resizeCanvas);
+
+  function drawGame(){
+    const W=canvas.width,H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+    // Sky
+    const sky=ctx.createLinearGradient(0,0,0,H);
+    sky.addColorStop(0,'#bae6fd');sky.addColorStop(1,'#e0f2fe');
+    ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+
+    const cx=W/2, cy=H*0.5;
+    const scale=(W*0.42)/L; // beam half-length L=10 maps to 42% width
+
+    // Pivot support (triangle)
+    ctx.fillStyle='#475569';
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx-22,cy+55);ctx.lineTo(cx+22,cy+55);ctx.closePath();ctx.fill();
+    // Ground
+    ctx.fillStyle='#a3a3a3';ctx.fillRect(0,cy+55,W,H-(cy+55));
+
+    // Beam (rotated by θ) — visual angle scaled down for clarity (physics unchanged)
+    const thVis=th*0.5;
+    const cosT=Math.cos(thVis),sinT=Math.sin(thVis);
+    const bx1=cx-L*scale*cosT, by1=cy+L*scale*sinT;
+    const bx2=cx+L*scale*cosT, by2=cy-L*scale*sinT;
+    // Beam body
+    ctx.save();
+    ctx.strokeStyle='#7c3aed';ctx.lineWidth=8;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(bx1,by1);ctx.lineTo(bx2,by2);ctx.stroke();
+    // End walls (to show edges)
+    ctx.strokeStyle='#dc2626';ctx.lineWidth=4;
+    const wallLen=14;
+    // left end perpendicular
+    ctx.beginPath();ctx.moveTo(bx1,by1);ctx.lineTo(bx1+sinT*wallLen,by1+cosT*wallLen);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(bx2,by2);ctx.lineTo(bx2+sinT*wallLen,by2+cosT*wallLen);ctx.stroke();
+    ctx.restore();
+
+    // Target flag (on beam at targetPos)
+    const tgX=cx+targetPos*scale*cosT, tgY=cy-targetPos*scale*sinT;
+    ctx.save();
+    ctx.strokeStyle='#16a34a';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(tgX,tgY);ctx.lineTo(tgX-sinT*30,tgY-cosT*30);ctx.stroke();
+    ctx.fillStyle='#22c55e';
+    const fx=tgX-sinT*30, fy=tgY-cosT*30;
+    ctx.beginPath();ctx.moveTo(fx,fy);ctx.lineTo(fx+18*cosT,fy-18*sinT+6);ctx.lineTo(fx,fy+12);ctx.fill();
+    ctx.restore();
+
+    // Ball (at position r along beam)
+    const ballX=cx+r*scale*cosT, ballY=cy-r*scale*sinT;
+    const ballR=12;
+    // Ball sits on top of beam (offset perpendicular)
+    const bxOff=ballX-sinT*(ballR+4), byOff=ballY-cosT*(ballR+4);
+    const grad=ctx.createRadialGradient(bxOff-4,byOff-4,2,bxOff,byOff,ballR);
+    grad.addColorStop(0,'#fbbf24');grad.addColorStop(1,'#d97706');
+    ctx.fillStyle=grad;
+    ctx.beginPath();ctx.arc(bxOff,byOff,ballR,0,2*Math.PI);ctx.fill();
+    ctx.strokeStyle='#92400e';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(bxOff,byOff,ballR,0,2*Math.PI);ctx.stroke();
+
+    // Position scale labels
+    ctx.fillStyle='#64748b';ctx.font="9px 'JetBrains Mono'";ctx.textAlign='center';
+    for(let pm=-10;pm<=10;pm+=5){
+      const lx=cx+pm*scale*cosT, ly=cy-pm*scale*sinT;
+      ctx.fillText(pm,lx+sinT*16,ly+cosT*16+3);
+    }
+
+    // Danger flash near edge
+    const absR=Math.abs(r);
+    if(absR>L*0.85){
+      ctx.fillStyle='rgba(220,38,38,'+(0.12+0.12*Math.sin(t*15))+')';
+      ctx.fillRect(0,0,W,H);
+    }
+
+    ctx.fillStyle='#666';ctx.font="10px 'Noto Sans JP'";ctx.textAlign='left';
+    ctx.fillText('ボール＆ビーム',8,H-8);
+  }
+
+  function updateHUD(){
+    document.getElementById('hud-pos').textContent=r.toFixed(1);
+    const aEl=document.getElementById('hud-angle');
+    aEl.textContent=(th*180/Math.PI).toFixed(1)+'°';
+    document.getElementById('hud-score').textContent=score;
+    document.getElementById('hud-timer').textContent=Math.max(0,LEVELS[level].timeLimit-t).toFixed(1);
+  }
+
+  function nextTarget(){
+    targetIdx++;
+    const tgs=LEVELS[level].targets;
+    if(targetIdx>=tgs.length){
+      // Loop with slight variation
+      targetPos=tgs[targetIdx%tgs.length];
+    } else {
+      targetPos=tgs[targetIdx];
+    }
+    holdTime=0;
+  }
+
+  function endGame(success,msg){
+    running=false;gameOver=true;
+    if(animId)cancelAnimationFrame(animId);
+    resultTitle.textContent=success?'🎉 タイムアップ！':'💥 ボール落下！';
+    resultTitle.className='result-title '+(success?'success':'fail');
+    // Star rating by score
+    let stars;
+    if(score>=8)stars=3;else if(score>=4)stars=2;else if(score>=1)stars=1;else stars=0;
+    resultScore.style.display='block';
+    resultScore.innerHTML='スコア <span style="font-size:2rem;color:#fde047;">'+score+'</span> 点'+
+      '<div style="font-size:1.3rem;margin-top:0.1rem;">'+'⭐'.repeat(stars)+'☆'.repeat(3-stars)+'</div>';
+    resultMsg.textContent=msg;
+    resultEl.classList.add('show');
+    btnStart.disabled=false;
+  }
+
+  function simAndDraw(){
+    if(!running)return;
+    const tLimit=LEVELS[level].timeLimit;
+    const reach=LEVELS[level].reach;
+    for(let i=0;i<STEPS_PER_FRAME;i++){
+      const uu=control();
+      const s=rk4([r,th,dr_,dth_],uu,dt);
+      r=s[0];th=s[1];dr_=s[2];dth_=s[3];t+=dt;
+
+      // Ball off the beam end → fail
+      if(Math.abs(r)>L){
+        endGame(false,'ボールがビームの端から落ちた！K₁やK₃を調整して、ボールが行き過ぎないようにしよう。獲得スコア: '+score+'点');
+        return;
+      }
+
+      // Reached target?
+      if(Math.abs(r-targetPos)<reach && Math.abs(dr_)<2){
+        holdTime+=dt;
+        if(holdTime>0.3){ // hold briefly to count
+          score++;
+          nextTarget();
+        }
+      } else {
+        holdTime=0;
+      }
+
+      // Time up → success
+      if(t>=tLimit){
+        endGame(true,'制限時間まで'+score+'個の目標に到達！ボールを落とさず上手にコントロールできたね。');
+        return;
+      }
+    }
+    updateHUD();drawGame();
+    animId=requestAnimationFrame(simAndDraw);
+  }
+
+  function resetState(){
+    r=3;th=0;dr_=0;dth_=0;t=0;
+    score=0;targetIdx=0;targetPos=LEVELS[level].targets[0];holdTime=0;
+    gameOver=false;
+    resultEl.classList.remove('show');
+    updateVals();updateHUD();drawGame();
+  }
+  function updateVals(){
+    document.getElementById('val-k1').textContent=parseFloat(slK1.value).toFixed(1);
+    document.getElementById('val-k2').textContent=parseFloat(slK2.value).toFixed(0);
+    document.getElementById('val-k3').textContent=parseFloat(slK3.value).toFixed(1);
+    document.getElementById('val-k4').textContent=parseFloat(slK4.value).toFixed(0);
+  }
+
+  function start(){if(running)return;if(gameOver)resetState();running=true;btnStart.disabled=true;simAndDraw();}
+  function reset(){running=false;if(animId)cancelAnimationFrame(animId);btnStart.disabled=false;resetState();}
+
+  btnStart.addEventListener('click',start);
+  btnReset.addEventListener('click',reset);
+  resultBtn.addEventListener('click',function(){reset();start();});
+  [slK1,slK2,slK3,slK4].forEach(s=>s.addEventListener('input',function(){updateVals();if(!running)drawGame();}));
+
+  resetState();
+})();
+</script>
+</body>
+</html>
