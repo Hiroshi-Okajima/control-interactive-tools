@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>自動追跡パトカーチャレンジ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#0f172a,#1e3a8a,#2563eb);color:#fff;padding:1.2rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.2rem,3vw,1.6rem);font-weight:700;margin-bottom:0.1rem;}
+.header p{font-size:0.8rem;opacity:0.8;}
+.main{max-width:1000px;margin:0 auto;padding:0.8rem;}
+
+/* Game canvas */
+.game-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0;box-shadow:0 2px 10px rgba(0,0,0,0.06);overflow:hidden;margin-bottom:0.8rem;}
+.canvas-wrap{position:relative;background:#1e293b;}
+canvas#game-canvas{display:block;width:100%;}
+
+/* HUD overlay */
+.hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:0.6rem 0.9rem;pointer-events:none;}
+.hud-box{background:rgba(15,23,42,0.78);backdrop-filter:blur(4px);border-radius:8px;padding:0.4rem 0.7rem;color:#fff;font-family:'JetBrains Mono',monospace;}
+.hud-dist{font-size:1.4rem;font-weight:700;line-height:1.1;}
+.hud-dist-label{font-size:0.6rem;opacity:0.7;letter-spacing:0.05em;}
+.hud-timer{font-size:1.4rem;font-weight:700;color:#fbbf24;line-height:1.1;}
+.hud-timer-label{font-size:0.6rem;opacity:0.7;letter-spacing:0.05em;}
+
+/* Danger bar */
+.danger-bar{position:absolute;bottom:0;left:0;right:0;height:6px;background:linear-gradient(90deg,#dc2626 0%,#dc2626 8%,#22c55e 30%,#22c55e 70%,#f59e0b 92%,#dc2626 100%);}
+.danger-marker{position:absolute;bottom:0;width:3px;height:14px;background:#fff;box-shadow:0 0 4px rgba(0,0,0,0.8);transform:translateX(-50%);transition:left 0.1s;}
+
+/* Result overlay */
+.result-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(15,23,42,0.85);backdrop-filter:blur(3px);color:#fff;text-align:center;z-index:10;padding:0.8rem;overflow-y:auto;}
+.result-overlay.show{display:flex;}
+.result-title{font-family:'Noto Serif JP',serif;font-size:1.7rem;font-weight:800;margin-bottom:0.3rem;}
+.result-title.success{color:#4ade80;}
+.result-title.fail{color:#f87171;}
+.result-msg{font-size:0.9rem;opacity:0.9;margin-bottom:0.8rem;max-width:380px;}
+.result-btn{pointer-events:auto;padding:0.5em 1.5em;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:700;font-size:0.9rem;cursor:pointer;font-family:'Noto Sans JP',sans-serif;}
+.result-btn:hover{background:#1d4ed8;}
+
+/* Controls */
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;}
+@media(max-width:700px){.controls{grid-template-columns:1fr;}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem;}
+.ctrl-group{margin-bottom:0.6rem;}.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.75rem;font-weight:600;color:var(--text2);margin-bottom:0.15rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.85rem;padding:0.1em 0.5em;border-radius:4px;min-width:3.5em;text-align:center;}
+.ctrl-val.a{color:var(--green);background:#ecfdf5;}
+.ctrl-val.b{color:var(--purple);background:#f3eeff;}
+.ctrl-val.d{color:var(--orange);background:#fff7ed;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--blue);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--blue);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);cursor:pointer;}
+input.sa::-webkit-slider-thumb,input.sa::-moz-range-thumb{background:var(--green);}
+input.sb::-webkit-slider-thumb,input.sb::-moz-range-thumb{background:var(--purple);}
+input.sd::-webkit-slider-thumb,input.sd::-moz-range-thumb{background:var(--orange);}
+.btn-row{display:flex;gap:0.5rem;margin-top:0.3rem;}
+.btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:0.3rem;padding:0.6em 1em;border:none;border-radius:8px;font-weight:700;font-size:0.9rem;cursor:pointer;transition:opacity 0.15s;}
+.btn:hover{opacity:0.88;}
+.btn-start{background:var(--green);color:#fff;}
+.btn-reset{background:#e5e5e5;color:#444;}
+.rule-box{font-size:0.78rem;line-height:1.8;color:var(--text2);}
+.rule-box .ok{color:var(--green);font-weight:700;}
+.rule-box .ng{color:var(--red);font-weight:700;}
+.level-tabs{display:flex;gap:0.4rem;margin-bottom:0.5rem;}
+.level-tab{flex:1;padding:0.4em;border:2px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;text-align:center;font-size:0.72rem;font-weight:700;color:var(--text2);transition:all 0.15s;}
+.level-tab.active{border-color:var(--blue);background:#eff6ff;color:#1d4ed8;}
+.level-tab:hover{border-color:var(--blue);}
+.eq-mini{font-family:'JetBrains Mono',monospace;font-size:0.72rem;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:0.4rem 0.6rem;margin-top:0.4rem;color:var(--text2);}
+.footer{text-align:center;padding:0.8rem;color:var(--text3);font-size:0.68rem;}
+.mini-chart-wrap{position:relative;height:90px;margin-top:0.4rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🚓 自動追跡パトカーチャレンジ 🚗</h1>
+  <p>自動追跡パトカー（青）で泥棒（赤）を追え！ぶつからず・見失わず40秒追跡せよ</p>
+</div>
+<div class="main">
+
+<!-- Game -->
+<div class="game-card">
+  <div class="canvas-wrap">
+    <canvas id="game-canvas" width="960" height="280"></canvas>
+    <div class="hud">
+      <div class="hud-box">
+        <div class="hud-dist-label">車間距離</div>
+        <div class="hud-dist" id="hud-dist">25 m</div>
+      </div>
+      <div class="hud-box">
+        <div class="hud-timer-label">残り時間</div>
+        <div class="hud-timer" id="hud-timer">40.0</div>
+      </div>
+    </div>
+    <div class="danger-marker" id="danger-marker" style="left:42%;"></div>
+    <div class="danger-bar"></div>
+    <div class="result-overlay" id="result">
+      <div class="result-title" id="result-title">成功！</div>
+      <div class="result-score" id="result-score" style="display:none;margin-bottom:0.6rem;font-size:1rem;font-weight:700;"></div>
+      <div class="result-msg" id="result-msg"></div>
+      <button class="result-btn" id="result-btn">もう一度</button>
+    </div>
+  </div>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">自動追跡パトカーの追跡ゲイン（ACC調整）</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--green);">a：相対速度ゲイン（反応の速さ）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-a" class="sa" min="-10" max="10" step="0.1" value="0">
+        <span class="ctrl-val a" id="val-a">0.0</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--purple);">b：相対距離ゲイン（追従の強さ）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-b" class="sb" min="-10" max="10" step="0.1" value="2.5"><span class="ctrl-val b" id="val-b">2.5</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--orange);">d：目標車間距離 [m]</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-d" class="sd" min="10" max="50" step="1" value="15">
+        <span class="ctrl-val d" id="val-d">15</span>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-start" id="btn-start">▶ スタート</button>
+      <button class="btn btn-reset" id="btn-reset">↺ リセット</button>
+    </div>
+    <div class="eq-mini"><div style="font-size:0.62rem;font-weight:700;letter-spacing:0.08em;color:var(--text3);margin-bottom:0.2rem;">コントローラーの数式</div>u₂ = −a(ẋ₂−ẋ₁) − b(x₂−x₁+d)</div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">難易度＆ルール</div>
+    <div class="level-tabs">
+      <div class="level-tab" id="lv1" onclick="setLevel(1)">かんたん</div>
+      <div class="level-tab active" id="lv2" onclick="setLevel(2)">ふつう</div>
+      <div class="level-tab" id="lv3" onclick="setLevel(3)">むずかしい</div>
+    </div>
+    <div class="rule-box">
+      🎯 <strong>目標</strong>：泥棒を <strong>40秒間</strong>追跡し続ける<br>
+      <span class="ng">✗ 車間 0m</span>：追突！ゲームオーバー<br>
+      <span class="ng">✗ 車間 60m超</span>：見失った！ゲームオーバー<br>
+      <span class="ok">✓ 40秒耐える</span>：前方から応援到着、泥棒確保！<br>
+      <span style="font-size:0.72rem;color:var(--text3);" id="level-hint">ふつう：泥棒は急加速・急減速してくる。aを上げると素早く反応、bを上げると車間維持が強くなる。</span>
+    </div>
+    <div class="mini-chart-wrap"><canvas id="mini-chart"></canvas></div>
+  </div>
+
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — 自動追跡パトカーチャレンジ</div>
+
+<script>
+(function(){
+  const canvas=document.getElementById('game-canvas');
+  const ctx=canvas.getContext('2d');
+  const slA=document.getElementById('sl-a'),slB=document.getElementById('sl-b'),slD=document.getElementById('sl-d');
+  const btnStart=document.getElementById('btn-start'),btnReset=document.getElementById('btn-reset');
+  const resultEl=document.getElementById('result'),resultTitle=document.getElementById('result-title');
+  const resultMsg=document.getElementById('result-msg'),resultBtn=document.getElementById('result-btn');
+  const resultScore=document.getElementById('result-score');
+
+  const dt=0.01, STEPS_PER_FRAME=2, T_GOAL=40;
+  // CAR_LEN: physical gap at which cars touch (visual car length ~5m)
+  // Displayed gap = physical gap (x1-x2) - CAR_LEN, so 0 = collision
+  const CAR_LEN=5;
+  const GAP_MIN=0, GAP_MAX=60; // displayed gap limits (0=collision, 60=lost)
+
+  let level=2; // 1=easy,2=normal,3=hard
+  let x1,v1,x2,v2,t;
+  let running=false,animId=null,gameOver=false;
+  let histT=[],histGap=[];
+  let gapMin=Infinity, gapMax=-Infinity; // track gap range for scoring
+
+  const LEVEL_HINTS={
+    1:'かんたん：泥棒は中程度の加減速を繰り返す。aを少し上げると安定して追従できる。',
+    2:'ふつう：泥棒は急加速の直後に急減速してくる。aを上げて相対速度のダンピングを効かせよう。',
+    3:'むずかしい：パトカーは50km/hスタート、泥棒は100km/hで先行。急減速の追突に注意しつつ、終盤は150km/hまで加速して逃げる泥棒を見失わないように！'
+  };
+  window.setLevel=function(lv){
+    level=lv;
+    [1,2,3].forEach(i=>{document.getElementById('lv'+i).className='level-tab'+(i===lv?' active':'');});
+    document.getElementById('level-hint').textContent=LEVEL_HINTS[lv];
+    if(!running) resetState();
+  };
+
+  // Thief (V1) speed patterns by difficulty
+  function getVr(tt){
+    if(level===1){
+      // Easy (was Normal) — moderate accel/decel
+      if(tt<4) return 25;
+      if(tt<7) return 45;
+      if(tt<11) return 20;
+      if(tt<15) return 50;
+      if(tt<19) return 30;
+      if(tt<23) return 55;
+      if(tt<27) return 25;
+      if(tt<32) return 48;
+      if(tt<36) return 35;
+      return 45;
+    } else if(level===2){
+      // Normal (was Hard) — abrupt accel then immediate brake
+      if(tt<2) return 25;
+      if(tt<4) return 70;
+      if(tt<5.5) return 8;
+      if(tt<7) return 68;
+      if(tt<8.5) return 10;
+      if(tt<10) return 72;
+      if(tt<11.5) return 12;
+      if(tt<14) return 65;
+      if(tt<15.5) return 8;
+      if(tt<18) return 70;
+      if(tt<19.5) return 15;
+      if(tt<22) return 68;
+      if(tt<23.5) return 10;
+      if(tt<26) return 72;
+      if(tt<27.5) return 8;
+      if(tt<30) return 66;
+      if(tt<31.5) return 12;
+      if(tt<34) return 70;
+      if(tt<35.5) return 10;
+      return 60;
+    } else {
+      // Hard (new) — very high initial speed, sudden brakes, final hard accel to 150
+      if(tt<6) return 100;   // start fast
+      if(tt<6.5) return 30;  // sudden hard brake!
+      if(tt<12) return 30;   // cruise slow
+      if(tt<13) return 90;   // accel again
+      if(tt<18) return 90;
+      if(tt<18.5) return 25; // sudden brake
+      if(tt<24) return 25;
+      if(tt<25) return 95;
+      if(tt<30) return 95;
+      if(tt<30.5) return 35; // brake
+      if(tt<34) return 35;
+      // Final escape: hard acceleration up to 150 (easy to lose sight!)
+      if(tt<36) return 110;
+      if(tt<38) return 140;
+      return 150;
+    }
+  }
+
+  // V1 control: track target speed vr
+  // V2 control: ACC
+  function dynamics(state,a,b,d,vr){
+    const [xx1,vv1,xx2,vv2]=state;
+    const u1=-vv1+vr;
+    const u2=-a*(vv2-vv1)-b*(xx2-xx1+d);
+    return [vv1,u1,vv2,u2];
+  }
+  function rk4(state,a,b,d,vr,h){
+    const k1=dynamics(state,a,b,d,vr);
+    const s2=state.map((v,i)=>v+.5*h*k1[i]);
+    const k2=dynamics(s2,a,b,d,vr);
+    const s3=state.map((v,i)=>v+.5*h*k2[i]);
+    const k3=dynamics(s3,a,b,d,vr);
+    const s4=state.map((v,i)=>v+h*k3[i]);
+    const k4=dynamics(s4,a,b,d,vr);
+    return state.map((v,i)=>v+h/6*(k1[i]+2*k2[i]+2*k3[i]+k4[i]));
+  }
+
+  // Mini chart (gap over time)
+  const miniChart=new Chart(document.getElementById('mini-chart').getContext('2d'),{
+    type:'line',
+    data:{datasets:[
+      {label:'gap',data:[],borderColor:'#2563eb',borderWidth:2,pointRadius:0,fill:false,tension:0.1},
+      {label:'max',data:[],borderColor:'#dc2626',borderWidth:1,borderDash:[4,3],pointRadius:0,fill:false},
+      {label:'target',data:[],borderColor:'#ea580c',borderWidth:1,borderDash:[3,3],pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+      scales:{
+        x:{type:'linear',min:0,max:T_GOAL,title:{display:true,text:'t [s]',font:{size:9}},ticks:{stepSize:10,font:{size:8}},grid:{color:'#f0f0f0'}},
+        y:{min:0,max:65,ticks:{stepSize:20,font:{size:8}},grid:{color:'#f0f0f0'}}
+      },
+      plugins:{legend:{display:false},tooltip:{enabled:false}}
+    }
+  });
+
+  function resizeCanvas(){
+    const rect=canvas.parentElement.getBoundingClientRect();
+    canvas.width=rect.width;
+    canvas.height=340;
+  }
+  resizeCanvas();
+  window.addEventListener('resize',resizeCanvas);
+
+  // ── Curve patterns (7 patterns incl. straight) — visual only ──
+  // value = curvature (lateral offset rate); positive=right curve, negative=left
+  const CURVE_PATTERNS=[0, 0.6, -0.6, 1.0, -1.0, 0.3, -0.3];
+  let curveIdx=0, curveTimer=0, curCurve=0, curveTarget=0;
+  const CURVE_INTERVAL=4.0; // seconds per pattern
+
+  function updateCurve(){
+    curveTimer+=dt*STEPS_PER_FRAME;
+    if(curveTimer>=CURVE_INTERVAL){
+      curveTimer=0;
+      curveIdx=(curveIdx+1)%CURVE_PATTERNS.length;
+      curveTarget=CURVE_PATTERNS[curveIdx];
+    }
+    // Smoothly approach target curvature
+    curCurve+=(curveTarget-curCurve)*0.04;
+  }
+
+  // Perspective road point: given depth z (0=near/bottom, 1=far/horizon)
+  // returns {x: center x, w: half road width, y: screen y}
+  function roadAt(z, W, horizonY, baseY, roadHalfNear){
+    // y: linear from baseY (z=0) to horizonY (z=1)
+    const y=baseY-(baseY-horizonY)*z;
+    // perspective width shrink
+    const w=roadHalfNear*(1-z*0.92);
+    // curve: lateral shift grows with depth squared (road bends ahead)
+    const bend=curCurve*z*z*W*0.42;
+    const x=W/2+bend;
+    return {x,y,w};
+  }
+
+  // Draw a car in perspective at given depth with given color
+  function drawCar3D(z,color,isThief,flashOn,W,horizonY,baseY,roadHalfNear,label,speed){
+    const p=roadAt(z,W,horizonY,baseY,roadHalfNear);
+    const sizeF=(1-z*0.9);
+    const cx=p.x, cy=p.y-40*sizeF;
+
+    ctx.save();
+
+    if(isThief){
+      // ── Sports car (rear view), sleek & wide ──
+      const cw=104*sizeF;          // wide body
+      const ch=40*sizeF;           // low profile
+      const bodyTop=cy-ch*0.5;
+      const bodyBot=cy+ch*0.5;
+
+      // Ground shadow
+      ctx.fillStyle='rgba(0,0,0,0.30)';
+      ctx.beginPath();ctx.ellipse(cx,bodyBot+3*sizeF,cw*0.56,ch*0.20,0,0,2*Math.PI);ctx.fill();
+
+      // Rear wing (spoiler) — two uprights + blade
+      const wingW=cw*0.92, wingY=bodyTop-ch*0.34;
+      ctx.fillStyle='#1f2937';
+      ctx.fillRect(cx-cw*0.34,wingY,cw*0.06,ch*0.34);   // left upright
+      ctx.fillRect(cx+cw*0.28,wingY,cw*0.06,ch*0.34);   // right upright
+      ctx.fillStyle=shade(color,-30);
+      if(ctx.roundRect){ctx.beginPath();ctx.roundRect(cx-wingW/2,wingY-ch*0.10,wingW,ch*0.16,3*sizeF);ctx.fill();}
+      else ctx.fillRect(cx-wingW/2,wingY-ch*0.10,wingW,ch*0.16);
+
+      // Main body — trapezoid (wider at bottom), glossy gradient
+      const grad=ctx.createLinearGradient(0,bodyTop,0,bodyBot);
+      grad.addColorStop(0,shade(color,40));
+      grad.addColorStop(0.45,color);
+      grad.addColorStop(1,shade(color,-35));
+      ctx.fillStyle=grad;
+      ctx.beginPath();
+      const topHalf=cw*0.40, botHalf=cw*0.50;
+      ctx.moveTo(cx-topHalf,bodyTop);
+      ctx.lineTo(cx+topHalf,bodyTop);
+      ctx.lineTo(cx+botHalf,bodyBot);
+      ctx.lineTo(cx-botHalf,bodyBot);
+      ctx.closePath();ctx.fill();
+
+      // Sloped rear window (dark, glossy)
+      ctx.fillStyle='rgba(20,30,45,0.85)';
+      ctx.beginPath();
+      ctx.moveTo(cx-topHalf*0.7,bodyTop+ch*0.02);
+      ctx.lineTo(cx+topHalf*0.7,bodyTop+ch*0.02);
+      ctx.lineTo(cx+topHalf*0.55,bodyTop+ch*0.34);
+      ctx.lineTo(cx-topHalf*0.55,bodyTop+ch*0.34);
+      ctx.closePath();ctx.fill();
+      // window highlight
+      ctx.fillStyle='rgba(255,255,255,0.12)';
+      ctx.beginPath();
+      ctx.moveTo(cx-topHalf*0.7,bodyTop+ch*0.02);
+      ctx.lineTo(cx-topHalf*0.2,bodyTop+ch*0.02);
+      ctx.lineTo(cx-topHalf*0.15,bodyTop+ch*0.34);
+      ctx.lineTo(cx-topHalf*0.55,bodyTop+ch*0.34);
+      ctx.closePath();ctx.fill();
+
+      // Horizontal body highlight line
+      ctx.strokeStyle='rgba(255,255,255,0.25)';ctx.lineWidth=Math.max(1,1.5*sizeF);
+      ctx.beginPath();ctx.moveTo(cx-botHalf*0.9,cy+ch*0.05);ctx.lineTo(cx+botHalf*0.9,cy+ch*0.05);ctx.stroke();
+
+      // Full-width tail light bar (signature sports-car look)
+      const tlY=bodyBot-ch*0.30, tlH=ch*0.16;
+      ctx.fillStyle='rgba(80,0,0,0.6)';
+      ctx.fillRect(cx-botHalf*0.86,tlY,botHalf*1.72,tlH);
+      // glowing red lamps left & right
+      const lampGrad=ctx.createLinearGradient(0,tlY,0,tlY+tlH);
+      lampGrad.addColorStop(0,'#ff5252');lampGrad.addColorStop(1,'#b91c1c');
+      ctx.fillStyle=lampGrad;
+      ctx.fillRect(cx-botHalf*0.86,tlY,botHalf*0.55,tlH);
+      ctx.fillRect(cx+botHalf*0.31,tlY,botHalf*0.55,tlH);
+      // bright center strip
+      ctx.fillStyle='rgba(255,60,60,0.7)';
+      ctx.fillRect(cx-botHalf*0.86,tlY,botHalf*1.72,Math.max(1,tlH*0.25));
+
+      // Diffuser / dual exhaust
+      ctx.fillStyle='#111827';
+      ctx.fillRect(cx-cw*0.16,bodyBot-ch*0.10,cw*0.10,ch*0.08);
+      ctx.fillRect(cx+cw*0.06,bodyBot-ch*0.10,cw*0.10,ch*0.08);
+
+      // Wheels peeking (wide tires)
+      ctx.fillStyle='#0b0b0b';
+      ctx.fillRect(cx-botHalf-2*sizeF,bodyBot-ch*0.22,cw*0.07,ch*0.22);
+      ctx.fillRect(cx+botHalf-cw*0.07+2*sizeF,bodyBot-ch*0.22,cw*0.07,ch*0.22);
+
+      // Speed label
+      if(sizeF>0.25){
+        ctx.fillStyle='#fca5a5';ctx.font='bold '+Math.max(8,11*sizeF)+"px 'JetBrains Mono'";
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(speed.toFixed(0)+'km/h',cx,wingY-ch*0.3);
+      }
+    } else {
+      // (kept for generality; police drawn separately as hood)
+      const cw=86*sizeF, ch=54*sizeF;
+      ctx.fillStyle=color;
+      if(ctx.roundRect){ctx.beginPath();ctx.roundRect(cx-cw/2,cy-ch/2,cw,ch,6*sizeF);ctx.fill();}
+      else ctx.fillRect(cx-cw/2,cy-ch/2,cw,ch);
+    }
+    ctx.restore();
+  }
+
+  // Lighten/darken a hex color by amount (-255..255)
+  function shade(hex,amt){
+    const h=hex.replace('#','');
+    let r=parseInt(h.substring(0,2),16),g=parseInt(h.substring(2,4),16),b=parseInt(h.substring(4,6),16);
+    r=Math.max(0,Math.min(255,r+amt));g=Math.max(0,Math.min(255,g+amt));b=Math.max(0,Math.min(255,b+amt));
+    return 'rgb('+r+','+g+','+b+')';
+  }
+
+  function drawGame(flashOn){
+    const W=canvas.width,H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+
+    const horizonY=H*0.30;
+    const baseY=H;            // bottom of screen (player's hood area)
+    const roadHalfNear=W*0.48;
+
+    // ── Sky ──
+    const sky=ctx.createLinearGradient(0,0,0,horizonY);
+    sky.addColorStop(0,'#1e3a8a');sky.addColorStop(1,'#7dd3fc');
+    ctx.fillStyle=sky;ctx.fillRect(0,0,W,horizonY);
+
+    // ── Ground (grass) ──
+    ctx.fillStyle='#4d7c2f';ctx.fillRect(0,horizonY,W,H-horizonY);
+
+    // ── Road as a filled perspective polygon ──
+    const steps=40;
+    ctx.beginPath();
+    // left edge from near to far
+    for(let i=0;i<=steps;i++){
+      const z=i/steps;const p=roadAt(z,W,horizonY,baseY,roadHalfNear);
+      const x=p.x-p.w;const y=p.y;
+      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    }
+    // right edge from far to near
+    for(let i=steps;i>=0;i--){
+      const z=i/steps;const p=roadAt(z,W,horizonY,baseY,roadHalfNear);
+      ctx.lineTo(p.x+p.w,p.y);
+    }
+    ctx.closePath();
+    ctx.fillStyle='#374151';ctx.fill();
+
+    // ── Road edges (white) ──
+    ctx.lineWidth=1;
+    for(const side of [-1,1]){
+      ctx.beginPath();
+      for(let i=0;i<=steps;i++){
+        const z=i/steps;const p=roadAt(z,W,horizonY,baseY,roadHalfNear);
+        const x=p.x+side*p.w;
+        if(i===0)ctx.moveTo(x,p.y);else ctx.lineTo(x,p.y);
+      }
+      ctx.strokeStyle='#e5e7eb';ctx.lineWidth=Math.max(1,3*(1));ctx.stroke();
+    }
+
+    // ── Center dashes (longer, scroll speed proportional to V2) ──
+    // Scroll phase grows with distance travelled (x2). Smaller coeff = slower flow.
+    const SCROLL_COEF=0.05;       // lower than before so low speed looks calm
+    const dashPhase=(x2*SCROLL_COEF)%1;
+    const DASH_PERIOD=0.16;       // length of one dash+gap cycle in z-space
+    const DASH_FILL=0.55;         // fraction painted
+    ctx.fillStyle='#fbbf24';
+    for(let i=0;i<steps;i++){
+      const z0=i/steps, z1=(i+1)/steps;
+      const cyc=(((z0+dashPhase)/DASH_PERIOD)%1+1)%1;
+      if(cyc>DASH_FILL)continue;
+      const p0=roadAt(z0,W,horizonY,baseY,roadHalfNear);
+      const p1=roadAt(z1,W,horizonY,baseY,roadHalfNear);
+      const dashW0=Math.max(1,p0.w*0.045), dashW1=Math.max(0.5,p1.w*0.045);
+      ctx.beginPath();
+      ctx.moveTo(p0.x-dashW0,p0.y);ctx.lineTo(p0.x+dashW0,p0.y);
+      ctx.lineTo(p1.x+dashW1,p1.y);ctx.lineTo(p1.x-dashW1,p1.y);
+      ctx.closePath();ctx.fill();
+    }
+
+    // ── Roadside street lamps (1/3 frequency, scroll with V2) ──
+    const LAMP_SPACING=1.02;      // 3x wider than before → 1/3 the lamps
+    const lampPhase=(x2*SCROLL_COEF)%LAMP_SPACING;
+    const lamps=[];
+    for(let k=-1;k<3;k++){
+      const zRaw=k*LAMP_SPACING - lampPhase + 0.05;
+      if(zRaw<=0.02||zRaw>=0.97)continue;
+      lamps.push({z:zRaw,side:(k%2===0)?-1:1});
+    }
+    lamps.sort((a,b)=>b.z-a.z); // far first
+    for(const lp of lamps){
+      const zRaw=lp.z, side=lp.side;
+      const p=roadAt(zRaw,W,horizonY,baseY,roadHalfNear);
+      const lampF=(1-zRaw*0.9);
+      const baseX=p.x+side*(p.w+ p.w*0.10 + 6*lampF);
+      const baseYpx=p.y;
+      const poleH=70*lampF, armL=18*lampF;
+      ctx.strokeStyle='#1f2937';ctx.lineWidth=Math.max(1,4*lampF);
+      ctx.beginPath();ctx.moveTo(baseX,baseYpx);ctx.lineTo(baseX,baseYpx-poleH);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(baseX,baseYpx-poleH);ctx.lineTo(baseX-side*armL,baseYpx-poleH);ctx.stroke();
+      const hx=baseX-side*armL, hy=baseYpx-poleH;
+      const glow=ctx.createRadialGradient(hx,hy,1,hx,hy,10*lampF);
+      glow.addColorStop(0,'rgba(255,236,170,0.95)');glow.addColorStop(1,'rgba(255,236,170,0)');
+      ctx.fillStyle=glow;
+      ctx.beginPath();ctx.arc(hx,hy,10*lampF,0,2*Math.PI);ctx.fill();
+      ctx.fillStyle='#fde68a';
+      ctx.beginPath();ctx.arc(hx,hy,Math.max(1.5,3.5*lampF),0,2*Math.PI);ctx.fill();
+    }
+
+    // ── Thief car ahead (depth from gap) ──
+    const gapDisp=(x1-x2)-CAR_LEN;
+    // map gap 0..GAP_MAX → depth 0.05..0.92 (near..far)
+    const zThief=Math.max(0.02,Math.min(0.95, gapDisp/GAP_MAX*0.9+0.05));
+    if(gapDisp<GAP_MAX){
+      drawCar3D(zThief,'#dc2626',true,false,W,horizonY,baseY,roadHalfNear,'盗',v1);
+    } else {
+      ctx.fillStyle='#dc2626';ctx.font="bold 14px 'Noto Sans JP'";ctx.textAlign='center';
+      ctx.fillText('見失いそう！',W/2,horizonY+30);
+    }
+
+    // ── Player's own car hood (police, bottom foreground) ──
+    const hoodH=H*0.18;
+    const hoodGrad=ctx.createLinearGradient(0,H-hoodH,0,H);
+    hoodGrad.addColorStop(0,'#1d4ed8');hoodGrad.addColorStop(1,'#1e3a8a');
+    ctx.fillStyle=hoodGrad;
+    ctx.beginPath();
+    ctx.moveTo(W*0.12,H);
+    ctx.lineTo(W*0.28,H-hoodH);
+    ctx.lineTo(W*0.72,H-hoodH);
+    ctx.lineTo(W*0.88,H);
+    ctx.closePath();ctx.fill();
+    // Siren bar on player hood
+    const sx=W*0.5,sy=H-hoodH+6;
+    ctx.fillStyle=flashOn?'#ef4444':'#3b82f6';
+    ctx.fillRect(sx-26,sy,24,10);
+    ctx.fillStyle=flashOn?'#3b82f6':'#ef4444';
+    ctx.fillRect(sx+2,sy,24,10);
+    ctx.fillStyle='#fff';ctx.font="bold 11px 'Noto Sans JP'";ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('POLICE',sx,sy+22);
+
+    // Curve direction indicator
+    if(Math.abs(curCurve)>0.15){
+      ctx.fillStyle='rgba(255,255,255,0.8)';ctx.font="bold 20px 'Noto Sans JP'";ctx.textAlign='center';
+      ctx.fillText(curCurve>0?'⟩⟩':'⟨⟨',W/2,horizonY+18);
+    }
+  }
+
+  function updateHUD(){
+    const gap=(x1-x2)-CAR_LEN; // displayed gap, 0 = collision
+    document.getElementById('hud-dist').textContent=Math.max(0,gap).toFixed(0)+' m';
+    const distEl=document.querySelector('.hud-dist');
+    if(gap<8||gap>52) distEl.style.color='#f87171';
+    else if(gap<15||gap>45) distEl.style.color='#fbbf24';
+    else distEl.style.color='#4ade80';
+    document.getElementById('hud-timer').textContent=Math.max(0,T_GOAL-t).toFixed(1);
+    const pct=Math.max(0,Math.min(100,(gap/GAP_MAX)*100));
+    document.getElementById('danger-marker').style.left=pct+'%';
+  }
+
+  function updateMini(){
+    const skip=Math.max(1,Math.floor(histT.length/200));
+    const g=[],mx=[],tg=[];
+    const d=parseFloat(slD.value);
+    for(let i=0;i<histT.length;i+=skip){
+      g.push({x:histT[i],y:histGap[i]});
+      mx.push({x:histT[i],y:GAP_MAX});
+      tg.push({x:histT[i],y:d});
+    }
+    miniChart.data.datasets[0].data=g;
+    miniChart.data.datasets[1].data=mx;
+    miniChart.data.datasets[2].data=tg;
+    miniChart.update();
+  }
+
+  function endGame(success,msg,score,range){
+    running=false;gameOver=true;
+    if(animId)cancelAnimationFrame(animId);
+    resultTitle.textContent=success?'🎉 確保成功！':'💥 ゲームオーバー';
+    resultTitle.className='result-title '+(success?'success':'fail');
+    if(success && typeof score==='number'){
+      // Star rating from score
+      let stars;
+      if(score>=80)stars=3;else if(score>=50)stars=2;else stars=1;
+      resultScore.innerHTML='スコア <span style="font-size:2rem;color:#fbbf24;">'+score+'</span> 点'+
+        '<div style="font-size:1.3rem;margin-top:0.1rem;">'+'⭐'.repeat(stars)+'☆'.repeat(3-stars)+'</div>'+
+        '<div style="font-size:0.74rem;opacity:0.8;margin-top:0.2rem;">車間の変動幅: '+range.toFixed(1)+' m（小さいほど高得点）</div>';
+      resultScore.style.display='block';
+    } else {
+      resultScore.style.display='none';
+    }
+    resultMsg.textContent=msg;
+    resultEl.classList.add('show');
+    btnStart.disabled=false;
+    updateMini();
+  }
+
+  let flashTimer=0,flashOn=false;
+  function simAndDraw(){
+    if(!running)return;
+    const a=parseFloat(slA.value),b=parseFloat(slB.value),dDisp=parseFloat(slD.value);
+    const d=dDisp+CAR_LEN; // physical target gap for control law
+    for(let i=0;i<STEPS_PER_FRAME;i++){
+      const vr=getVr(t);
+      const s=rk4([x1,v1,x2,v2],a,b,d,vr,dt);
+      x1=s[0];v1=s[1];x2=s[2];v2=s[3];t+=dt;
+      const gap=(x1-x2)-CAR_LEN; // displayed gap, 0 = collision
+      if(gap<gapMin)gapMin=gap;
+      if(gap>gapMax)gapMax=gap;
+      if(Math.round(t/dt)%5===0){histT.push(t);histGap.push(gap);}
+
+      // Check fail conditions
+      if(gap<=GAP_MIN){endGame(false,'泥棒に追突してしまった！車間距離を保とう。bを上げて目標車間を維持してみよう。');return;}
+      if(gap>=GAP_MAX){endGame(false,'泥棒を見失った！60m以上離れてしまった。aやbを上げて追従性能を高めよう。');return;}
+      // Check success
+      if(t>=T_GOAL){
+        const range=gapMax-gapMin;
+        // Piecewise linear: 5m=100, 10m=80, 20m=50, 60m=0
+        let score;
+        if(range<=5) score=100;
+        else if(range<=10) score=100-(range-5)*4;      // 100→80
+        else if(range<=20) score=80-(range-10)*3;       // 80→50
+        else if(range<=60) score=50-(range-20)*1.25;    // 50→0
+        else score=0;
+        score=Math.max(0,Math.min(100,Math.round(score)));
+        endGame(true,'前方から応援が到着。泥棒を確保！',score,range);
+        return;
+      }
+    }
+    // Flash siren
+    flashTimer++;if(flashTimer>=15){flashTimer=0;flashOn=!flashOn;}
+    updateCurve();
+    updateHUD();drawGame(flashOn);
+    if(Math.round(t/dt)%15===0)updateMini();
+    animId=requestAnimationFrame(simAndDraw);
+  }
+
+  function resetState(){
+    const dDisp=parseFloat(slD.value);
+    const v1_0=getVr(0);
+    // Police: matches thief for levels 1-2; fixed 50 for level 3 (thief starts at 100)
+    const v2_0=(level===3)?50:v1_0;
+    x1=dDisp+CAR_LEN; v1=v1_0; x2=0; v2=v2_0; t=0;
+    histT=[];histGap=[];gameOver=false;
+    gapMin=Infinity;gapMax=-Infinity;
+    curveIdx=0;curveTimer=0;curCurve=0;curveTarget=0;
+    resultEl.classList.remove('show');
+    updateValDisplays();updateHUD();updateMini();drawGame(false);
+  }
+  function updateValDisplays(){
+    document.getElementById('val-a').textContent=parseFloat(slA.value).toFixed(1);
+    document.getElementById('val-b').textContent=parseFloat(slB.value).toFixed(1);
+    document.getElementById('val-d').textContent=parseFloat(slD.value).toFixed(0);
+  }
+
+  function start(){if(running)return;if(gameOver)resetState();running=true;btnStart.disabled=true;simAndDraw();}
+  function reset(){running=false;if(animId)cancelAnimationFrame(animId);btnStart.disabled=false;resetState();}
+
+  btnStart.addEventListener('click',start);
+  btnReset.addEventListener('click',reset);
+  resultBtn.addEventListener('click',function(){reset();start();});
+  [slA,slB,slD].forEach(s=>s.addEventListener('input',function(){
+    updateValDisplays();
+    if(!running){resetState();}
+  }));
+
+  resetState();
+})();
+</script>
+</body>
+</html>
