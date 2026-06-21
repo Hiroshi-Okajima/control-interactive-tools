@@ -3,7 +3,7 @@
 制御工学のインタラクティブ教材集（HTML + JavaScript）
 
 ## 教材一覧
-
+[教材リンク](https://hiroshi-okajima.github.io/control-interactive-tools)
 | # | 教材名 | 内容 | ファイル |
 |---|--------|------|----------|
 | 01 | 1次系の応答 | ステップ応答・インパルス応答 (K, T) | `control_1st_order.html` |
@@ -44,6 +44,7 @@ https://hiroshi-okajima.github.io/control-interactive-tools/
 - [荷物運び（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_crane_game.html)
 - [ボール＆ビーム（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_ballbeam_game.html)
 - [タンクシステム（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_tank_game.html)
+- [追跡パトカー（ドライバー視点，Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_acc_game2.html)
 
 ## 使い方
 
