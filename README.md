@@ -3,7 +3,6 @@
 制御工学のインタラクティブ教材集（HTML + JavaScript）
 
 ## 教材一覧
-[教材リンク](https://hiroshi-okajima.github.io/control-interactive-tools)
 | # | 教材名 | 内容 | ファイル |
 |---|--------|------|----------|
 | 01 | 1次系の応答 | ステップ応答・インパルス応答 (K, T) | `control_1st_order.html` |
