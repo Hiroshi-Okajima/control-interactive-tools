@@ -20,6 +20,7 @@
 | 12 | 荷物運び | 小学生向けゲーム | `control_crane_game.html` |
 | 13 | ボール＆ビーム | 小学生向けゲーム | `control_ballbeam_game.html` |
 | 14 | タンクシステム | 小学生向けゲーム | `control_tank_game.html` |
+| 15 | 追跡パトカー2 | 小学生向けゲーム（ドライバー視点） | `control_acc_game2.html` |
 
 ## GitHub Pages URL
 
