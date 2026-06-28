@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ドローン着陸チャレンジ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--sky:#0ea5e9;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#064e3b,#0e7490,#0ea5e9);color:#fff;padding:1.2rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.2rem,3vw,1.6rem);font-weight:700;margin-bottom:0.1rem;}
+.header p{font-size:0.8rem;opacity:0.85;}
+.main{max-width:1000px;margin:0 auto;padding:0.8rem;}
+.game-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0;box-shadow:0 2px 10px rgba(0,0,0,0.06);overflow:hidden;margin-bottom:0.8rem;}
+.canvas-wrap{position:relative;background:#bae6fd;}
+canvas#game-canvas{display:block;width:100%;}
+.hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:0.6rem 0.9rem;pointer-events:none;}
+.hud-box{background:rgba(6,78,59,0.78);backdrop-filter:blur(4px);border-radius:8px;padding:0.4rem 0.7rem;color:#fff;font-family:'JetBrains Mono',monospace;}
+.hud-v{font-size:1.2rem;font-weight:700;line-height:1.1;}
+.hud-l{font-size:0.58rem;opacity:0.75;letter-spacing:0.05em;}
+.hud-timer .hud-v{color:#fde047;}
+.result-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(6,78,59,0.88);backdrop-filter:blur(3px);color:#fff;text-align:center;z-index:10;padding:0.8rem;overflow-y:auto;}
+.result-overlay.show{display:flex;}
+.result-title{font-family:'Noto Serif JP',serif;font-size:1.7rem;font-weight:800;margin-bottom:0.3rem;}
+.result-title.success{color:#86efac;}
+.result-title.fail{color:#fca5a5;}
+.result-score{font-size:1rem;font-weight:700;margin-bottom:0.5rem;}
+.result-detail{font-size:0.78rem;opacity:0.85;margin-bottom:0.6rem;font-family:'JetBrains Mono',monospace;}
+.result-msg{font-size:0.86rem;opacity:0.9;margin-bottom:0.8rem;max-width:400px;}
+.result-btn{pointer-events:auto;padding:0.5em 1.5em;border:none;border-radius:8px;background:var(--sky);color:#fff;font-weight:700;font-size:0.9rem;cursor:pointer;font-family:'Noto Sans JP',sans-serif;}
+.result-btn:hover{opacity:0.9;}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;}
+@media(max-width:700px){.controls{grid-template-columns:1fr;}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem;}
+.gain-section{margin-bottom:0.6rem;}
+.gain-head{font-size:0.7rem;font-weight:700;color:var(--text2);margin-bottom:0.25rem;padding-bottom:0.15rem;border-bottom:1px solid var(--border);}
+.ctrl-group{margin-bottom:0.4rem;}
+.ctrl-label{font-size:0.72rem;font-weight:600;color:var(--text2);margin-bottom:0.1rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.82rem;padding:0.1em 0.5em;border-radius:4px;min-width:3.2em;text-align:center;}
+.ctrl-val.vert{color:var(--teal);background:#f0fdfa;}
+.ctrl-val.horz{color:var(--purple);background:#f3eeff;}
+.ctrl-val.tgt{color:var(--orange);background:#fff7ed;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--sky);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--sky);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);cursor:pointer;}
+input.vert::-webkit-slider-thumb,input.vert::-moz-range-thumb{background:var(--teal);}
+input.horz::-webkit-slider-thumb,input.horz::-moz-range-thumb{background:var(--purple);}
+input.tgt::-webkit-slider-thumb,input.tgt::-moz-range-thumb{background:var(--orange);}
+.btn-row{display:flex;gap:0.5rem;margin-top:0.3rem;}
+.btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:0.3rem;padding:0.55em 1em;border:none;border-radius:8px;font-weight:700;font-size:0.88rem;cursor:pointer;transition:opacity 0.15s;}
+.btn:hover{opacity:0.88;}
+.btn-start{background:var(--green);color:#fff;}
+.btn-reset{background:#e5e5e5;color:#444;}
+.rule-box{font-size:0.76rem;line-height:1.7;color:var(--text2);}
+.rule-box .ok{color:var(--green);font-weight:700;}
+.rule-box .ng{color:var(--red);font-weight:700;}
+.level-tabs{display:flex;gap:0.4rem;margin-bottom:0.5rem;}
+.level-tab{flex:1;padding:0.4em;border:2px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;text-align:center;font-size:0.72rem;font-weight:700;color:var(--text2);transition:all 0.15s;}
+.level-tab.active{border-color:var(--sky);background:#e0f2fe;color:#0369a1;}
+.level-tab:hover{border-color:var(--sky);}
+.eq-mini{font-family:'JetBrains Mono',monospace;font-size:0.68rem;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:0.4rem 0.6rem;margin-top:0.4rem;color:var(--text2);line-height:1.6;}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.7rem 0.9rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.level-explain{margin-top:0.5rem;display:flex;flex-direction:column;gap:0.3rem;}
+.lvl-row{display:flex;gap:0.5rem;padding:0.4rem 0.5rem;border-radius:8px;background:#f8fafc;border:1px solid transparent;transition:all 0.15s;align-items:flex-start;}
+.lvl-row.active{background:#e0f2fe;border-color:var(--sky);}
+.lvl-name{font-weight:700;font-size:0.74rem;white-space:nowrap;min-width:4.5em;}
+.lvl-desc{font-size:0.72rem;color:var(--text2);line-height:1.55;}
+.chart-title{font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.3rem;color:var(--text2);}
+.chart-wrap{position:relative;height:150px;}
+.footer{text-align:center;padding:0.8rem;color:var(--text3);font-size:0.68rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🚁 ドローン着陸チャレンジ</h1>
+  <p>縦・横のゲインを調整し、目標地点へ素早く・やわらかく着陸せよ</p>
+</div>
+<div class="main">
+
+<div class="game-card">
+  <div class="canvas-wrap">
+    <canvas id="game-canvas" width="960" height="380"></canvas>
+    <div class="hud">
+      <div class="hud-box"><div class="hud-l">高度 z</div><div class="hud-v" id="hud-alt">50.0</div></div>
+      <div class="hud-box"><div class="hud-l">降下速度</div><div class="hud-v" id="hud-vz">0.0</div></div>
+      <div class="hud-box"><div class="hud-l">目標との横ずれ</div><div class="hud-v" id="hud-xerr">0.0</div></div>
+      <div class="hud-box hud-timer"><div class="hud-l">経過時間</div><div class="hud-v" id="hud-time">0.0</div></div>
+    </div>
+    <div class="result-overlay" id="result">
+      <div class="result-title" id="result-title"></div>
+      <div class="result-score" id="result-score"></div>
+      <div class="result-detail" id="result-detail"></div>
+      <div class="result-msg" id="result-msg"></div>
+      <button class="result-btn" id="result-btn">もう一度</button>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+
+  <div class="card">
+    <div class="card-label" style="color:var(--sky);">制御ゲイン（縦・横 独立PD）</div>
+    <div class="gain-section">
+      <div class="gain-head" style="color:var(--teal);">縦方向（高度）の制御</div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">Kp_z：高度の比例ゲイン</div>
+        <div class="ctrl-row"><input type="range" id="sl-kpz" class="vert" min="0.2" max="4" step="0.1" value="1.5"><span class="ctrl-val vert" id="val-kpz">1.5</span></div>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">Kd_z：降下速度の微分ゲイン</div>
+        <div class="ctrl-row"><input type="range" id="sl-kdz" class="vert" min="0.5" max="6" step="0.1" value="3.0"><span class="ctrl-val vert" id="val-kdz">3.0</span></div>
+      </div>
+    </div>
+    <div class="gain-section">
+      <div class="gain-head" style="color:var(--purple);">横方向（位置）の制御</div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">Kp_x：横位置の比例ゲイン</div>
+        <div class="ctrl-row"><input type="range" id="sl-kpx" class="horz" min="0.2" max="4" step="0.1" value="1.2"><span class="ctrl-val horz" id="val-kpx">1.2</span></div>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-label">Kd_x：横速度の微分ゲイン</div>
+        <div class="ctrl-row"><input type="range" id="sl-kdx" class="horz" min="0.5" max="6" step="0.1" value="2.5"><span class="ctrl-val horz" id="val-kdx">2.5</span></div>
+      </div>
+    </div>
+    <div class="gain-section" style="margin-bottom:0.3rem;">
+      <div class="gain-head" style="color:var(--orange);">目標着陸地点</div>
+      <div class="ctrl-group" style="margin-bottom:0.2rem;">
+        <div class="ctrl-label">x_target：着陸地点の横位置 [m]</div>
+        <div class="ctrl-row"><input type="range" id="sl-xtgt" class="tgt" min="-12" max="12" step="0.5" value="0"><span class="ctrl-val tgt" id="val-xtgt">0.0</span></div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-start" id="btn-start">▶ スタート</button>
+      <button class="btn btn-reset" id="btn-reset">↺ リセット</button>
+    </div>
+    <div class="eq-mini"><div style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;color:var(--text3);margin-bottom:0.2rem;">コントローラーの数式</div>u_z = −Kp_z·z − Kd_z·ż + g（重力補償）<br>u_x = −Kp_x·(x−x_target) − Kd_x·ẋ</div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">難易度＆ルール</div>
+    <div class="level-tabs">
+      <div class="level-tab active" id="lv1" onclick="setLevel(1)">かんたん</div>
+      <div class="level-tab" id="lv2" onclick="setLevel(2)">ふつう</div>
+      <div class="level-tab" id="lv3" onclick="setLevel(3)">むずかしい</div>
+    </div>
+    <div class="rule-box">
+      🎯 高度50mから<strong>目標地点（緑のパッド）</strong>へ着陸<br>
+      <span class="ok">✓ 成功条件</span>：横ずれ2m以内 ＋ 接地速度3m/s以下<br>
+      <span class="ng">✗ 失敗</span>：速すぎる接地（激突）／目標から大きく外れる<br>
+      <strong>スコア</strong>：接地が<strong>やわらかい</strong>ほど＋<strong>速い</strong>ほど＋<strong>正確</strong>なほど高得点
+    </div>
+    <div class="level-explain">
+      <div class="lvl-row active" id="exp1">
+        <span class="lvl-name" style="color:#0369a1;">かんたん</span>
+        <span class="lvl-desc">外乱なし。着陸地点は中央(0m)。Kp_z・Kd_zのバランスで、やわらかく速い着陸を練習しよう。</span>
+      </div>
+      <div class="lvl-row" id="exp2">
+        <span class="lvl-name" style="color:#0369a1;">ふつう</span>
+        <span class="lvl-desc">一定方向の横風（突風）が吹き、機体が風下へ流される。着陸地点は中央(0m)。横方向のKp_xを大きくすると風による位置のズレ（定常偏差）を抑えられる。</span>
+      </div>
+      <div class="lvl-row" id="exp3">
+        <span class="lvl-name" style="color:#0369a1;">むずかしい</span>
+        <span class="lvl-desc">突風＋位置センサーのノイズに加え、着陸地点が右(8m)に。大きく横移動すると機体が傾いて揚力が落ち高度が乱れる（縦横の結合）。Kd_zを高めにして高度の乱れに備えよう。</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="chart-card" style="margin-top:0.8rem;">
+  <div class="chart-title">高度 z(t) と 降下速度 ż(t)</div>
+  <div class="chart-wrap"><canvas id="chart"></canvas></div>
+</div>
+
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — ドローン着陸チャレンジ</div>
+
+<script>
+(function(){
+  const canvas=document.getElementById('game-canvas');
+  const ctx=canvas.getContext('2d');
+  const slKpz=document.getElementById('sl-kpz'),slKdz=document.getElementById('sl-kdz');
+  const slKpx=document.getElementById('sl-kpx'),slKdx=document.getElementById('sl-kdx');
+  const slXtgt=document.getElementById('sl-xtgt');
+  const btnStart=document.getElementById('btn-start'),btnReset=document.getElementById('btn-reset');
+  const resultEl=document.getElementById('result'),resultTitle=document.getElementById('result-title');
+  const resultScore=document.getElementById('result-score'),resultDetail=document.getElementById('result-detail');
+  const resultMsg=document.getElementById('result-msg'),resultBtn=document.getElementById('result-btn');
+
+  const g=9.8, dt=0.02, STEPS_PER_FRAME=3;
+  const Z0=50;            // initial altitude
+  const X0=-8;            // initial horizontal offset
+  const TOUCH=0.3;        // touchdown altitude threshold
+  const V_FAIL=3.0;       // touchdown speed above which = crash
+  const X_FAIL=2.0;       // horizontal error within which = success
+
+  const LEVELS={
+    1:{wind:0,noise:0,coupling:0,label:'かんたん：外乱なし。まずは基本の着陸を。'},
+    2:{wind:1.8,noise:0,coupling:0,label:'ふつう：一定方向の横風（突風）が吹く。横方向の制御が乱される。'},
+    3:{wind:1.4,noise:1.2,coupling:4.0,label:'むずかしい：突風＋センサーノイズに加え、横移動すると機体が傾いて揚力が落ち高度が乱れる（縦横の結合）。'}
+  };
+  let level=1;
+  window.setLevel=function(lv){
+    level=lv;
+    [1,2,3].forEach(i=>{
+      document.getElementById('lv'+i).className='level-tab'+(i===lv?' active':'');
+      document.getElementById('exp'+i).className='lvl-row'+(i===lv?' active':'');
+    });
+    // Hard mode: default target landing point at x=8.0 (large lateral move → coupling matters)
+    slXtgt.value=(lv===3)?8.0:0.0;
+    updateVals();
+    if(!running)resetState();
+  };
+
+  let x,z,vx,vz,t;
+  let running=false,animId=null,gameOver=false;
+  let histT=[],histZ=[],histVz=[];
+  let landed=false;
+
+  // Fixed-pattern wind gust (reproducible, depends only on t)
+  // Includes a steady bias so the wind pushes consistently in one direction,
+  // making the horizontal proportional gain (Kp_x) matter for steady-state error.
+  function windGust(tt){
+    return 0.8 + Math.sin(tt*1.7)*0.7 + Math.sin(tt*0.9+1.0)*0.5 + Math.sin(tt*2.6+0.5)*0.3;
+  }
+
+  function getGains(){
+    return{
+      kpz:parseFloat(slKpz.value),kdz:parseFloat(slKdz.value),
+      kpx:parseFloat(slKpx.value),kdx:parseFloat(slKdx.value),
+      xt:parseFloat(slXtgt.value)
+    };
+  }
+
+  function resizeCanvas(){const rect=canvas.parentElement.getBoundingClientRect();canvas.width=rect.width;canvas.height=380;}
+  resizeCanvas();
+  window.addEventListener('resize',resizeCanvas);
+
+  // Chart
+  const chart=new Chart(document.getElementById('chart').getContext('2d'),{
+    type:'line',
+    data:{datasets:[
+      {label:'z',data:[],borderColor:'#0891b2',borderWidth:2,pointRadius:0,fill:false,tension:0.1,yAxisID:'y'},
+      {label:'vz',data:[],borderColor:'#dc2626',borderWidth:2,pointRadius:0,fill:false,tension:0.1,yAxisID:'y2'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+      scales:{
+        x:{type:'linear',min:0,max:12,title:{display:true,text:'t [s]',font:{size:9}},ticks:{stepSize:2,font:{size:8}},grid:{color:'#f0f0f0'}},
+        y:{position:'left',min:0,max:55,title:{display:true,text:'z [m]',font:{size:9},color:'#0891b2'},ticks:{font:{size:8}},grid:{color:'#f0f0f0'}},
+        y2:{position:'right',min:-16,max:4,title:{display:true,text:'ż [m/s]',font:{size:9},color:'#dc2626'},ticks:{font:{size:8}},grid:{display:false}}
+      },
+      plugins:{legend:{display:false},tooltip:{enabled:false}}
+    }
+  });
+
+  function drawGame(){
+    const W=canvas.width,H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+
+    // Sky gradient
+    const sky=ctx.createLinearGradient(0,0,0,H);
+    sky.addColorStop(0,'#7dd3fc');sky.addColorStop(1,'#e0f2fe');
+    ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+
+    const groundY=H-36;
+    const cx=W/2;
+    const xScale=W/30;        // 30m wide view
+    const zScale=(groundY-30)/Z0; // altitude to px
+
+    function sx(xm){return cx+xm*xScale;}
+    function sy(zm){return groundY-zm*zScale;}
+
+    // Ground
+    ctx.fillStyle='#4d7c2f';ctx.fillRect(0,groundY,W,H-groundY);
+    ctx.strokeStyle='#3f6212';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,groundY);ctx.lineTo(W,groundY);ctx.stroke();
+
+    const gains=getGains();
+    // Target landing pad
+    const padX=sx(gains.xt), padW=xScale*4;
+    ctx.fillStyle='#16a34a';
+    ctx.fillRect(padX-padW/2,groundY-6,padW,6);
+    // Pad markings
+    ctx.fillStyle='#fff';ctx.font="bold 12px 'Noto Sans JP'";ctx.textAlign='center';
+    ctx.fillText('H',padX,groundY-10);
+    // Target vertical guide
+    ctx.strokeStyle='rgba(22,163,74,0.35)';ctx.lineWidth=1.5;ctx.setLineDash([5,5]);
+    ctx.beginPath();ctx.moveTo(padX,30);ctx.lineTo(padX,groundY-6);ctx.stroke();ctx.setLineDash([]);
+
+    // Wind indicator (level 2,3)
+    if(LEVELS[level].wind>0 && running){
+      const w=windGust(t)*LEVELS[level].wind;
+      const wx=W-70,wy=40;
+      ctx.fillStyle='rgba(8,145,178,0.15)';ctx.fillRect(wx-50,wy-14,108,28);
+      ctx.strokeStyle='#0891b2';ctx.lineWidth=2;
+      const arrowLen=w*18;
+      ctx.beginPath();ctx.moveTo(wx,wy);ctx.lineTo(wx+arrowLen,wy);ctx.stroke();
+      if(Math.abs(arrowLen)>3){
+        const dir=Math.sign(arrowLen);
+        ctx.beginPath();ctx.moveTo(wx+arrowLen,wy-4);ctx.lineTo(wx+arrowLen+dir*6,wy);ctx.lineTo(wx+arrowLen,wy+4);ctx.fillStyle='#0891b2';ctx.fill();
+      }
+      ctx.fillStyle='#0e7490';ctx.font="9px 'Noto Sans JP'";ctx.textAlign='center';ctx.fillText('風',wx,wy-18);
+    }
+
+    // Drone
+    const dx=sx(x), dy=sy(z);
+    // Landing speed color
+    const spd=Math.abs(vz);
+    let bodyColor;
+    if(spd<1.5)bodyColor='#22c55e';
+    else if(spd<3.0)bodyColor='#f59e0b';
+    else bodyColor='#dc2626';
+
+    // Tilt angle (visual): proportional to lateral control effort (only meaningful when coupling on)
+    const gns=getGains();
+    const uxNow=-gns.kpx*(x-gns.xt)-gns.kdx*vx;
+    const tilt=Math.max(-0.5,Math.min(0.5, uxNow*0.04));
+
+    // Shadow on ground
+    ctx.fillStyle='rgba(0,0,0,0.15)';
+    ctx.beginPath();ctx.ellipse(dx,groundY-2,22*(1-z/Z0*0.4),5,0,0,2*Math.PI);ctx.fill();
+
+    ctx.save();
+    ctx.translate(dx,dy);
+    ctx.rotate(tilt);
+    // Drone arms + rotors
+    ctx.strokeStyle='#374151';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(-26,0);ctx.lineTo(26,0);ctx.stroke();
+    const rot=running?(t*40):0;
+    for(const rx of [-26,26]){
+      ctx.strokeStyle='#6b7280';ctx.lineWidth=2;
+      for(let b=0;b<2;b++){
+        const a=rot+b*Math.PI/2;
+        ctx.beginPath();ctx.moveTo(rx-12*Math.cos(a),-3-3*Math.sin(a));ctx.lineTo(rx+12*Math.cos(a),-3+3*Math.sin(a));ctx.stroke();
+      }
+      ctx.fillStyle='#374151';ctx.beginPath();ctx.arc(rx,-3,3,0,2*Math.PI);ctx.fill();
+    }
+    // Body
+    ctx.fillStyle=bodyColor;
+    if(ctx.roundRect){ctx.beginPath();ctx.roundRect(-14,-8,28,16,5);ctx.fill();}
+    else ctx.fillRect(-14,-8,28,16);
+    // Camera/sensor dot
+    ctx.fillStyle='#1f2937';ctx.beginPath();ctx.arc(0,6,3,0,2*Math.PI);ctx.fill();
+    ctx.restore();
+
+    // Altitude line to ground
+    ctx.strokeStyle='rgba(0,0,0,0.12)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.moveTo(dx,dy+8);ctx.lineTo(dx,groundY);ctx.stroke();ctx.setLineDash([]);
+
+    // Title
+    ctx.fillStyle='#475569';ctx.font="10px 'Noto Sans JP'";ctx.textAlign='left';
+    ctx.fillText('ドローン着陸',8,H-8);
+  }
+
+  function updateHUD(){
+    document.getElementById('hud-alt').textContent=z.toFixed(1);
+    const vzEl=document.getElementById('hud-vz');
+    vzEl.textContent=Math.abs(vz).toFixed(1);
+    if(Math.abs(vz)>3)vzEl.style.color='#fca5a5';
+    else if(Math.abs(vz)>1.5)vzEl.style.color='#fde047';
+    else vzEl.style.color='#86efac';
+    const gains=getGains();
+    document.getElementById('hud-xerr').textContent=(x-gains.xt).toFixed(1);
+    document.getElementById('hud-time').textContent=t.toFixed(1);
+  }
+
+  function updateChart(){
+    const skip=Math.max(1,Math.floor(histT.length/300));
+    const dz=[],dvz=[];
+    for(let i=0;i<histT.length;i+=skip){
+      dz.push({x:histT[i],y:histZ[i]});
+      dvz.push({x:histT[i],y:histVz[i]});
+    }
+    chart.data.datasets[0].data=dz;
+    chart.data.datasets[1].data=dvz;
+    chart.update();
+  }
+
+  function computeScore(touchV,xErr,landTime){
+    // Soft landing (lower touchV better), accurate (lower xErr), fast (lower time)
+    const softScore=Math.max(0, 50*(1 - touchV/V_FAIL));      // 0..50
+    const accScore=Math.max(0, 30*(1 - Math.abs(xErr)/X_FAIL)); // 0..30
+    const timeScore=Math.max(0, 20*(1 - Math.min(landTime,20)/20)); // 0..20
+    return {total:Math.round(softScore+accScore+timeScore),soft:Math.round(softScore),acc:Math.round(accScore),time:Math.round(timeScore)};
+  }
+
+  function endGame(success,touchV,xErr,landTime){
+    running=false;gameOver=true;
+    if(animId)cancelAnimationFrame(animId);
+    if(success){
+      const sc=computeScore(touchV,xErr,landTime);
+      let stars;
+      if(sc.total>=80)stars=3;else if(sc.total>=55)stars=2;else stars=1;
+      resultTitle.textContent='🎉 着陸成功！';
+      resultTitle.className='result-title success';
+      resultScore.innerHTML='スコア <span style="font-size:2rem;color:#fde047;">'+sc.total+'</span> 点'+
+        '<div style="font-size:1.3rem;margin-top:0.1rem;">'+'⭐'.repeat(stars)+'☆'.repeat(3-stars)+'</div>';
+      resultDetail.innerHTML='やわらかさ '+sc.soft+'/50　正確さ '+sc.acc+'/30　速さ '+sc.time+'/20<br>'+
+        '接地速度 '+touchV.toFixed(2)+' m/s　横ずれ '+Math.abs(xErr).toFixed(2)+' m　時間 '+landTime.toFixed(1)+' s';
+      resultMsg.textContent=stars===3?'完璧な着陸！やわらかく・正確で・素早い。':stars===2?'良い着陸！どこかをもっと詰められるかも。':'着陸成功。次はもっとやわらかく狙ってみよう。';
+    } else {
+      resultTitle.textContent='💥 着陸失敗';
+      resultTitle.className='result-title fail';
+      resultScore.innerHTML='';
+      resultDetail.innerHTML='接地速度 '+touchV.toFixed(2)+' m/s　横ずれ '+Math.abs(xErr).toFixed(2)+' m';
+      let why;
+      if(touchV>=V_FAIL && Math.abs(xErr)>=X_FAIL) why='速すぎ＆目標から外れた。Kd_zを上げてやわらかく、Kp_xで横位置を合わせよう。';
+      else if(touchV>=V_FAIL) why='接地が速すぎて激突！Kd_z（降下の微分ゲイン）を上げてやわらかく降りよう。';
+      else why='目標地点から外れて着地。Kp_xを上げて横位置を合わせよう。';
+      resultMsg.textContent=why;
+    }
+    resultEl.classList.add('show');
+    btnStart.disabled=false;
+    updateChart();
+  }
+
+  function simAndDraw(){
+    if(!running)return;
+    const gains=getGains();
+    const lv=LEVELS[level];
+    for(let i=0;i<STEPS_PER_FRAME;i++){
+      // Sensor noise on position (level 3)
+      let xMeas=x, zMeas=z;
+      if(lv.noise>0){
+        xMeas=x+(Math.random()-0.5)*lv.noise;
+        zMeas=z+(Math.random()-0.5)*lv.noise*0.5;
+      }
+      // Control (PD) with gravity compensation on vertical
+      const uz=-gains.kpz*zMeas - gains.kdz*vz + g;
+      const ux=-gains.kpx*(xMeas-gains.xt) - gains.kdx*vx;
+      // Wind disturbance (fixed pattern) on horizontal
+      const wind=lv.wind>0 ? windGust(t)*lv.wind : 0;
+      // Vertical-horizontal coupling (hard): tilting to move sideways loses lift.
+      // Lift loss grows with lateral control effort and lateral speed → drags altitude down.
+      const liftLoss=lv.coupling>0 ? lv.coupling*(Math.abs(ux)+Math.abs(vx)*0.6) : 0;
+      // Dynamics
+      vz+=dt*(uz-g-liftLoss);  // net vertical accel (coupling pulls down)
+      vx+=dt*(ux+wind);
+      z+=dt*vz;
+      x+=dt*vx;
+      t+=dt;
+
+      if(Math.round(t/dt)%4===0){histT.push(t);histZ.push(Math.max(0,z));histVz.push(vz);}
+
+      // Touchdown
+      if(z<=TOUCH){
+        z=0;
+        const touchV=Math.abs(vz);
+        const xErr=x-gains.xt;
+        const success=(touchV<V_FAIL)&&(Math.abs(xErr)<X_FAIL);
+        landed=true;
+        updateHUD();drawGame();
+        endGame(success,touchV,xErr,t);
+        return;
+      }
+      // Drifted way off screen → fail
+      if(Math.abs(x)>16){
+        const xErr=x-gains.xt;
+        updateHUD();drawGame();
+        endGame(false,Math.abs(vz),xErr,t);
+        return;
+      }
+      // Timeout safety
+      if(t>40){
+        const xErr=x-gains.xt;
+        endGame(false,Math.abs(vz),xErr,t);
+        return;
+      }
+    }
+    updateHUD();drawGame();
+    if(Math.round(t/dt)%9===0)updateChart();
+    animId=requestAnimationFrame(simAndDraw);
+  }
+
+  function resetState(){
+    x=X0;z=Z0;vx=0;vz=0;t=0;
+    histT=[];histZ=[];histVz=[];landed=false;gameOver=false;
+    resultEl.classList.remove('show');
+    updateVals();updateHUD();updateChart();drawGame();
+  }
+  function updateVals(){
+    document.getElementById('val-kpz').textContent=parseFloat(slKpz.value).toFixed(1);
+    document.getElementById('val-kdz').textContent=parseFloat(slKdz.value).toFixed(1);
+    document.getElementById('val-kpx').textContent=parseFloat(slKpx.value).toFixed(1);
+    document.getElementById('val-kdx').textContent=parseFloat(slKdx.value).toFixed(1);
+    document.getElementById('val-xtgt').textContent=parseFloat(slXtgt.value).toFixed(1);
+  }
+
+  function start(){if(running)return;if(gameOver)resetState();running=true;btnStart.disabled=true;simAndDraw();}
+  function reset(){running=false;if(animId)cancelAnimationFrame(animId);btnStart.disabled=false;resetState();}
+
+  btnStart.addEventListener('click',start);
+  btnReset.addEventListener('click',reset);
+  resultBtn.addEventListener('click',function(){reset();start();});
+  [slKpz,slKdz,slKpx,slKdx,slXtgt].forEach(s=>s.addEventListener('input',function(){updateVals();if(!running)drawGame();}));
+
+  resetState();
+})();
+</script>
+</body>
+</html>
