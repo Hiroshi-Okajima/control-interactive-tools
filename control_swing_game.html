@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ブランコ共振チャレンジ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--sky:#0ea5e9;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#14532d,#15803d,#4ade80);color:#fff;padding:1.2rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.2rem,3vw,1.6rem);font-weight:700;margin-bottom:0.1rem;}
+.header p{font-size:0.8rem;opacity:0.9;}
+.main{max-width:1000px;margin:0 auto;padding:0.8rem;}
+.game-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0;box-shadow:0 2px 10px rgba(0,0,0,0.06);overflow:hidden;margin-bottom:0.8rem;}
+.canvas-wrap{position:relative;background:#dbeafe;}
+canvas#game-canvas{display:block;width:100%;}
+.hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:0.6rem 0.9rem;pointer-events:none;}
+.hud-box{background:rgba(20,83,45,0.8);backdrop-filter:blur(4px);border-radius:8px;padding:0.4rem 0.7rem;color:#fff;font-family:'JetBrains Mono',monospace;}
+.hud-v{font-size:1.2rem;font-weight:700;line-height:1.1;}
+.hud-l{font-size:0.58rem;opacity:0.78;letter-spacing:0.05em;}
+.hud-amp .hud-v{color:#86efac;}
+.hud-timer .hud-v{color:#fde047;}
+.result-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(20,83,45,0.88);backdrop-filter:blur(3px);color:#fff;text-align:center;z-index:10;padding:0.8rem;overflow-y:auto;}
+.result-overlay.show{display:flex;}
+.result-title{font-family:'Noto Serif JP',serif;font-size:1.7rem;font-weight:800;margin-bottom:0.3rem;}
+.result-title.success{color:#86efac;}
+.result-title.fail{color:#fca5a5;}
+.result-score{font-size:1rem;font-weight:700;margin-bottom:0.5rem;}
+.result-msg{font-size:0.86rem;opacity:0.9;margin-bottom:0.8rem;max-width:420px;}
+.result-btn{pointer-events:auto;padding:0.5em 1.5em;border:none;border-radius:8px;background:#16a34a;color:#fff;font-weight:700;font-size:0.9rem;cursor:pointer;font-family:'Noto Sans JP',sans-serif;}
+.result-btn:hover{opacity:0.9;}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;}
+@media(max-width:700px){.controls{grid-template-columns:1fr;}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem;}
+.ctrl-group{margin-bottom:0.55rem;}
+.ctrl-label{font-size:0.74rem;font-weight:600;color:var(--text2);margin-bottom:0.12rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.85rem;padding:0.1em 0.5em;border-radius:4px;min-width:4em;text-align:center;}
+.ctrl-val.freq{color:var(--green);background:#ecfdf5;}
+.ctrl-val.phase{color:var(--purple);background:#f3eeff;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#16a34a;border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#16a34a;border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);cursor:pointer;}
+input.phase::-webkit-slider-thumb,input.phase::-moz-range-thumb{background:var(--purple);}
+.btn-row{display:flex;gap:0.5rem;margin-top:0.3rem;}
+.btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:0.3rem;padding:0.55em 1em;border:none;border-radius:8px;font-weight:700;font-size:0.88rem;cursor:pointer;transition:opacity 0.15s;}
+.btn:hover{opacity:0.88;}
+.btn-start{background:#16a34a;color:#fff;}
+.btn-reset{background:#e5e5e5;color:#444;}
+.rule-box{font-size:0.76rem;line-height:1.7;color:var(--text2);}
+.rule-box .ok{color:var(--green);font-weight:700;}
+.rule-box .ng{color:var(--red);font-weight:700;}
+.level-tabs{display:flex;gap:0.4rem;margin-bottom:0.5rem;}
+.level-tab{flex:1;padding:0.4em;border:2px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;text-align:center;font-size:0.72rem;font-weight:700;color:var(--text2);transition:all 0.15s;}
+.level-tab.active{border-color:#16a34a;background:#f0fdf4;color:#166534;}
+.level-tab:hover{border-color:#16a34a;}
+.level-explain{margin-top:0.5rem;display:flex;flex-direction:column;gap:0.3rem;}
+.lvl-row{display:flex;gap:0.5rem;padding:0.4rem 0.5rem;border-radius:8px;background:#f8fafc;border:1px solid transparent;transition:all 0.15s;align-items:flex-start;}
+.lvl-row.active{background:#f0fdf4;border-color:#16a34a;}
+.lvl-name{font-weight:700;font-size:0.74rem;white-space:nowrap;min-width:4.5em;color:#166534;}
+.lvl-desc{font-size:0.72rem;color:var(--text2);line-height:1.55;}
+.eq-mini{font-family:'JetBrains Mono',monospace;font-size:0.7rem;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:0.4rem 0.6rem;margin-top:0.4rem;color:var(--text2);line-height:1.7;}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.7rem 0.9rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);margin-top:0.8rem;}
+.chart-title{font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.3rem;color:var(--text2);}
+.chart-wrap{position:relative;height:150px;}
+.footer{text-align:center;padding:0.8rem;color:var(--text3);font-size:0.68rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🛝 ブランコ共振チャレンジ</h1>
+  <p>押すタイミング（周波数と位相）を合わせて、ブランコを揺らせ・止めろ！</p>
+</div>
+<div class="main">
+
+<div class="game-card">
+  <div class="canvas-wrap">
+    <canvas id="game-canvas" width="960" height="360"></canvas>
+    <div class="hud">
+      <div class="hud-box hud-amp"><div class="hud-l">振幅</div><div class="hud-v" id="hud-amp">3.0°</div></div>
+      <div class="hud-box"><div class="hud-l" id="hud-goal-label">目標振幅</div><div class="hud-v" id="hud-goal" style="color:#fdba74;">45°</div></div>
+      <div class="hud-box"><div class="hud-l">ロープ長 L</div><div class="hud-v" id="hud-len">2.5 m</div></div>
+      <div class="hud-box hud-timer"><div class="hud-l">残り時間</div><div class="hud-v" id="hud-timer">40.0</div></div>
+    </div>
+    <div class="result-overlay" id="result">
+      <div class="result-title" id="result-title"></div>
+      <div class="result-score" id="result-score"></div>
+      <div class="result-msg" id="result-msg"></div>
+      <button class="result-btn" id="result-btn">もう一度</button>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+
+  <div class="card">
+    <div class="card-label" style="color:#16a34a;">押す力の調整（加振入力）</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--green);">ω_f：押す周波数 [rad/s]</div>
+      <div class="ctrl-row"><input type="range" id="sl-wf" min="0.8" max="3.2" step="0.01" value="1.20"><span class="ctrl-val freq" id="val-wf">1.20</span></div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--purple);">φ：押す位相 [deg]（制振モードで重要）</div>
+      <div class="ctrl-row"><input type="range" id="sl-phi" class="phase" min="0" max="360" step="5" value="180"><span class="ctrl-val phase" id="val-phi">180</span></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-start" id="btn-start">▶ スタート</button>
+      <button class="btn btn-reset" id="btn-reset">↺ リセット</button>
+    </div>
+    <div class="eq-mini">
+      <div style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;color:var(--text3);margin-bottom:0.2rem;">モデルと入力</div>
+      θ̈ = −ω<sub>n</sub>²θ − cθ̇ + u(t)<br>
+      u(t) = a·sin(ω<sub>f</sub>t + φ)<br>
+      ω<sub>n</sub> = √(g/L)　（固有振動数）
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">難易度＆ルール</div>
+    <div class="level-tabs">
+      <div class="level-tab active" id="lv1" onclick="setLevel(1)">かんたん</div>
+      <div class="level-tab" id="lv2" onclick="setLevel(2)">ふつう</div>
+      <div class="level-tab" id="lv3" onclick="setLevel(3)">むずかしい</div>
+    </div>
+    <div class="rule-box">
+      <span class="ok">✓ 揺らすモード</span>：振幅を目標45°まで育てたら成功。早いほど高得点<br>
+      <span class="ok">✓ 止めるモード</span>：揺れを5°未満に鎮めたら成功。早いほど高得点<br>
+      <span class="ng">✗ 失敗</span>：時間切れ／（止めるモードで）揺れが85°を超える
+    </div>
+    <div class="level-explain">
+      <div class="lvl-row active" id="exp1">
+        <span class="lvl-name">かんたん</span>
+        <span class="lvl-desc">【揺らす】ロープ長 L=2.5m は公開。ω<sub>n</sub>=√(g/L) を計算して ω_f を合わせよう。共振に合えばぐんぐん振幅が育つ。位相は関係ない。</span>
+      </div>
+      <div class="lvl-row" id="exp2">
+        <span class="lvl-name">ふつう</span>
+        <span class="lvl-desc">【揺らす】ロープ長は非公開（？m）。ω_f を少しずつ変えて、振幅がもっとも育つ「共振周波数」を実験で探し当てよう。</span>
+      </div>
+      <div class="lvl-row" id="exp3">
+        <span class="lvl-name">むずかしい</span>
+        <span class="lvl-desc">【止める】50°で揺れているブランコを、押す力で鎮めろ。周波数を合わせるだけでは不十分で、<strong>位相 φ が逆だと逆に増幅して振り切れる</strong>。揺れの速度と逆向きに力が働く位相を探せ。</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="chart-card">
+  <div class="chart-title">振幅の推移（包絡線）</div>
+  <div class="chart-wrap"><canvas id="chart"></canvas></div>
+</div>
+
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — ブランコ共振チャレンジ</div>
+
+<script>
+(function(){
+  const canvas=document.getElementById('game-canvas');
+  const ctx=canvas.getContext('2d');
+  const slWf=document.getElementById('sl-wf'),slPhi=document.getElementById('sl-phi');
+  const btnStart=document.getElementById('btn-start'),btnReset=document.getElementById('btn-reset');
+  const resultEl=document.getElementById('result'),resultTitle=document.getElementById('result-title');
+  const resultScore=document.getElementById('result-score'),resultMsg=document.getElementById('result-msg');
+  const resultBtn=document.getElementById('result-btn');
+
+  const g=9.8, dt=0.01, STEPS_PER_FRAME=3;
+  const AMP_FORCE=0.35;   // pump forcing amplitude
+  const AMP_FORCE_DAMP=0.30;
+
+  // Verified parameters:
+  //  L1 pump: L=2.5 (wn=1.980), c=0.15 → resonance reaches 45° in ~15.1s; ±8% fails
+  //  L2 pump: L=1.6 hidden (wn=2.475) → resonance reaches in ~24.7s
+  //  L3 damp: L=2.5, c=0.08, init 50° → phase 0° quells in ~8.6s; phase 180° amplifies to 85°+
+  const LEVELS={
+    1:{mode:'pump',L:2.5,c:0.15,a:AMP_FORCE,th0:3,target:45,T:40,Tmin:15,showL:true},
+    2:{mode:'pump',L:1.6,c:0.15,a:AMP_FORCE,th0:3,target:45,T:35,Tmin:24,showL:false},
+    3:{mode:'damp',L:2.5,c:0.08,a:AMP_FORCE_DAMP,th0:50,target:5,T:25,Tmin:8.5,showL:true}
+  };
+  let level=1;
+
+  window.setLevel=function(lv){
+    level=lv;
+    [1,2,3].forEach(i=>{
+      document.getElementById('lv'+i).className='level-tab'+(i===lv?' active':'');
+      document.getElementById('exp'+i).className='lvl-row'+(i===lv?' active':'');
+    });
+    if(!running)resetState();
+  };
+
+  let th,om,t;
+  let running=false,animId=null,gameOver=false;
+  let histT=[],histAmp=[];
+  let uNow=0;
+
+  function wn(){return Math.sqrt(g/LEVELS[level].L);}
+  function ampDeg(){
+    const w=wn();
+    return Math.sqrt(th*th+(om/w)*(om/w))*180/Math.PI;
+  }
+
+  function resizeCanvas(){const r=canvas.parentElement.getBoundingClientRect();canvas.width=r.width;canvas.height=360;}
+  resizeCanvas();
+  window.addEventListener('resize',resizeCanvas);
+
+  // Chart
+  const chart=new Chart(document.getElementById('chart').getContext('2d'),{
+    type:'line',
+    data:{datasets:[
+      {label:'amp',data:[],borderColor:'#16a34a',borderWidth:2,pointRadius:0,fill:false,tension:0.15},
+      {label:'target',data:[],borderColor:'#ea580c',borderWidth:1.5,borderDash:[6,4],pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+      scales:{
+        x:{type:'linear',min:0,max:40,title:{display:true,text:'t [s]',font:{size:9}},ticks:{stepSize:5,font:{size:8}},grid:{color:'#f0f0f0'}},
+        y:{min:0,max:90,title:{display:true,text:'振幅 [deg]',font:{size:9}},ticks:{stepSize:15,font:{size:8}},grid:{color:'#f0f0f0'}}
+      },
+      plugins:{legend:{display:false},tooltip:{enabled:false}}
+    }
+  });
+
+  function drawGame(){
+    const W=canvas.width,H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+    const lv=LEVELS[level];
+
+    // Sky / park
+    const sky=ctx.createLinearGradient(0,0,0,H);
+    sky.addColorStop(0,'#93c5fd');sky.addColorStop(1,'#dbeafe');
+    ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+    const groundY=H-40;
+    ctx.fillStyle='#86efac';ctx.fillRect(0,groundY,W,H-groundY);
+    ctx.strokeStyle='#4ade80';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,groundY);ctx.lineTo(W,groundY);ctx.stroke();
+
+    const pivotX=W/2, pivotY=54;
+    const ropePx=lv.L*(groundY-pivotY-40)/2.5; // scale so L=2.5 fits
+
+    // Swing frame (A-frame both sides)
+    ctx.strokeStyle='#92400e';ctx.lineWidth=7;ctx.lineCap='round';
+    for(const s of [-1,1]){
+      ctx.beginPath();
+      ctx.moveTo(pivotX+s*24,pivotY-6);
+      ctx.lineTo(pivotX+s*120,groundY);
+      ctx.stroke();
+    }
+    // Top bar
+    ctx.beginPath();ctx.moveTo(pivotX-40,pivotY-6);ctx.lineTo(pivotX+40,pivotY-6);ctx.stroke();
+
+    // Target amplitude guides
+    const tgtRad=lv.target*Math.PI/180;
+    ctx.strokeStyle=lv.mode==='pump'?'rgba(234,88,12,0.55)':'rgba(22,163,74,0.55)';
+    ctx.lineWidth=2;ctx.setLineDash([7,5]);
+    for(const s of [-1,1]){
+      ctx.beginPath();
+      ctx.moveTo(pivotX,pivotY);
+      ctx.lineTo(pivotX+s*ropePx*Math.sin(tgtRad),pivotY+ropePx*Math.cos(tgtRad));
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.fillStyle=lv.mode==='pump'?'#ea580c':'#16a34a';
+    ctx.font="bold 10px 'Noto Sans JP'";ctx.textAlign='center';
+    ctx.fillText(lv.mode==='pump'?'目標 ±'+lv.target+'°':'目標 ±'+lv.target+'°未満',pivotX,pivotY+ropePx+28);
+
+    // Danger guides in damp mode (85°)
+    if(lv.mode==='damp'){
+      const dRad=85*Math.PI/180;
+      ctx.strokeStyle='rgba(220,38,38,0.4)';ctx.lineWidth=2;ctx.setLineDash([4,4]);
+      for(const s of [-1,1]){
+        ctx.beginPath();ctx.moveTo(pivotX,pivotY);
+        ctx.lineTo(pivotX+s*ropePx*Math.sin(dRad),pivotY+ropePx*Math.cos(dRad));ctx.stroke();
+      }
+      ctx.setLineDash([]);
+    }
+
+    // Rope + seat + rider
+    const seatX=pivotX+ropePx*Math.sin(th);
+    const seatY=pivotY+ropePx*Math.cos(th);
+    ctx.strokeStyle='#78716c';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(pivotX,pivotY);ctx.lineTo(seatX,seatY);ctx.stroke();
+    // Pivot
+    ctx.fillStyle='#57534e';ctx.beginPath();ctx.arc(pivotX,pivotY,6,0,2*Math.PI);ctx.fill();
+
+    ctx.save();
+    ctx.translate(seatX,seatY);
+    ctx.rotate(th);
+    // Seat
+    ctx.fillStyle='#b45309';
+    ctx.fillRect(-20,-4,40,8);
+    // Rider (simple)
+    ctx.fillStyle='#f59e0b';
+    ctx.beginPath();ctx.arc(0,-26,9,0,2*Math.PI);ctx.fill(); // head
+    ctx.strokeStyle='#f59e0b';ctx.lineWidth=5;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(0,-17);ctx.lineTo(0,-4);ctx.stroke(); // body
+    ctx.restore();
+
+    // Forcing arrow at seat (push direction/size)
+    if(Math.abs(uNow)>0.02 && running){
+      const arrowLen=Math.min(70,Math.abs(uNow)*160);
+      const dir=uNow>0?1:-1;
+      const ay=seatY-8;
+      ctx.strokeStyle='#dc2626';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(seatX,ay);ctx.lineTo(seatX+dir*arrowLen,ay);ctx.stroke();
+      ctx.fillStyle='#dc2626';
+      ctx.beginPath();
+      ctx.moveTo(seatX+dir*arrowLen,ay-5);ctx.lineTo(seatX+dir*(arrowLen+9),ay);ctx.lineTo(seatX+dir*arrowLen,ay+5);
+      ctx.fill();
+      ctx.font="bold 10px 'Noto Sans JP'";ctx.textAlign='center';
+      ctx.fillText('押す力',seatX+dir*(arrowLen/2),ay-9);
+    }
+
+    // Resonance flash when amplitude near target in pump
+    const aD=ampDeg();
+    if(lv.mode==='damp' && aD>75){
+      ctx.fillStyle='rgba(220,38,38,'+(0.1+0.1*Math.sin(t*15))+')';
+      ctx.fillRect(0,0,W,H);
+    }
+
+    ctx.fillStyle='#475569';ctx.font="10px 'Noto Sans JP'";ctx.textAlign='left';
+    ctx.fillText(lv.mode==='pump'?'揺らすモード':'止めるモード',8,H-8);
+  }
+
+  function updateHUD(){
+    const lv=LEVELS[level];
+    document.getElementById('hud-amp').textContent=ampDeg().toFixed(1)+'°';
+    document.getElementById('hud-goal-label').textContent=lv.mode==='pump'?'目標振幅':'鎮める目標';
+    document.getElementById('hud-goal').textContent=(lv.mode==='pump'?lv.target+'°以上':lv.target+'°未満');
+    document.getElementById('hud-len').textContent=lv.showL?lv.L.toFixed(1)+' m':'？ m';
+    document.getElementById('hud-timer').textContent=Math.max(0,lv.T-t).toFixed(1);
+  }
+
+  function updateChart(){
+    const lv=LEVELS[level];
+    const skip=Math.max(1,Math.floor(histT.length/300));
+    const dA=[],dT=[];
+    for(let i=0;i<histT.length;i+=skip){
+      dA.push({x:histT[i],y:histAmp[i]});
+      dT.push({x:histT[i],y:lv.target});
+    }
+    // extend target line to full axis
+    dT.push({x:lv.T,y:lv.target});
+    chart.data.datasets[0].data=dA;
+    chart.data.datasets[1].data=dT;
+    chart.options.scales.x.max=lv.T;
+    chart.update();
+  }
+
+  function endGame(success,reachT,msg){
+    running=false;gameOver=true;
+    if(animId)cancelAnimationFrame(animId);
+    const lv=LEVELS[level];
+    resultTitle.textContent=success?(lv.mode==='pump'?'🎉 大きく揺れた！':'🎉 ぴたりと止めた！'):'💥 失敗…';
+    resultTitle.className='result-title '+(success?'success':'fail');
+    if(success){
+      let score=Math.round(100*(lv.T-reachT)/(lv.T-lv.Tmin));
+      score=Math.max(0,Math.min(100,score));
+      let stars;
+      if(score>=80)stars=3;else if(score>=50)stars=2;else stars=1;
+      resultScore.innerHTML='スコア <span style="font-size:2rem;color:#fde047;">'+score+'</span> 点'+
+        '<div style="font-size:1.3rem;margin-top:0.1rem;">'+'⭐'.repeat(stars)+'☆'.repeat(3-stars)+'</div>'+
+        '<div style="font-size:0.74rem;opacity:0.85;margin-top:0.2rem;">達成時間 '+reachT.toFixed(1)+' 秒（早いほど高得点）</div>';
+    } else {
+      resultScore.innerHTML='';
+    }
+    resultMsg.textContent=msg;
+    resultEl.classList.add('show');
+    btnStart.disabled=false;
+    updateChart();
+  }
+
+  function simAndDraw(){
+    if(!running)return;
+    const lv=LEVELS[level];
+    const w=wn();
+    const wf=parseFloat(slWf.value);
+    const phi=parseFloat(slPhi.value)*Math.PI/180;
+    for(let i=0;i<STEPS_PER_FRAME;i++){
+      uNow=lv.a*Math.sin(wf*t+phi);
+      const thdd=-w*w*th - lv.c*om + uNow;
+      om+=dt*thdd; th+=dt*om; t+=dt;
+      const aD=ampDeg();
+      if(Math.round(t/dt)%5===0){histT.push(t);histAmp.push(aD);}
+
+      if(lv.mode==='pump'){
+        if(aD>=lv.target){
+          endGame(true,t,'共振周波数を捉えた！押すリズムがブランコの固有振動数に合うと、小さな力でも振幅がどんどん育つ。');
+          return;
+        }
+        if(t>=lv.T){
+          endGame(false,t,'時間切れ！振幅が目標に届かなかった。ω_f を固有振動数 ωₙ=√(g/L) に近づけよう。'+(lv.showL?'（L='+lv.L+'m なら ωₙ≈'+w.toFixed(2)+'）':'振幅の育ち方を見ながら ω_f を少しずつ調整して共振点を探そう。'));
+          return;
+        }
+      } else {
+        if(aD<=lv.target){
+          endGame(true,t,'見事な制振！揺れの速度と逆向きに力が働く位相に合わせると、エネルギーが吸い取られて素早く止まる。');
+          return;
+        }
+        if(aD>=85){
+          endGame(false,t,'揺れが大きくなりすぎた！位相が逆だと、止めるつもりが逆に励振してしまう。φ を変えて、揺れを打ち消す位相を探そう。');
+          return;
+        }
+        if(t>=lv.T){
+          endGame(false,t,'時間切れ！押す力をうまく使えば自然減衰より速く止められる。ω_f を固有振動数に合わせ、φ を調整しよう。');
+          return;
+        }
+      }
+    }
+    updateHUD();drawGame();
+    if(Math.round(t/dt)%15===0)updateChart();
+    animId=requestAnimationFrame(simAndDraw);
+  }
+
+  function resetState(){
+    const lv=LEVELS[level];
+    th=lv.th0*Math.PI/180;om=0;t=0;uNow=0;
+    histT=[];histAmp=[];gameOver=false;
+    resultEl.classList.remove('show');
+    updateVals();updateHUD();updateChart();drawGame();
+  }
+  function updateVals(){
+    document.getElementById('val-wf').textContent=parseFloat(slWf.value).toFixed(2);
+    document.getElementById('val-phi').textContent=parseFloat(slPhi.value).toFixed(0);
+  }
+
+  function start(){if(running)return;if(gameOver)resetState();running=true;btnStart.disabled=true;simAndDraw();}
+  function reset(){running=false;if(animId)cancelAnimationFrame(animId);btnStart.disabled=false;resetState();}
+
+  btnStart.addEventListener('click',start);
+  btnReset.addEventListener('click',reset);
+  resultBtn.addEventListener('click',function(){reset();start();});
+  [slWf,slPhi].forEach(s=>s.addEventListener('input',function(){updateVals();}));
+
+  resetState();
+})();
+</script>
+</body>
+</html>
