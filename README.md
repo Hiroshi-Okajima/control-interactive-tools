@@ -25,7 +25,8 @@
 | 13 | ボール＆ビーム | 小学生向けゲーム | `control_ballbeam_game.html` |
 | 14 | タンクシステム | 小学生向けゲーム | `control_tank_game.html` |
 | 15 | 追跡パトカー2 | 小学生向けゲーム（ドライバー視点） | `control_acc_game2.html` |
-| 16 | ドローン着陸 | 小学生向けゲーム（正確に着陸させる） | `control_drone_game.html` |
+| 16 | ドローン着陸 | 正確に着陸させる | `control_drone_game.html` |
+| 17 | ブランコ共振 | 共振を利用してブランコを揺らす | `control_swing_game.html` |
 
 ## GitHub Pages URL
 
@@ -51,7 +52,9 @@ https://hiroshi-okajima.github.io/control-interactive-tools/
 - [ボール＆ビーム（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_ballbeam_game.html)
 - [タンクシステム（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_tank_game.html)
 - [追跡パトカー（ドライバー視点，Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_acc_game2.html)
-- [ドローン着陸（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_drone_game.html)
+- [ドローン着陸](https://hiroshi-okajima.github.io/control-interactive-tools/control_drone_game.html)
+- [ブランコ共振](https://hiroshi-okajima.github.io/control-interactive-tools/control_swing_game.html)
+
 
 ## 使い方
 
