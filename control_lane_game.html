@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>レーンキープ チャレンジ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#0f172a,#1e3a8a,#2563eb);color:#fff;padding:1.2rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.2rem,3vw,1.6rem);font-weight:700;margin-bottom:0.1rem;}
+.header p{font-size:0.8rem;opacity:0.85;}
+.main{max-width:1000px;margin:0 auto;padding:0.8rem;}
+.game-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0;box-shadow:0 2px 10px rgba(0,0,0,0.06);overflow:hidden;margin-bottom:0.8rem;}
+.canvas-wrap{position:relative;background:#1e293b;}
+canvas#game-canvas{display:block;width:100%;}
+.hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;padding:0.6rem 0.9rem;pointer-events:none;}
+.hud-box{background:rgba(15,23,42,0.78);backdrop-filter:blur(4px);border-radius:8px;padding:0.4rem 0.7rem;color:#fff;font-family:'JetBrains Mono',monospace;}
+.hud-v{font-size:1.2rem;font-weight:700;line-height:1.1;}
+.hud-l{font-size:0.58rem;opacity:0.75;letter-spacing:0.05em;}
+.hud-timer .hud-v{color:#fbbf24;}
+.lane-bar{position:absolute;bottom:0;left:0;right:0;height:6px;background:linear-gradient(90deg,#dc2626 0%,#f59e0b 14%,#22c55e 42%,#22c55e 58%,#f59e0b 86%,#dc2626 100%);}
+.lane-marker{position:absolute;bottom:0;width:3px;height:14px;background:#fff;box-shadow:0 0 4px rgba(0,0,0,0.8);transform:translateX(-50%);transition:left 0.05s;}
+.result-overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(15,23,42,0.85);backdrop-filter:blur(3px);color:#fff;text-align:center;z-index:10;padding:0.8rem;overflow-y:auto;}
+.result-overlay.show{display:flex;}
+.result-title{font-family:'Noto Serif JP',serif;font-size:1.7rem;font-weight:800;margin-bottom:0.3rem;}
+.result-title.success{color:#4ade80;}
+.result-title.fail{color:#f87171;}
+.result-score{font-size:1rem;font-weight:700;margin-bottom:0.5rem;}
+.result-msg{font-size:0.86rem;opacity:0.9;margin-bottom:0.8rem;max-width:420px;}
+.result-btn{pointer-events:auto;padding:0.5em 1.5em;border:none;border-radius:8px;background:#2563eb;color:#fff;font-weight:700;font-size:0.9rem;cursor:pointer;font-family:'Noto Sans JP',sans-serif;}
+.result-btn:hover{background:#1d4ed8;}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;}
+@media(max-width:700px){.controls{grid-template-columns:1fr;}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.4rem;}
+.ctrl-group{margin-bottom:0.55rem;}
+.ctrl-label{font-size:0.74rem;font-weight:600;color:var(--text2);margin-bottom:0.12rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.85rem;padding:0.1em 0.5em;border-radius:4px;min-width:3.6em;text-align:center;}
+.ctrl-val.kp{color:var(--blue);background:#eef2ff;}
+.ctrl-val.kd{color:var(--purple);background:#f3eeff;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--blue);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--blue);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);cursor:pointer;}
+input.kd::-webkit-slider-thumb,input.kd::-moz-range-thumb{background:var(--purple);}
+.btn-row{display:flex;gap:0.5rem;margin-top:0.3rem;}
+.btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:0.3rem;padding:0.55em 1em;border:none;border-radius:8px;font-weight:700;font-size:0.88rem;cursor:pointer;transition:opacity 0.15s;}
+.btn:hover{opacity:0.88;}
+.btn-start{background:var(--green);color:#fff;}
+.btn-reset{background:#e5e5e5;color:#444;}
+.rule-box{font-size:0.76rem;line-height:1.7;color:var(--text2);}
+.rule-box .ok{color:var(--green);font-weight:700;}
+.rule-box .ng{color:var(--red);font-weight:700;}
+.level-tabs{display:flex;gap:0.4rem;margin-bottom:0.5rem;}
+.level-tab{flex:1;padding:0.4em;border:2px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;text-align:center;font-size:0.72rem;font-weight:700;color:var(--text2);transition:all 0.15s;}
+.level-tab.active{border-color:var(--blue);background:#eff6ff;color:#1d4ed8;}
+.level-tab:hover{border-color:var(--blue);}
+.level-explain{margin-top:0.5rem;display:flex;flex-direction:column;gap:0.3rem;}
+.lvl-row{display:flex;gap:0.5rem;padding:0.4rem 0.5rem;border-radius:8px;background:#f8fafc;border:1px solid transparent;align-items:flex-start;}
+.lvl-row.active{background:#eff6ff;border-color:var(--blue);}
+.lvl-name{font-weight:700;font-size:0.74rem;white-space:nowrap;min-width:4.5em;color:#1d4ed8;}
+.lvl-desc{font-size:0.72rem;color:var(--text2);line-height:1.55;}
+.eq-mini{font-family:'JetBrains Mono',monospace;font-size:0.7rem;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:0.4rem 0.6rem;margin-top:0.4rem;color:var(--text2);line-height:1.7;}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.7rem 0.9rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);margin-top:0.8rem;}
+.chart-title{font-size:0.65rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.3rem;color:var(--text2);}
+.chart-wrap{position:relative;height:150px;}
+.footer{text-align:center;padding:0.8rem;color:var(--text3);font-size:0.68rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🛣️ レーンキープ チャレンジ</h1>
+  <p>車線中央からのズレに応じて操舵せよ！比例だけでは蛇行する</p>
+</div>
+<div class="main">
+
+<div class="game-card">
+  <div class="canvas-wrap">
+    <canvas id="game-canvas" width="960" height="340"></canvas>
+    <div class="hud">
+      <div class="hud-box"><div class="hud-l">中央からのズレ y</div><div class="hud-v" id="hud-y">0.00 m</div></div>
+      <div class="hud-box"><div class="hud-l">方位誤差 ψ</div><div class="hud-v" id="hud-psi">0.0°</div></div>
+      <div class="hud-box"><div class="hud-l">操舵角 δ</div><div class="hud-v" id="hud-delta">0.0°</div></div>
+      <div class="hud-box hud-timer"><div class="hud-l">残り時間</div><div class="hud-v" id="hud-timer">40.0</div></div>
+    </div>
+    <div class="lane-marker" id="lane-marker" style="left:50%;"></div>
+    <div class="lane-bar"></div>
+    <div class="result-overlay" id="result">
+      <div class="result-title" id="result-title"></div>
+      <div class="result-score" id="result-score"></div>
+      <div class="result-msg" id="result-msg"></div>
+      <button class="result-btn" id="result-btn">もう一度</button>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">操舵フィードバックゲイン</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--blue);">K_p：横ズレ y に対する比例ゲイン（±可・初期値0）</div>
+      <div class="ctrl-row"><input type="range" id="sl-kp" min="-0.9" max="0.9" step="0.02" value="0"><span class="ctrl-val kp" id="val-kp">0.00</span></div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--purple);">K_d：方位誤差 ψ に対するゲイン＝減衰（±可・初期値0）</div>
+      <div class="ctrl-row"><input type="range" id="sl-kd" class="kd" min="-3" max="3" step="0.1" value="0"><span class="ctrl-val kd" id="val-kd">0.0</span></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-start" id="btn-start">▶ スタート</button>
+      <button class="btn btn-reset" id="btn-reset">↺ リセット</button>
+    </div>
+    <div class="eq-mini">
+      <div style="font-size:0.6rem;font-weight:700;letter-spacing:0.08em;color:var(--text3);margin-bottom:0.2rem;">車両モデルとコントローラ</div>
+      ẏ = V·ψ　（横ズレの変化）<br>
+      ψ̇ = (V/L)·δ − V·κ　（方位の変化、κ=道路曲率）<br>
+      δ<sub>cmd</sub> = −K_p·y − K_d·ψ　（|δ| ≤ 35°で飽和）<br>δ̇ = (δ<sub>cmd</sub> − δ)/τ　（操舵の遅れ τ=0.4s）
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">難易度＆ルール</div>
+    <div class="level-tabs">
+      <div class="level-tab active" id="lv1" onclick="setLevel(1)">かんたん</div>
+      <div class="level-tab" id="lv2" onclick="setLevel(2)">ふつう</div>
+      <div class="level-tab" id="lv3" onclick="setLevel(3)">むずかしい</div>
+    </div>
+    <div class="rule-box">
+      🎯 車線中央（黄色の線）を保ったまま走り切る<br>
+      <span class="ng">✗ 失敗</span>：ズレが ±3.2m を超えて路外に飛び出す<br>
+      <span class="ok">✓ 成功</span>：制限時間まで走り切る。<strong>ズレの二乗平均（RMS）が小さいほど高得点</strong><br><span style="font-size:0.7rem;color:var(--text3);">※ ゲインは正負とも設定可。負にすると発散、K_p を上げすぎても操舵の遅れで不安定になる。</span>
+    </div>
+    <div class="level-explain">
+      <div class="lvl-row active" id="exp1">
+        <span class="lvl-name">かんたん</span>
+        <span class="lvl-desc">速度15m/s、ゆるやかなカーブ。初期値は K_p=K_d=0 なので、操舵せずカーブ外側へ流されて即脱輪。まず K_p を＋にして車線へ戻る力を作ろう。</span>
+      </div>
+      <div class="lvl-row" id="exp2">
+        <span class="lvl-name">ふつう</span>
+        <span class="lvl-desc">速度20m/s、急なカーブ。K_p だけでは<strong>減衰がゼロ</strong>なので蛇行が止まらず脱輪する。K_d を＋に足して減衰を与えよう。</span>
+      </div>
+      <div class="lvl-row" id="exp3">
+        <span class="lvl-name">むずかしい</span>
+        <span class="lvl-desc">速度25m/s、さらに急なカーブ＋横風。速度が上がるほど同じゲインでも振動しやすい。K_d を最大近くまで上げ、K_p は上げすぎない値に合わせるのが鍵。</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="chart-card">
+  <div class="chart-title">車線中央からのズレ y(t)</div>
+  <div class="chart-wrap"><canvas id="chart"></canvas></div>
+</div>
+
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — レーンキープ チャレンジ</div>
+
+<script>
+(function(){
+  const canvas=document.getElementById('game-canvas');
+  const ctx=canvas.getContext('2d');
+  const slKp=document.getElementById('sl-kp'),slKd=document.getElementById('sl-kd');
+  const btnStart=document.getElementById('btn-start'),btnReset=document.getElementById('btn-reset');
+  const resultEl=document.getElementById('result'),resultTitle=document.getElementById('result-title');
+  const resultScore=document.getElementById('result-score'),resultMsg=document.getElementById('result-msg');
+  const resultBtn=document.getElementById('result-btn');
+
+  const dt=0.02, STEPS_PER_FRAME=2;
+  const WHEELBASE=2.8;                  // L [m]
+  const DELTA_MAX=35*Math.PI/180;       // steering saturation
+  const TAU_STEER=0.40;                 // steering actuator lag [s] (高ゲインで不安定化する要因)
+  const LANE_HALF=3.2;                  // off-road threshold [m]
+  const CURVE_INTERVAL=4.0;             // seconds per curvature pattern
+
+  // Verified levels:
+  //  Kp=0 or 負    → カーブ外側へ流されて脱輪（0点）
+  //  Kd=0（比例のみ）→ 蛇行が収まらず脱輪（0点）
+  //  Kp=0.9(最大)   → 操舵遅れτと相まって不安定化し脱輪（0点）
+  //  最適解 Kp=0.3, Kd=3(最大) → 99 / 87 / 74点（かんたん/ふつう/むずかしい）
+  const LEVELS={
+    1:{V:15,T:40,wind:0,P:[0,0.018,-0.018,0.030,-0.030,0.012,-0.012]},
+    2:{V:20,T:40,wind:0,P:[0,0.032,-0.032,0.048,-0.048,0.018,-0.018]},
+    3:{V:25,T:35,wind:0.5,P:[0,0.042,-0.042,0.058,-0.058,0.025,-0.030]}
+  };
+  let level=1;
+  window.setLevel=function(lv){
+    level=lv;
+    [1,2,3].forEach(i=>{
+      document.getElementById('lv'+i).className='level-tab'+(i===lv?' active':'');
+      document.getElementById('exp'+i).className='lvl-row'+(i===lv?' active':'');
+    });
+    if(!running)resetState();
+  };
+
+  let y,psi,t,s,delta;
+  let curveIdx,curveTimer,curKappa,kappaTarget;
+  let running=false,animId=null,gameOver=false;
+  let histT=[],histY=[];
+  let ySumSq=0,nSamp=0,yPeak=0;
+
+  function getGains(){return{kp:parseFloat(slKp.value),kd:parseFloat(slKd.value)};}
+
+  function updateCurve(){
+    const lv=LEVELS[level];
+    curveTimer+=dt*STEPS_PER_FRAME;
+    if(curveTimer>=CURVE_INTERVAL){
+      curveTimer=0;
+      curveIdx=(curveIdx+1)%lv.P.length;
+      kappaTarget=lv.P[curveIdx];
+    }
+    curKappa+=(kappaTarget-curKappa)*0.15; // road curvature transition
+  }
+
+  function crosswind(tt){
+    return Math.sin(tt*1.3)+0.5*Math.sin(tt*2.7+1.0);
+  }
+
+  function resizeCanvas(){const r=canvas.parentElement.getBoundingClientRect();canvas.width=r.width;canvas.height=340;}
+  resizeCanvas();
+  window.addEventListener('resize',resizeCanvas);
+
+  // Chart
+  const chart=new Chart(document.getElementById('chart').getContext('2d'),{
+    type:'line',
+    data:{datasets:[
+      {label:'y',data:[],borderColor:'#2563eb',borderWidth:2,pointRadius:0,fill:false,tension:0.12},
+      {label:'+lim',data:[],borderColor:'#dc2626',borderWidth:1.2,borderDash:[6,4],pointRadius:0,fill:false},
+      {label:'-lim',data:[],borderColor:'#dc2626',borderWidth:1.2,borderDash:[6,4],pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+      scales:{
+        x:{type:'linear',min:0,max:40,title:{display:true,text:'t [s]',font:{size:9}},ticks:{stepSize:5,font:{size:8}},grid:{color:'#f0f0f0'}},
+        y:{min:-3.5,max:3.5,title:{display:true,text:'y [m]',font:{size:9}},ticks:{stepSize:1,font:{size:8}},grid:{color:'#f0f0f0'}}
+      },
+      plugins:{legend:{display:false},tooltip:{enabled:false}}
+    }
+  });
+
+  // ── Pseudo-3D road geometry ──
+  // Returns screen position of the LANE CENTER at depth z (0=near,1=horizon)
+  function roadAt(z,W,horizonY,baseY,roadHalfNear){
+    const yy=baseY-(baseY-horizonY)*z;
+    const w=roadHalfNear*(1-z*0.92);
+    const pxPerM=roadHalfNear/LANE_HALF;
+    const bend=curKappa*z*z*W*7.5;          // road curvature ahead
+    const lateral=-y*pxPerM*(1-z*0.92);     // car offset shifts road opposite
+    const heading=-psi*z*W*0.55;            // heading error tilts the view
+    return {x:W/2+bend+lateral+heading, y:yy, w:w};
+  }
+
+  function drawGame(){
+    const W=canvas.width,H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+    const horizonY=H*0.30, baseY=H, roadHalfNear=W*0.46;
+    const steps=40;
+
+    // Sky
+    const sky=ctx.createLinearGradient(0,0,0,horizonY);
+    sky.addColorStop(0,'#1e3a8a');sky.addColorStop(1,'#7dd3fc');
+    ctx.fillStyle=sky;ctx.fillRect(0,0,W,horizonY);
+    // Grass
+    ctx.fillStyle='#4d7c2f';ctx.fillRect(0,horizonY,W,H-horizonY);
+
+    // Road polygon
+    ctx.beginPath();
+    for(let i=0;i<=steps;i++){
+      const z=i/steps,p=roadAt(z,W,horizonY,baseY,roadHalfNear);
+      if(i===0)ctx.moveTo(p.x-p.w,p.y);else ctx.lineTo(p.x-p.w,p.y);
+    }
+    for(let i=steps;i>=0;i--){
+      const z=i/steps,p=roadAt(z,W,horizonY,baseY,roadHalfNear);
+      ctx.lineTo(p.x+p.w,p.y);
+    }
+    ctx.closePath();ctx.fillStyle='#374151';ctx.fill();
+
+    // Road edge lines (white, red-tinted when close)
+    const nearEdge=Math.abs(y)>LANE_HALF*0.7;
+    for(const side of [-1,1]){
+      ctx.beginPath();
+      for(let i=0;i<=steps;i++){
+        const z=i/steps,p=roadAt(z,W,horizonY,baseY,roadHalfNear);
+        const px=p.x+side*p.w;
+        if(i===0)ctx.moveTo(px,p.y);else ctx.lineTo(px,p.y);
+      }
+      ctx.strokeStyle=nearEdge?'#fca5a5':'#e5e7eb';ctx.lineWidth=3;ctx.stroke();
+    }
+
+    // Center dashes (yellow) — scroll with travelled distance
+    const SCROLL=0.05, DASH_PERIOD=0.16, DASH_FILL=0.55;
+    const phase=(s*SCROLL)%1;
+    ctx.fillStyle='#fbbf24';
+    for(let i=0;i<steps;i++){
+      const z0=i/steps,z1=(i+1)/steps;
+      const cyc=(((z0+phase)/DASH_PERIOD)%1+1)%1;
+      if(cyc>DASH_FILL)continue;
+      const p0=roadAt(z0,W,horizonY,baseY,roadHalfNear);
+      const p1=roadAt(z1,W,horizonY,baseY,roadHalfNear);
+      const w0=Math.max(1,p0.w*0.045),w1=Math.max(0.5,p1.w*0.045);
+      ctx.beginPath();
+      ctx.moveTo(p0.x-w0,p0.y);ctx.lineTo(p0.x+w0,p0.y);
+      ctx.lineTo(p1.x+w1,p1.y);ctx.lineTo(p1.x-w1,p1.y);
+      ctx.closePath();ctx.fill();
+    }
+
+    // Street lamps (speed sense, far→near)
+    const LAMP_SPACING=1.02;
+    const lampPhase=(s*SCROLL)%LAMP_SPACING;
+    const lamps=[];
+    for(let k=-1;k<3;k++){
+      const zR=k*LAMP_SPACING-lampPhase+0.05;
+      if(zR<=0.02||zR>=0.97)continue;
+      lamps.push({z:zR,side:(k%2===0)?-1:1});
+    }
+    lamps.sort((a,b)=>b.z-a.z);
+    for(const lp of lamps){
+      const p=roadAt(lp.z,W,horizonY,baseY,roadHalfNear);
+      const f=(1-lp.z*0.9);
+      const bx=p.x+lp.side*(p.w*1.10+6*f), by=p.y;
+      const poleH=70*f,armL=18*f;
+      ctx.strokeStyle='#1f2937';ctx.lineWidth=Math.max(1,4*f);
+      ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(bx,by-poleH);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(bx,by-poleH);ctx.lineTo(bx-lp.side*armL,by-poleH);ctx.stroke();
+      const hx=bx-lp.side*armL,hy=by-poleH;
+      const gl=ctx.createRadialGradient(hx,hy,1,hx,hy,10*f);
+      gl.addColorStop(0,'rgba(255,236,170,0.95)');gl.addColorStop(1,'rgba(255,236,170,0)');
+      ctx.fillStyle=gl;ctx.beginPath();ctx.arc(hx,hy,10*f,0,2*Math.PI);ctx.fill();
+      ctx.fillStyle='#fde68a';ctx.beginPath();ctx.arc(hx,hy,Math.max(1.5,3.5*f),0,2*Math.PI);ctx.fill();
+    }
+
+    // Own car hood (fixed at screen bottom center)
+    const hoodH=H*0.17;
+    const hg=ctx.createLinearGradient(0,H-hoodH,0,H);
+    hg.addColorStop(0,'#334155');hg.addColorStop(1,'#0f172a');
+    ctx.fillStyle=hg;
+    ctx.beginPath();
+    ctx.moveTo(W*0.14,H);ctx.lineTo(W*0.29,H-hoodH);
+    ctx.lineTo(W*0.71,H-hoodH);ctx.lineTo(W*0.86,H);
+    ctx.closePath();ctx.fill();
+
+    // Steering wheel indicator on hood
+    const wx=W*0.5, wy=H-hoodH*0.45, wr=Math.min(31,hoodH*0.50); // 1.2倍に拡大
+    ctx.save();
+    ctx.translate(wx,wy);ctx.rotate(delta*2.4); // δ>0 = 右操舵 → 時計回り（表示は1.5倍に強調）
+    ctx.strokeStyle='#cbd5e1';ctx.lineWidth=5;
+    ctx.beginPath();ctx.arc(0,0,wr,0,2*Math.PI);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(-wr,0);ctx.lineTo(wr,0);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,wr);ctx.stroke();
+    ctx.restore();
+
+    // Curve direction indicator
+    if(Math.abs(curKappa)>0.008){
+      ctx.fillStyle='rgba(255,255,255,0.8)';ctx.font="bold 20px 'Noto Sans JP'";ctx.textAlign='center';
+      ctx.fillText(curKappa>0?'⟩⟩':'⟨⟨',W/2,horizonY+18);
+    }
+
+    // Off-lane warning flash
+    if(Math.abs(y)>LANE_HALF*0.8){
+      ctx.fillStyle='rgba(220,38,38,'+(0.10+0.10*Math.sin(t*15))+')';
+      ctx.fillRect(0,0,W,H);
+    }
+  }
+
+  function updateHUD(){
+    const yEl=document.getElementById('hud-y');
+    yEl.textContent=y.toFixed(2)+' m';
+    const ay=Math.abs(y);
+    if(ay>LANE_HALF*0.8)yEl.style.color='#f87171';
+    else if(ay>LANE_HALF*0.5)yEl.style.color='#fbbf24';
+    else yEl.style.color='#4ade80';
+    document.getElementById('hud-psi').textContent=(psi*180/Math.PI).toFixed(1)+'°';
+    document.getElementById('hud-delta').textContent=(delta*180/Math.PI).toFixed(1)+'°';
+    document.getElementById('hud-timer').textContent=Math.max(0,LEVELS[level].T-t).toFixed(1);
+    const pct=Math.max(0,Math.min(100,(y/LANE_HALF*0.5+0.5)*100));
+    document.getElementById('lane-marker').style.left=pct+'%';
+  }
+
+  function updateChart(){
+    const lv=LEVELS[level];
+    const skip=Math.max(1,Math.floor(histT.length/300));
+    const dY=[],dP=[],dM=[];
+    for(let i=0;i<histT.length;i+=skip){
+      dY.push({x:histT[i],y:histY[i]});
+      dP.push({x:histT[i],y:LANE_HALF});
+      dM.push({x:histT[i],y:-LANE_HALF});
+    }
+    dP.push({x:lv.T,y:LANE_HALF});dM.push({x:lv.T,y:-LANE_HALF});
+    chart.data.datasets[0].data=dY;
+    chart.data.datasets[1].data=dP;
+    chart.data.datasets[2].data=dM;
+    chart.options.scales.x.max=lv.T;
+    chart.update();
+  }
+
+  // RMS → score (0.15m=100, 0.30=85, 0.55=65, 0.95=35, 1.6=0)
+  function scoreFromRms(rms){
+    const pts=[[0.15,100],[0.30,85],[0.55,65],[0.95,35],[1.6,0]];
+    if(rms<=pts[0][0])return 100;
+    for(let i=0;i<pts.length-1;i++){
+      const [x0,s0]=pts[i],[x1,s1]=pts[i+1];
+      if(rms<=x1)return Math.round(s0+(s1-s0)*(rms-x0)/(x1-x0));
+    }
+    return 0;
+  }
+
+  function endGame(success,msg){
+    running=false;gameOver=true;
+    if(animId)cancelAnimationFrame(animId);
+    resultTitle.textContent=success?'🎉 完走！':'💥 コースアウト！';
+    resultTitle.className='result-title '+(success?'success':'fail');
+    if(success){
+      const rms=Math.sqrt(ySumSq/Math.max(1,nSamp));
+      const sc=scoreFromRms(rms);
+      let stars;
+      if(sc>=85)stars=3;else if(sc>=60)stars=2;else stars=1;
+      resultScore.innerHTML='スコア <span style="font-size:2rem;color:#fbbf24;">'+sc+'</span> 点'+
+        '<div style="font-size:1.3rem;margin-top:0.1rem;">'+'⭐'.repeat(stars)+'☆'.repeat(3-stars)+'</div>'+
+        '<div style="font-size:0.74rem;opacity:0.85;margin-top:0.2rem;">ズレのRMS '+rms.toFixed(2)+' m ／ 最大ズレ '+yPeak.toFixed(2)+' m</div>';
+    } else {
+      resultScore.innerHTML='';
+    }
+    resultMsg.textContent=msg;
+    resultEl.classList.add('show');
+    btnStart.disabled=false;
+    updateChart();
+  }
+
+  function simAndDraw(){
+    if(!running)return;
+    const lv=LEVELS[level];
+    const {kp,kd}=getGains();
+    for(let i=0;i<STEPS_PER_FRAME;i++){
+      // Steering command (feedback) → actuator with first-order lag
+      let deltaCmd=-kp*y-kd*psi;
+      deltaCmd=Math.max(-DELTA_MAX,Math.min(DELTA_MAX,deltaCmd));
+      delta+=dt*(deltaCmd-delta)/TAU_STEER;
+      delta=Math.max(-DELTA_MAX,Math.min(DELTA_MAX,delta));
+      const w=lv.wind>0?lv.wind*crosswind(t):0;
+      // Lateral dynamics
+      psi+=dt*((lv.V/WHEELBASE)*delta - lv.V*curKappa);
+      y+=dt*(lv.V*psi + w);
+      s+=lv.V*dt;
+      t+=dt;
+
+      ySumSq+=y*y;nSamp++;
+      if(Math.abs(y)>yPeak)yPeak=Math.abs(y);
+      if(Math.round(t/dt)%5===0){histT.push(t);histY.push(y);}
+
+      if(Math.abs(y)>LANE_HALF){
+        endGame(false, (kp<0||kd<0)
+          ? 'ゲインが負だとフィードバックが逆向きに働き、ズレがどんどん拡大する。K_p・K_d とも正の値にしよう。'
+          : (kp<0.05
+             ? '操舵していないのでカーブの外側へ流されて路外へ！K_p を＋にして、中央からのズレに応じて操舵する力を作ろう。'
+             : (kd<0.5
+                ? '蛇行が大きくなって路外へ！K_p だけでは減衰がゼロなので振動が収まらない。K_d（方位のフィードバック）を足そう。'
+                : (kp>0.5
+                   ? 'K_p が大きすぎて不安定に！操舵には遅れ（τ=0.4s）があるため、比例ゲインを上げすぎると振動が発散する。K_p を下げよう。'
+                   : 'コースアウト！K_p と K_d のバランスを見直そう。'))));
+        return;
+      }
+      if(t>=lv.T){
+        const rms=Math.sqrt(ySumSq/Math.max(1,nSamp));
+        endGame(true, rms<0.2
+          ? 'ほぼ中央をキープ！比例と減衰のバランスが見事。'
+          : (kd<0.5
+             ? '完走！ただし蛇行が残っている。K_d を足すと振動が収まり、もっと中央を保てる。'
+             : (kp<0.25
+                ? '完走！K_p をもう少し上げるとカーブでの定常的なズレが小さくなる。'
+                : '完走！K_d を最大近くまで上げ、K_p を調整するとさらに中央を保てる。')));
+        return;
+      }
+    }
+    updateCurve();
+    updateHUD();drawGame();
+    if(Math.round(t/dt)%15===0)updateChart();
+    animId=requestAnimationFrame(simAndDraw);
+  }
+
+  function resetState(){
+    y=0;psi=0;t=0;s=0;delta=0;
+    curveIdx=0;curveTimer=0;curKappa=0;kappaTarget=LEVELS[level].P[0];
+    histT=[];histY=[];ySumSq=0;nSamp=0;yPeak=0;gameOver=false;
+    resultEl.classList.remove('show');
+    updateVals();updateHUD();updateChart();drawGame();
+  }
+  function updateVals(){
+    document.getElementById('val-kp').textContent=parseFloat(slKp.value).toFixed(2);
+    document.getElementById('val-kd').textContent=parseFloat(slKd.value).toFixed(1);
+  }
+
+  function start(){if(running)return;if(gameOver)resetState();running=true;btnStart.disabled=true;simAndDraw();}
+  function reset(){running=false;if(animId)cancelAnimationFrame(animId);btnStart.disabled=false;resetState();}
+
+  btnStart.addEventListener('click',start);
+  btnReset.addEventListener('click',reset);
+  resultBtn.addEventListener('click',function(){reset();start();});
+  [slKp,slKd].forEach(el=>el.addEventListener('input',function(){updateVals();if(!running)drawGame();}));
+
+  resetState();
+})();
+</script>
+</body>
+</html>
