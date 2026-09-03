@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>部分分数展開と逆ラプラス変換</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#0c4a6e,#0369a1,#38bdf8);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.85;max-width:700px;margin:0 auto;}
+.main{max-width:1100px;margin:0 auto;padding:1rem;}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:880px){.layout{grid-template-columns:1fr;}}
+.col{display:flex;flex-direction:column;gap:0.7rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.35rem;}
+.ctrl-group{margin-bottom:0.5rem;}
+.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.75rem;font-weight:600;color:var(--text2);margin-bottom:0.12rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.84rem;padding:0.1em 0.5em;border-radius:4px;min-width:4em;text-align:center;}
+.v-a{color:var(--blue);background:#eef2ff;}
+.v-b{color:var(--green);background:#ecfdf5;}
+.v-c{color:var(--orange);background:#fff7ed;}
+.v-d{color:var(--purple);background:#f3eeff;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--blue);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--blue);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input.sb::-webkit-slider-thumb,input.sb::-moz-range-thumb{background:var(--green);}
+input.sc::-webkit-slider-thumb,input.sc::-moz-range-thumb{background:var(--orange);}
+input.sd::-webkit-slider-thumb,input.sd::-moz-range-thumb{background:var(--purple);}
+.formula{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.6rem 0.8rem;line-height:1.9;color:var(--text);font-size:0.84rem;}
+.frac{display:inline-flex;flex-direction:column;align-items:stretch;vertical-align:middle;margin:0 0.3em;}
+.frac .num{border-bottom:1.6px solid var(--text2);padding:0 0.6em 0.1em;line-height:1.4;text-align:center;white-space:nowrap;}
+.frac .den{padding:0.1em 0.6em 0;line-height:1.4;text-align:center;white-space:nowrap;}
+.badge{display:inline-block;font-size:0.66rem;font-weight:700;padding:0.15em 0.7em;border-radius:20px;}
+.badge.re{background:#dbeafe;color:#1d4ed8;}
+.badge.rep{background:#fef3c7;color:#92400e;}
+.badge.cx{background:#ede9fe;color:#5b21b6;}
+.term-list{display:flex;flex-direction:column;gap:0.45rem;margin-top:0.5rem;}
+.term{display:flex;align-items:center;gap:0.55rem;padding:0.45rem 0.6rem;border-radius:var(--r);border:1px solid var(--border);background:#fafafa;}
+.term-sw{width:15px;height:15px;border-radius:4px;flex-shrink:0;}
+.term-body{flex:1;font-family:'JetBrains Mono',monospace;font-size:0.78rem;line-height:1.6;}
+.term-arrow{color:var(--text3);font-size:0.8rem;margin:0 0.15em;}
+.term-time{color:var(--text);font-weight:600;}
+.chart-wrap{position:relative;height:200px;}
+.chart-wrap.small{height:175px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:0.25rem;font-size:0.71rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.25rem;}
+.sw{width:15px;height:3px;border-radius:2px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.insight{background:linear-gradient(135deg,#e0f2fe,#dbeafe);border:1px solid #7dd3fc;border-radius:var(--r);padding:0.6rem 0.9rem;font-size:0.79rem;line-height:1.75;color:#0c4a6e;}
+.insight strong{color:#075985;}
+.preset-row{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.5rem;}
+.btn{padding:0.4em 0.8em;border:none;border-radius:7px;font-weight:700;font-size:0.73rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:var(--blue);color:#fff;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+.note{font-size:0.71rem;color:var(--text3);margin-top:0.3rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>部分分数展開と逆ラプラス変換</h1>
+  <p>F(s) を部分分数に分け、各項が時間波形になり、足し合わせると全体になる過程を見る</p>
+</div>
+<div class="main">
+<div class="layout">
+
+<!-- LEFT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">対象とする F(s)</div>
+    <div class="formula" id="fs-box"></div>
+    <div style="margin-top:0.5rem;">分母の根の種類：<span id="kind-badge"></span></div>
+    <div class="note" id="disc-note"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">分子　N(s) = c·s + d</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--orange);">c（s の係数）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-c" class="sc" min="-5" max="5" step="0.1" value="0">
+        <span class="ctrl-val v-c" id="val-c">0.0</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--purple);">d（定数項）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-d" class="sd" min="-10" max="10" step="0.1" value="1">
+        <span class="ctrl-val v-d" id="val-d">1.0</span>
+      </div>
+    </div>
+    <div class="card-label" style="color:var(--blue);margin-top:0.7rem;">分母　s² + a·s + b</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--blue);">a</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-a" min="0" max="8" step="0.05" value="4">
+        <span class="ctrl-val v-a" id="val-a">4.00</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--green);">b</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-b" class="sb" min="0" max="20" step="0.05" value="3">
+        <span class="ctrl-val v-b" id="val-b">3.00</span>
+      </div>
+    </div>
+    <div class="preset-row">
+      <button class="btn btn-p" id="p-real">相異なる実根</button>
+      <button class="btn btn-p" id="p-rep">重根</button>
+      <button class="btn btn-p" id="p-cx">共役複素根</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--green);">部分分数展開の結果</div>
+    <div class="formula" id="pf-box"></div>
+    <div class="term-list" id="term-list"></div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">各項の時間波形（部分）</div>
+    <div class="legend-row" id="leg-parts"></div>
+    <div class="chart-wrap"><canvas id="chart-parts"></canvas></div>
+    <div class="note">それぞれの部分分数項を単独で逆ラプラス変換した波形です。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">合成 f(t) ＝ 各項の和</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#2563eb;"></span>f(t)（合計）</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#94a3b8;"></span>各項</span>
+    </div>
+    <div class="chart-wrap small"><canvas id="chart-sum"></canvas></div>
+    <div class="note">破線の各項をすべて足すと、青の f(t) に一致します。</div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・部分分数展開は、複雑な F(s) を<strong>逆変換の分かっている基本形</strong>に分解する操作<br>
+    ・<strong>相異なる実根</strong> → 1/(s+p) 型 → <strong>指数関数</strong> e<sup>−pt</sup> の和<br>
+    ・<strong>重根</strong> → 1/(s+p)² が現れる → <strong>t·e<sup>−pt</sup></strong> という t 倍の項が出る<br>
+    ・<strong>共役複素根</strong> → 2次のまま残す → <strong>減衰振動</strong> e<sup>−σt</sup>(A cos ω<sub>d</sub>t + B sin ω<sub>d</sub>t)<br>
+    ・分母の根の位置が<strong>波形の形</strong>を決め、留数（分子側）が<strong>各項の大きさ</strong>を決める<br>
+    ・実根が2つのとき、片方の係数が正・もう片方が負になることが多く、<strong>差し引きで波形ができる</strong>ことが見て取れる
+  </div>
+</div>
+
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — 部分分数展開と逆ラプラス変換</div>
+
+<script>
+(function(){
+  const slA=document.getElementById('sl-a'),slB=document.getElementById('sl-b');
+  const slC=document.getElementById('sl-c'),slD=document.getElementById('sl-d');
+  const COLORS=['#dc2626','#059669','#ea580c'];
+
+  function vals(){
+    return{a:parseFloat(slA.value),b:parseFloat(slB.value),
+           c:parseFloat(slC.value),d:parseFloat(slD.value)};
+  }
+  function num(v,n){ // tidy number
+    const s=v.toFixed(n===undefined?3:n);
+    return s.replace(/\.?0+$/,'')||'0';
+  }
+  function signed(v,n){
+    const t=num(Math.abs(v),n);
+    return (v<0?'− ':'+ ')+t;
+  }
+
+  // classify denominator roots
+  function analyze(V){
+    const D=V.a*V.a-4*V.b;
+    if(Math.abs(D)<1e-6){
+      const p=V.a/2; // repeated root at s=-p
+      // F=(c s+d)/(s+p)^2 = c/(s+p) + (d-c p)/(s+p)^2
+      return {kind:'rep', p:p, D:D,
+              A1:V.c, A2:V.d-V.c*p};
+    }
+    if(D>0){
+      const r=Math.sqrt(D);
+      const p1=(V.a-r)/2, p2=(V.a+r)/2; // roots at -p1,-p2 (p1<p2)
+      // F=(c s+d)/((s+p1)(s+p2)) ; A1 = (c(-p1)+d)/(p2-p1), A2 = (c(-p2)+d)/(p1-p2)
+      const A1=(-V.c*p1+V.d)/(p2-p1);
+      const A2=(-V.c*p2+V.d)/(p1-p2);
+      return {kind:'real', p1:p1, p2:p2, D:D, A1:A1, A2:A2};
+    }
+    const sig=V.a/2, wd=Math.sqrt(-D)/2;
+    // F=(c s+d)/((s+sig)^2+wd^2) = c*(s+sig)/(...) + (d-c*sig)/(...)
+    // -> c e^{-sig t} cos(wd t) + ((d-c*sig)/wd) e^{-sig t} sin(wd t)
+    return {kind:'cx', sig:sig, wd:wd, D:D, Ac:V.c, As:(V.d-V.c*sig)};
+  }
+
+  // time functions for each term
+  function terms(V,R){
+    if(R.kind==='real'){
+      return [
+        {color:COLORS[0],
+         sExpr:'<span class="frac"><span class="num">'+num(R.A1)+'</span><span class="den">s + '+num(R.p1)+'</span></span>',
+         tExpr:num(R.A1)+' e<sup>−'+num(R.p1)+'t</sup>',
+         f:function(t){return R.A1*Math.exp(-R.p1*t);}},
+        {color:COLORS[1],
+         sExpr:'<span class="frac"><span class="num">'+num(R.A2)+'</span><span class="den">s + '+num(R.p2)+'</span></span>',
+         tExpr:num(R.A2)+' e<sup>−'+num(R.p2)+'t</sup>',
+         f:function(t){return R.A2*Math.exp(-R.p2*t);}}
+      ];
+    }
+    if(R.kind==='rep'){
+      return [
+        {color:COLORS[0],
+         sExpr:'<span class="frac"><span class="num">'+num(R.A1)+'</span><span class="den">s + '+num(R.p)+'</span></span>',
+         tExpr:num(R.A1)+' e<sup>−'+num(R.p)+'t</sup>',
+         f:function(t){return R.A1*Math.exp(-R.p*t);}},
+        {color:COLORS[1],
+         sExpr:'<span class="frac"><span class="num">'+num(R.A2)+'</span><span class="den">(s + '+num(R.p)+')²</span></span>',
+         tExpr:num(R.A2)+' t e<sup>−'+num(R.p)+'t</sup>',
+         f:function(t){return R.A2*t*Math.exp(-R.p*t);}}
+      ];
+    }
+    const out=[];
+    out.push({color:COLORS[0],
+      sExpr:'<span class="frac"><span class="num">'+num(R.Ac)+'(s + '+num(R.sig)+')</span><span class="den">(s + '+num(R.sig)+')² + '+num(R.wd*R.wd)+'</span></span>',
+      tExpr:num(R.Ac)+' e<sup>−'+num(R.sig)+'t</sup> cos('+num(R.wd)+'t)',
+      f:function(t){return R.Ac*Math.exp(-R.sig*t)*Math.cos(R.wd*t);}});
+    out.push({color:COLORS[1],
+      sExpr:'<span class="frac"><span class="num">'+num(R.As)+'</span><span class="den">(s + '+num(R.sig)+')² + '+num(R.wd*R.wd)+'</span></span>',
+      tExpr:num(R.As/R.wd)+' e<sup>−'+num(R.sig)+'t</sup> sin('+num(R.wd)+'t)',
+      f:function(t){return (R.As/R.wd)*Math.exp(-R.sig*t)*Math.sin(R.wd*t);}});
+    return out;
+  }
+
+  // charts
+  function ds(color,w,dash){return{data:[],borderColor:color,borderWidth:w,borderDash:dash||[],pointRadius:0,fill:false,tension:0.1};}
+  function mkChart(id,extra){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',min:0,max:8,title:{display:true,text:'t [s]',font:{size:10}},ticks:{stepSize:1,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chParts=mkChart('chart-parts');
+  const chSum=mkChart('chart-sum');
+
+  function update(){
+    const V=vals();
+    document.getElementById('val-a').textContent=V.a.toFixed(2);
+    document.getElementById('val-b').textContent=V.b.toFixed(2);
+    document.getElementById('val-c').textContent=V.c.toFixed(1);
+    document.getElementById('val-d').textContent=V.d.toFixed(1);
+
+    // F(s) display
+    const numStr=(Math.abs(V.c)<1e-9)? num(V.d)
+      : (num(V.c)+'s '+signed(V.d,3));
+    document.getElementById('fs-box').innerHTML=
+      'F(s) = <span class="frac"><span class="num">'+numStr+'</span>'+
+      '<span class="den">s² + '+num(V.a)+'s + '+num(V.b)+'</span></span>';
+
+    const R=analyze(V);
+    const kb=document.getElementById('kind-badge');
+    const dn=document.getElementById('disc-note');
+    if(R.kind==='real'){
+      kb.innerHTML='<span class="badge re">相異なる実根</span>';
+      dn.textContent='判別式 a²−4b = '+num(R.D,3)+' > 0　→　s = −'+num(R.p1)+', −'+num(R.p2);
+    }else if(R.kind==='rep'){
+      kb.innerHTML='<span class="badge rep">重根</span>';
+      dn.textContent='判別式 a²−4b ≒ 0　→　s = −'+num(R.p)+'（2重根）';
+    }else{
+      kb.innerHTML='<span class="badge cx">共役複素根</span>';
+      dn.textContent='判別式 a²−4b = '+num(R.D,3)+' < 0　→　s = −'+num(R.sig)+' ± '+num(R.wd)+'j';
+    }
+
+    const T=terms(V,R);
+
+    // partial fraction formula
+    document.getElementById('pf-box').innerHTML=
+      'F(s) = '+T[0].sExpr+' <span style="margin:0 0.2em;">+</span> '+T[1].sExpr;
+
+    // term list
+    const tl=document.getElementById('term-list');
+    tl.innerHTML='';
+    T.forEach(function(tm){
+      const div=document.createElement('div');
+      div.className='term';
+      div.innerHTML='<span class="term-sw" style="background:'+tm.color+';"></span>'+
+        '<span class="term-body">'+tm.sExpr+
+        ' <span class="term-arrow">⟶ ℒ⁻¹ ⟶</span> '+
+        '<span class="term-time">'+tm.tExpr+'</span></span>';
+      tl.appendChild(div);
+    });
+
+    // legend for parts chart
+    const lg=document.getElementById('leg-parts');
+    lg.innerHTML='';
+    T.forEach(function(tm,i){
+      const sp=document.createElement('span');
+      sp.className='legend-item';
+      sp.innerHTML='<span class="sw" style="background:'+tm.color+';"></span>第'+(i+1)+'項';
+      lg.appendChild(sp);
+    });
+
+    // data
+    const N=500,TMAX=8;
+    const partsData=T.map(function(){return [];});
+    const sumData=[];
+    for(let i=0;i<=N;i++){
+      const t=i/N*TMAX;
+      let s=0;
+      T.forEach(function(tm,k){
+        const y=tm.f(t);
+        partsData[k].push({x:t,y:y});
+        s+=y;
+      });
+      sumData.push({x:t,y:s});
+    }
+
+    chParts.data.datasets=T.map(function(tm,k){
+      const d=ds(tm.color,2.4);d.data=partsData[k];return d;
+    });
+    chParts.update();
+
+    const sumSets=[];
+    const dsum=ds('#2563eb',2.8);dsum.data=sumData;sumSets.push(dsum);
+    T.forEach(function(tm,k){
+      const dd=ds(tm.color,1.4,[5,4]);dd.data=partsData[k];sumSets.push(dd);
+    });
+    chSum.data.datasets=sumSets;
+    chSum.update();
+  }
+
+  [slA,slB,slC,slD].forEach(function(s){s.addEventListener('input',update);});
+
+  document.getElementById('p-real').addEventListener('click',function(){
+    slA.value=4;slB.value=3;slC.value=0;slD.value=1;update();
+  });
+  document.getElementById('p-rep').addEventListener('click',function(){
+    slA.value=4;slB.value=4;slC.value=0;slD.value=1;update();
+  });
+  document.getElementById('p-cx').addEventListener('click',function(){
+    slA.value=2;slB.value=5;slC.value=0;slD.value=1;update();
+  });
+
+  update();
+})();
+</script>
+</body>
+</html>
