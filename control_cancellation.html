@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>極・零相殺の危険性</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#450a0a,#991b1b,#ef4444);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.88;max-width:720px;margin:0 auto;}
+.main{max-width:1100px;margin:0 auto;padding:1rem;}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:880px){.layout{grid-template-columns:1fr;}}
+.col{display:flex;flex-direction:column;gap:0.7rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.35rem;}
+.mode-tabs{display:flex;gap:0.4rem;margin-bottom:0.6rem;}
+.mode-tab{flex:1;padding:0.5em 0.4em;border:2px solid var(--border);border-radius:9px;background:var(--card);cursor:pointer;text-align:center;font-size:0.76rem;font-weight:700;color:var(--text2);transition:all 0.15s;line-height:1.35;}
+.mode-tab.active{border-color:var(--red);background:#fef2f2;color:#991b1b;}
+.mode-tab:hover{border-color:var(--red);}
+.ctrl-group{margin-bottom:0.55rem;}
+.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.75rem;font-weight:600;color:var(--text2);margin-bottom:0.12rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.84rem;padding:0.1em 0.5em;border-radius:4px;min-width:4.4em;text-align:center;}
+.v-err{color:var(--red);background:#fef2f2;}
+.v-k{color:var(--blue);background:#eef2ff;}
+.v-d{color:var(--orange);background:#fff7ed;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--red);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--red);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input.sk::-webkit-slider-thumb,input.sk::-moz-range-thumb{background:var(--blue);}
+input.sd::-webkit-slider-thumb,input.sd::-moz-range-thumb{background:var(--orange);}
+.formula{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.55rem 0.8rem;line-height:1.95;color:var(--text);font-size:0.82rem;}
+.frac{display:inline-flex;flex-direction:column;align-items:stretch;vertical-align:middle;margin:0 0.3em;}
+.frac .num{border-bottom:1.6px solid var(--text2);padding:0 0.6em 0.1em;line-height:1.4;text-align:center;white-space:nowrap;}
+.frac .den{padding:0.1em 0.6em 0;line-height:1.4;text-align:center;white-space:nowrap;}
+.canvas-wrap{position:relative;background:#fafaf8;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+canvas#splane{display:block;width:100%;}
+.verdict{border-radius:var(--r);padding:0.55rem 0.85rem;font-size:0.82rem;font-weight:700;margin-top:0.5rem;line-height:1.6;}
+.verdict.ok{background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;}
+.verdict.ng{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;}
+.spec-table{width:100%;border-collapse:collapse;font-size:0.76rem;margin-top:0.3rem;}
+.spec-table th,.spec-table td{padding:0.28rem 0.4rem;border-bottom:1px solid var(--border);text-align:left;}
+.spec-table th{font-size:0.66rem;color:var(--text3);font-weight:700;letter-spacing:0.04em;}
+.spec-table td.num{font-family:'JetBrains Mono',monospace;font-weight:600;text-align:right;}
+.pass{color:var(--green);font-weight:700;}
+.fail{color:var(--red);font-weight:700;}
+.chart-wrap{position:relative;height:180px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:0.25rem;font-size:0.71rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.25rem;}
+.sw{width:15px;height:3px;border-radius:2px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.insight{background:linear-gradient(135deg,#fef2f2,#fee2e2);border:1px solid #fca5a5;border-radius:var(--r);padding:0.6rem 0.9rem;font-size:0.79rem;line-height:1.75;color:#7f1d1d;}
+.insight strong{color:#991b1b;}
+.note{font-size:0.71rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+.btn{padding:0.4em 0.9em;border:none;border-radius:7px;font-weight:700;font-size:0.75rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:var(--red);color:#fff;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>極・零相殺の危険性</h1>
+  <p>制御器の零点でプラントの極を打ち消す設計は、どんなときに成立し、どんなときに破綻するか</p>
+</div>
+<div class="main">
+<div class="layout">
+
+<!-- LEFT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">打ち消す対象のプラント極</div>
+    <div class="mode-tabs">
+      <div class="mode-tab active" id="m1" onclick="setMode(1)">安定な極<br><span style="font-weight:400;font-size:0.68rem;">s = −1</span></div>
+      <div class="mode-tab" id="m2" onclick="setMode(2)">不安定な極<br><span style="font-weight:400;font-size:0.68rem;">s = +1</span></div>
+    </div>
+    <div class="formula" id="sys-box"></div>
+    <div class="note">制御器の零点をプラントの極に一致させて相殺を狙う設計です。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">モデル誤差と設計パラメータ</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--red);">モデル誤差 [%]（制御器の零点位置のずれ）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-err" min="-30" max="30" step="1" value="0">
+        <span class="ctrl-val v-err" id="val-err">0 %</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--blue);">制御器ゲイン K</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-k" class="sk" min="0.5" max="30" step="0.5" value="10">
+        <span class="ctrl-val v-k" id="val-k">10.0</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--orange);">外乱パルスの大きさ（t = 1〜1.05 s に加わる）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-dist" class="sd" min="0" max="3" step="0.1" value="0">
+        <span class="ctrl-val v-d" id="val-dist">0.0</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;">
+      <button class="btn btn-p" id="btn-exact">誤差ゼロ（完全相殺）</button>
+      <button class="btn btn-p" id="btn-dist">外乱を加える</button>
+      <button class="btn" id="btn-reset">リセット</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">s平面（閉ループ極）</div>
+    <div class="canvas-wrap"><canvas id="splane"></canvas></div>
+    <div class="legend-row" style="margin-top:0.35rem;">
+      <span class="legend-item"><span class="sw" style="background:#dc2626;height:10px;width:10px;border-radius:50%;"></span>閉ループ極</span>
+      <span class="legend-item"><span class="sw" style="background:#7c3aed;height:10px;width:10px;border-radius:50%;"></span>プラント極</span>
+      <span class="legend-item"><span class="sw" style="background:#0891b2;height:10px;width:10px;border-radius:50%;"></span>制御器零点</span>
+    </div>
+    <div class="verdict" id="verdict"></div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">閉ループ極と判定</div>
+    <div class="formula" id="char-box" style="font-size:0.78rem;"></div>
+    <table class="spec-table">
+      <tr><th>項目</th><th style="text-align:right;">値</th><th style="text-align:center;">判定</th></tr>
+      <tr><td>プラント極</td><td class="num" id="row-pp">—</td><td></td></tr>
+      <tr><td>制御器零点</td><td class="num" id="row-cz">—</td><td></td></tr>
+      <tr><td>閉ループ極 1</td><td class="num" id="row-r1">—</td><td style="text-align:center;" id="row-r1-j">—</td></tr>
+      <tr><td>閉ループ極 2</td><td class="num" id="row-r2">—</td><td style="text-align:center;" id="row-r2-j">—</td></tr>
+      <tr><td>最大実部</td><td class="num" id="row-max">—</td><td style="text-align:center;" id="row-max-j">—</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">出力 y(t)（目標値へのステップ応答）</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#2563eb;"></span>出力 y(t)</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#94a3b8;"></span>目標値 1</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-y"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--orange);">内部信号 u(t)（制御器の出力）</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#ea580c;"></span>制御入力 u(t)</span>
+    </div>
+    <div class="chart-wrap" style="height:150px;"><canvas id="chart-u"></canvas></div>
+    <div class="note" id="u-note"></div>
+  </div>
+
+  <div class="card insight">
+    <strong>⚠️ 教育ポイント</strong><br>
+    ・<strong>安定な極の相殺</strong>：多少ずれても閉ループは安定。ただし相殺しきれない分が<strong>遅い応答成分</strong>として残る<br>
+    ・<strong>不安定な極の相殺</strong>：<strong>誤差ゼロで完全に一致させても、不安定極は閉ループに残る</strong>。相殺は伝達関数の上で見かけ上消えるだけで、内部の不安定モードは消えない<br>
+    ・これが「<strong>不安定な極・零点は相殺してはならない</strong>」という原則の根拠<br>
+    ・完全相殺では不安定モードが<strong>不可制御・不可観測</strong>になり、外乱がないと応答は正常に見える。しかし<strong>わずかな外乱で発散</strong>する（外乱スライダーで確認）<br>
+    ・状態空間で言えば、相殺は<strong>不可制御または不可観測</strong>なモードを作ることに相当する
+  </div>
+</div>
+
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — 極・零相殺の危険性</div>
+
+<script>
+(function(){
+  const slErr=document.getElementById('sl-err'), slK=document.getElementById('sl-k');
+  const slDist=document.getElementById('sl-dist');
+  const cv=document.getElementById('splane'), ctx=cv.getContext('2d');
+
+  // Plant P(s)=1/(s - pole).  mode1: pole=-1 (stable), mode2: pole=+1 (unstable)
+  // Controller C(s)=K(s - z)/(s + a), a=5 fixed. Intended z = pole (cancel).
+  const A_POLE=5.0;
+  let mode=1;
+  window.setMode=function(m){
+    mode=m;
+    document.getElementById('m1').className='mode-tab'+(m===1?' active':'');
+    document.getElementById('m2').className='mode-tab'+(m===2?' active':'');
+    update();
+  };
+
+  function plantPole(){ return (mode===1)? -1.0 : 1.0; }
+
+  function vals(){
+    return {err:parseFloat(slErr.value)/100, K:parseFloat(slK.value), dist:parseFloat(slDist.value)};
+  }
+
+  function resize(){
+    const r=cv.parentElement.getBoundingClientRect();
+    cv.width=r.width; cv.height=Math.round(r.width*0.55);
+  }
+  resize(); window.addEventListener('resize',function(){resize();update();});
+
+  const XMIN=-20, XMAX=4, YMIN=-6, YMAX=6;
+  function toPx(x,y){ return [ (x-XMIN)/(XMAX-XMIN)*cv.width, (YMAX-y)/(YMAX-YMIN)*cv.height ]; }
+
+  // closed loop char poly: (s+a)(s-p) + K(s-z) = s^2 + (a-p+K)s + (-a p - K z)
+  function clRoots(p,z,K){
+    const b1=(A_POLE-p+K), b0=(-A_POLE*p-K*z);
+    const D=b1*b1-4*b0;
+    if(D>=0){
+      const r=Math.sqrt(D);
+      return [{re:(-b1+r)/2,im:0},{re:(-b1-r)/2,im:0}];
+    }
+    const r=Math.sqrt(-D);
+    return [{re:-b1/2,im:r/2},{re:-b1/2,im:-r/2}];
+  }
+
+  // simulate closed loop in state space to get y(t) and u(t)
+  // states: xp (plant), xc (controller)
+  // Controller C=K(s-z)/(s+a): realize as xc' = -a xc + e ; u = K( e + (-z - a) xc )
+  //   check: U/E = K(1 + (-z-a)/(s+a)) = K( (s+a-z-a)/(s+a) ) = K(s-z)/(s+a)  OK
+  // Plant P=1/(s-p): xp' = p xp + u ; y = xp
+  function simulate(p,z,K,T,dt,dist){
+    let xp=0, xc=0;
+    const ys=[],us=[];
+    const n=Math.round(T/dt);
+    for(let i=0;i<=n;i++){
+      const t=i*dt;
+      const y=xp;
+      const e=1-y;                         // step reference = 1
+      const u=K*(e+(-z-A_POLE)*xc);
+      ys.push({x:t,y:clamp(y)});
+      us.push({x:t,y:clamp(u)});
+      const d=(t>=1.0&&t<1.05)? dist : 0;  // short disturbance pulse into the plant
+      const dxc=-A_POLE*xc+e;
+      const dxp=p*xp+u+d;
+      xc+=dt*dxc; xp+=dt*dxp;
+      if(!isFinite(xp)||Math.abs(xp)>1e12) { // stop growing
+        for(let k=i+1;k<=n;k++){ys.push({x:k*dt,y:null});us.push({x:k*dt,y:null});}
+        break;
+      }
+    }
+    return {ys:ys,us:us};
+  }
+  function clamp(v){
+    if(!isFinite(v))return null;
+    return Math.max(-1e6,Math.min(1e6,v));
+  }
+
+  function ds(color,w,dash){return{data:[],borderColor:color,borderWidth:w,borderDash:dash||[],pointRadius:0,fill:false,tension:0.08,spanGaps:false};}
+  function mkChart(id,ymin,ymax){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',min:0,max:8,title:{display:true,text:'t [s]',font:{size:10}},ticks:{stepSize:1,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{min:ymin,max:ymax,ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chY=mkChart('chart-y',-1,3);
+  const chU=mkChart('chart-u',-20,40);
+
+  function num(v,n){return v.toFixed(n===undefined?3:n);}
+
+  function drawPlane(p,z,roots){
+    const W=cv.width,H=cv.height;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#fafaf8';ctx.fillRect(0,0,W,H);
+    // right half plane tint
+    const o=toPx(0,0);
+    ctx.fillStyle='rgba(220,38,38,0.07)';
+    ctx.fillRect(o[0],0,W-o[0],H);
+    // grid
+    ctx.strokeStyle='#e5e7eb';ctx.lineWidth=1;
+    for(let x=Math.ceil(XMIN);x<=XMAX;x+=2){const q=toPx(x,0);ctx.beginPath();ctx.moveTo(q[0],0);ctx.lineTo(q[0],H);ctx.stroke();}
+    for(let y=Math.ceil(YMIN);y<=YMAX;y+=2){const q=toPx(0,y);ctx.beginPath();ctx.moveTo(0,q[1]);ctx.lineTo(W,q[1]);ctx.stroke();}
+    // axes
+    ctx.strokeStyle='#334155';ctx.lineWidth=1.8;
+    ctx.beginPath();ctx.moveTo(0,o[1]);ctx.lineTo(W,o[1]);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(o[0],0);ctx.lineTo(o[0],H);ctx.stroke();
+    ctx.fillStyle='#64748b';ctx.font="10px 'JetBrains Mono'";ctx.textAlign='center';
+    for(let x=Math.ceil(XMIN);x<=XMAX;x+=4){if(x===0)continue;const q=toPx(x,0);ctx.fillText(x,q[0],o[1]+13);}
+    ctx.fillStyle='#991b1b';ctx.font="10px 'Noto Sans JP'";ctx.textAlign='left';
+    ctx.fillText('不安定領域',o[0]+6,14);
+
+    // plant pole (purple circle)
+    let q=toPx(p,0);
+    ctx.strokeStyle='#7c3aed';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.arc(q[0],q[1],9,0,2*Math.PI);ctx.stroke();
+    // controller zero (teal circle)
+    q=toPx(z,0);
+    ctx.strokeStyle='#0891b2';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.arc(q[0],q[1],6,0,2*Math.PI);ctx.stroke();
+    // controller pole -a
+    q=toPx(-A_POLE,0);
+    ctx.strokeStyle='#94a3b8';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(q[0]-6,q[1]-6);ctx.lineTo(q[0]+6,q[1]+6);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(q[0]-6,q[1]+6);ctx.lineTo(q[0]+6,q[1]-6);ctx.stroke();
+
+    // closed-loop poles (red filled)
+    roots.forEach(function(r){
+      const qq=toPx(r.re,r.im);
+      ctx.fillStyle=(r.re>1e-9)?'#dc2626':'#16a34a';
+      ctx.beginPath();ctx.arc(qq[0],qq[1],7,0,2*Math.PI);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.arc(qq[0],qq[1],7,0,2*Math.PI);ctx.stroke();
+    });
+  }
+
+  function update(){
+    const V=vals();
+    const p=plantPole();
+    const z=p*(1+V.err);   // controller zero, intended = p
+    document.getElementById('val-err').textContent=(V.err*100).toFixed(0)+' %';
+    document.getElementById('val-k').textContent=V.K.toFixed(1);
+    document.getElementById('val-dist').textContent=V.dist.toFixed(1);
+
+    // formula
+    const pStr=(p<0)? ('s + '+num(-p,2)) : ('s − '+num(p,2));
+    const zStr=(z<0)? ('s + '+num(-z,2)) : ('s − '+num(z,2));
+    document.getElementById('sys-box').innerHTML=
+      'プラント　P(s) = <span class="frac"><span class="num">1</span><span class="den">'+pStr+'</span></span>'+
+      '<span style="margin-left:0.8em;color:'+(p>0?'#dc2626':'#059669')+';font-weight:700;">'+(p>0?'不安定':'安定')+'</span><br>'+
+      '制御器　C(s) = <span class="frac"><span class="num">'+num(V.K,1)+'('+zStr+')</span><span class="den">s + '+num(A_POLE,0)+'</span></span>';
+
+    const roots=clRoots(p,z,V.K);
+    const b1=(A_POLE-p+V.K), b0=(-A_POLE*p-V.K*z);
+    document.getElementById('char-box').innerHTML=
+      '特性方程式：s² + '+num(b1,2)+' s + '+num(b0,2)+' = 0';
+
+    document.getElementById('row-pp').textContent=num(p,3);
+    document.getElementById('row-cz').textContent=num(z,3);
+    function rs(r){return (Math.abs(r.im)<1e-9)? num(r.re,3) : (num(r.re,3)+' ± '+num(Math.abs(r.im),3)+'j');}
+    document.getElementById('row-r1').textContent=rs(roots[0]);
+    document.getElementById('row-r2').textContent=rs(roots[1]);
+    const j=function(re){return re<0? '<span class="pass">安定</span>':'<span class="fail">不安定</span>';};
+    document.getElementById('row-r1-j').innerHTML=j(roots[0].re);
+    document.getElementById('row-r2-j').innerHTML=j(roots[1].re);
+    const mx=Math.max(roots[0].re,roots[1].re);
+    document.getElementById('row-max').textContent=num(mx,3);
+    document.getElementById('row-max-j').innerHTML=j(mx);
+
+    const v=document.getElementById('verdict');
+    if(mx<0){
+      v.className='verdict ok';
+      if(Math.abs(V.err)<1e-9){
+        v.textContent='✓ 閉ループは安定。安定な極の相殺は成立しています。';
+      }else{
+        v.textContent='✓ 閉ループは安定。モデル誤差があっても、相殺しきれない分は安定な極として残るだけで破綻しません。';
+      }
+    }else{
+      v.className='verdict ng';
+      if(Math.abs(V.err)<1e-9){
+        v.innerHTML='✗ 誤差ゼロで完全に相殺しても、閉ループ極 s = '+num(mx,3)+' が不安定のまま残ります。<br>この不安定モードは<strong>不可制御・不可観測</strong>なので、外乱がなければ応答は一見正常に見えます。<strong>外乱スライダーを上げてください</strong>——たちまち発散します。';
+      }else{
+        v.textContent='✗ 閉ループが不安定（最大実部 '+num(mx,3)+'）。不安定極の相殺は誤差の大小によらず破綻します。';
+      }
+    }
+
+    // simulation
+    const sim=simulate(p,z,V.K,8,0.0005,V.dist);
+    // decimate
+    const step=Math.max(1,Math.floor(sim.ys.length/700));
+    const ys=[],us=[],ref=[];
+    for(let i=0;i<sim.ys.length;i+=step){
+      ys.push(sim.ys[i]); us.push(sim.us[i]);
+      ref.push({x:sim.ys[i].x,y:1});
+    }
+    const dy=ds('#2563eb',2.5);dy.data=ys;
+    const dr=ds('#94a3b8',1.3,[5,4]);dr.data=ref;
+    chY.data.datasets=[dy,dr];
+    // autoscale y
+    let ymax=2, ymin=-1;
+    ys.forEach(function(pt){ if(pt.y!==null){ymax=Math.max(ymax,pt.y);ymin=Math.min(ymin,pt.y);} });
+    chY.options.scales.y.max=Math.min(50,ymax*1.15);
+    chY.options.scales.y.min=Math.max(-50,ymin*1.15-0.2);
+    chY.update();
+
+    const du=ds('#ea580c',2.3);du.data=us;
+    chU.data.datasets=[du];
+    let umax=10, umin=-10;
+    us.forEach(function(pt){ if(pt.y!==null){umax=Math.max(umax,pt.y);umin=Math.min(umin,pt.y);} });
+    chU.options.scales.y.max=Math.min(500,umax*1.15);
+    chU.options.scales.y.min=Math.max(-500,umin*1.15);
+    chU.update();
+
+    const un=document.getElementById('u-note');
+    if(mx>=0){
+      un.textContent=(V.dist>0.01)
+        ? '外乱をきっかけに不安定モードが励起され、信号が発散しています。実機ではアクチュエータが飽和・破損します。'
+        : '外乱ゼロなので今は有界に見えますが、閉ループには不安定極が残っています。外乱を加えると発散します。';
+    }else{
+      un.textContent='内部信号 u(t) は有界に収まっています。外乱を加えても収束します。';
+    }
+
+    drawPlane(p,z,roots);
+  }
+
+  [slErr,slK,slDist].forEach(function(s){s.addEventListener('input',update);});
+  document.getElementById('btn-exact').addEventListener('click',function(){slErr.value=0;update();});
+  document.getElementById('btn-dist').addEventListener('click',function(){slDist.value=1.5;update();});
+  document.getElementById('btn-reset').addEventListener('click',function(){slErr.value=0;slK.value=10;slDist.value=0;setMode(1);});
+
+  update();
+})();
+</script>
+</body>
+</html>
