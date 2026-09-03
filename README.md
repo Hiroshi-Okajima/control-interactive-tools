@@ -29,6 +29,7 @@
 | 17 | ブランコ共振 | 共振を利用してブランコを揺らす | `control_swing_game.html` |
 | 18 | レーンキープ制御 | 小学生向けゲーム | `control_lane_game.html` |
 | c1 | 極と設計仕様 | S平面と応答 | `control_spec_region.html` |
+| c2 | 部分分数分解 | 部分分数分解と逆ラプラス変換 | `control_partial_fraction.html` |
 
 ## GitHub Pages URL
 
@@ -58,6 +59,7 @@ https://hiroshi-okajima.github.io/control-interactive-tools/
 - [ブランコ共振](https://hiroshi-okajima.github.io/control-interactive-tools/control_swing_game.html) 
 - [レーンキープ](https://hiroshi-okajima.github.io/control-interactive-tools/control_lane_game.html)
 - [極と設計仕様](https://hiroshi-okajima.github.io/control-interactive-tools/control_spec_region.html)
+- [部分分数分解](https://hiroshi-okajima.github.io/control-interactive-tools/control_partial_fraction.html)
 
 
 ## 使い方
