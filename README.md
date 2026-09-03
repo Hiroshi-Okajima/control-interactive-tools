@@ -31,6 +31,7 @@
 | c1 | 極と設計仕様 | S平面と応答 | `control_spec_region.html` |
 | c2 | 部分分数分解 | 部分分数分解と逆ラプラス変換 | `control_partial_fraction.html` |
 | c3 | 閉ループ安定 | 不安定な極零相殺と応答 | `control_cancellation.html` |
+| c4 | 内部モデル原理 | 参照信号と制御器の内部モデル | `control_internal_model.html` |
 
 ## GitHub Pages URL
 
@@ -62,6 +63,7 @@ https://hiroshi-okajima.github.io/control-interactive-tools/
 - [極と設計仕様](https://hiroshi-okajima.github.io/control-interactive-tools/control_spec_region.html)
 - [部分分数分解](https://hiroshi-okajima.github.io/control-interactive-tools/control_partial_fraction.html) 
 - [閉ループ安定性](https://hiroshi-okajima.github.io/control-interactive-tools/control_cancellation.html)
+- [内部モデル原理](https://hiroshi-okajima.github.io/control-interactive-tools/control_internal_model.html)
 
 
 
