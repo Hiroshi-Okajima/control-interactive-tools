@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>設計仕様と極の配置領域</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#1e1b4b,#3730a3,#6366f1);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.8;max-width:700px;margin:0 auto;}
+.main{max-width:1100px;margin:0 auto;padding:1rem;}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:880px){.layout{grid-template-columns:1fr;}}
+.col{display:flex;flex-direction:column;gap:0.7rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.35rem;}
+.ctrl-group{margin-bottom:0.55rem;}
+.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.75rem;font-weight:600;color:var(--text2);margin-bottom:0.12rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.84rem;padding:0.1em 0.5em;border-radius:4px;min-width:4em;text-align:center;}
+.v-a{color:var(--blue);background:#eef2ff;}
+.v-b{color:var(--green);background:#ecfdf5;}
+.v-z{color:var(--purple);background:#f3eeff;}
+.v-s{color:var(--teal);background:#f0fdfa;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--blue);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--blue);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input.sb::-webkit-slider-thumb,input.sb::-moz-range-thumb{background:var(--green);}
+input.sz::-webkit-slider-thumb,input.sz::-moz-range-thumb{background:var(--purple);}
+input.ss::-webkit-slider-thumb,input.ss::-moz-range-thumb{background:var(--teal);}
+.canvas-wrap{position:relative;background:#fafaf8;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+canvas#splane{display:block;width:100%;}
+.verdict{border-radius:var(--r);padding:0.5rem 0.8rem;font-size:0.82rem;font-weight:700;margin-top:0.5rem;}
+.verdict.ok{background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;}
+.verdict.ng{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;}
+.spec-table{width:100%;border-collapse:collapse;font-size:0.76rem;margin-top:0.3rem;}
+.spec-table th,.spec-table td{padding:0.28rem 0.4rem;border-bottom:1px solid var(--border);text-align:left;}
+.spec-table th{font-size:0.66rem;color:var(--text3);font-weight:700;letter-spacing:0.04em;}
+.spec-table td.num{font-family:'JetBrains Mono',monospace;font-weight:600;text-align:right;}
+.pass{color:var(--green);font-weight:700;}
+.fail{color:var(--red);font-weight:700;}
+.chart-wrap{position:relative;height:185px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:0.2rem;font-size:0.7rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.25rem;}
+.sw{width:14px;height:10px;border-radius:2px;}
+.eq{font-family:'JetBrains Mono',monospace;font-size:0.74rem;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.45rem 0.65rem;line-height:1.8;color:var(--text2);}
+.badge{display:inline-block;font-size:0.66rem;font-weight:700;padding:0.15em 0.6em;border-radius:20px;}
+.badge.cx{background:#ede9fe;color:#5b21b6;}
+.badge.re{background:#dbeafe;color:#1d4ed8;}
+.insight{background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1px solid #a5b4fc;border-radius:var(--r);padding:0.6rem 0.9rem;font-size:0.79rem;line-height:1.75;color:#312e81;}
+.insight strong{color:#3730a3;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+.btn{padding:0.4em 0.9em;border:none;border-radius:7px;font-weight:700;font-size:0.76rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:var(--blue);color:#fff;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>設計仕様と極の配置領域</h1>
+  <p>特性方程式 s² + as + b の係数を変えて、極が設計仕様の領域に入るかを確かめる</p>
+</div>
+<div class="main">
+<div class="layout">
+
+<!-- LEFT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">s平面と仕様領域</div>
+    <div class="canvas-wrap"><canvas id="splane"></canvas></div>
+    <div class="legend-row" style="margin-top:0.35rem;">
+      <span class="legend-item"><span class="sw" style="background:rgba(124,58,237,0.22);"></span>ζ条件（扇形）のみ</span>
+      <span class="legend-item"><span class="sw" style="background:rgba(8,145,178,0.22);"></span>σ条件（垂直線）のみ</span>
+      <span class="legend-item"><span class="sw" style="background:rgba(34,197,94,0.35);"></span>両方を満たす領域</span>
+    </div>
+    <div class="verdict" id="verdict"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">特性方程式の係数　s² + a·s + b = 0</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--blue);">a（1次の係数）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-a" min="0" max="10" step="0.05" value="2.00">
+        <span class="ctrl-val v-a" id="val-a">2.00</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--green);">b（定数項）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-b" class="sb" min="0.1" max="25" step="0.1" value="4.0">
+        <span class="ctrl-val v-b" id="val-b">4.0</span>
+      </div>
+    </div>
+    <div class="eq" id="poly-box">s² + 2.00 s + 4.0 = 0</div>
+    <div style="display:flex;gap:0.4rem;margin-top:0.5rem;">
+      <button class="btn btn-p" id="btn-auto">仕様を満たす a, b を自動設定</button>
+      <button class="btn" id="btn-reset">リセット</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--text3);">設計仕様（通常はデフォルトのまま）</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--purple);">減衰比の下限 ζ<sub>min</sub>（扇形の条件）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-z" class="sz" min="0.05" max="0.95" step="0.01" value="0.50">
+        <span class="ctrl-val v-z" id="val-z">0.50</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--teal);">実部の上限 σ<sub>min</sub>（垂直線の条件）Re(s) ≤ −σ<sub>min</sub></div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-s" class="ss" min="0.1" max="4" step="0.05" value="1.00">
+        <span class="ctrl-val v-s" id="val-s">1.00</span>
+      </div>
+    </div>
+    <div class="eq" style="margin-top:0.4rem;">
+      ζ ≥ ζ<sub>min</sub>　⇔　a ≥ 2ζ<sub>min</sub>√b　（行き過ぎ量の制限）<br>
+      Re(s) ≤ −σ<sub>min</sub>　（整定時間の制限、T<sub>s</sub> ≈ 4/σ）
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">極と応答特性</div>
+    <table class="spec-table">
+      <tr><th>項目</th><th style="text-align:right;">現在値</th><th style="text-align:right;">条件</th><th style="text-align:center;">判定</th></tr>
+      <tr><td>判別式 a²−4b</td><td class="num" id="row-disc">—</td><td style="text-align:right;" id="row-kind">—</td><td></td></tr>
+      <tr><td>極 s</td><td class="num" colspan="3" id="row-pole" style="text-align:right;">—</td></tr>
+      <tr><td>減衰比 ζ = a/(2√b)</td><td class="num" id="row-zeta">—</td><td class="num" id="row-zeta-req">—</td><td style="text-align:center;" id="row-zeta-j">—</td></tr>
+      <tr><td>実部 Re(s)</td><td class="num" id="row-re">—</td><td class="num" id="row-re-req">—</td><td style="text-align:center;" id="row-re-j">—</td></tr>
+      <tr><td>固有角周波数 ω<sub>n</sub>=√b</td><td class="num" colspan="2" id="row-wn" style="text-align:right;">—</td><td></td></tr>
+      <tr><td>行き過ぎ量 M<sub>p</sub></td><td class="num" colspan="2" id="row-mp" style="text-align:right;">—</td><td></td></tr>
+      <tr><td>整定時間 T<sub>s</sub> ≈ 4/|Re|</td><td class="num" colspan="2" id="row-ts" style="text-align:right;">—</td><td></td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">ステップ応答　G(s) = b/(s²+as+b)</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#2563eb;"></span>応答 y(t)</span>
+      <span class="legend-item"><span class="sw" style="background:#0891b2;height:2px;"></span>±2%帯</span>
+      <span class="legend-item"><span class="sw" style="background:#94a3b8;height:2px;"></span>目標値 1</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart"></canvas></div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・s²+as+b を2次標準形 s²+2ζω<sub>n</sub>s+ω<sub>n</sub>² と比べると <strong>ω<sub>n</sub>=√b、ζ=a/(2√b)</strong><br>
+    ・仕様は s平面上の<strong>2つの幾何条件</strong>になる：ζ条件は<strong>角度</strong>（扇形）、σ条件は<strong>実部</strong>（垂直線）<br>
+    ・<strong>b を大きくする</strong>と極は原点から遠ざかり速くなるが、同じ a では ζ が下がり振動的になる<br>
+    ・<strong>a を大きくする</strong>と ζ が上がり振動は収まる。a²≥4b になると<strong>実数極</strong>となり行き過ぎ量は消える<br>
+    ・ただし a を上げすぎると片方の極が原点に近づき、<strong>σ条件を満たさなくなる</strong>（遅くなる）<br>
+    ・両条件を満たす<strong>緑の領域</strong>に2つの極をともに入れるのが目標
+  </div>
+</div>
+
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — 設計仕様と極の配置領域</div>
+
+<script>
+(function(){
+  const cv=document.getElementById('splane');
+  const ctx=cv.getContext('2d');
+  const slA=document.getElementById('sl-a'),slB=document.getElementById('sl-b');
+  const slZ=document.getElementById('sl-z'),slS=document.getElementById('sl-s');
+
+  const XMIN=-11, XMAX=1.5, YMIN=-6, YMAX=6;
+
+  function resize(){
+    const r=cv.parentElement.getBoundingClientRect();
+    cv.width=r.width; cv.height=Math.round(r.width*0.72);
+  }
+  resize(); window.addEventListener('resize',()=>{resize();update();});
+
+  function toPx(x,y){
+    return [ (x-XMIN)/(XMAX-XMIN)*cv.width, (YMAX-y)/(YMAX-YMIN)*cv.height ];
+  }
+  function toS(px,py){
+    return [ XMIN+px/cv.width*(XMAX-XMIN), YMAX-py/cv.height*(YMAX-YMIN) ];
+  }
+
+  function vals(){
+    return {
+      a:parseFloat(slA.value), b:parseFloat(slB.value),
+      zmin:parseFloat(slZ.value), smin:parseFloat(slS.value)
+    };
+  }
+
+  function poles(a,b){
+    const D=a*a-4*b;
+    if(D>=0){
+      const r=Math.sqrt(D);
+      return {kind:'real', p1:{re:(-a+r)/2,im:0}, p2:{re:(-a-r)/2,im:0}, D:D};
+    }
+    const r=Math.sqrt(-D);
+    return {kind:'complex', p1:{re:-a/2,im:r/2}, p2:{re:-a/2,im:-r/2}, D:D};
+  }
+
+  function stepResp(t,a,b){
+    const wn=Math.sqrt(b), z=a/(2*wn);
+    if(z<1-1e-9){
+      const wd=wn*Math.sqrt(1-z*z);
+      const ph=Math.acos(Math.min(1,Math.max(-1,z)));
+      return 1-Math.exp(-z*wn*t)/Math.sqrt(1-z*z)*Math.sin(wd*t+ph);
+    } else if(Math.abs(z-1)<1e-9){
+      return 1-(1+wn*t)*Math.exp(-wn*t);
+    } else {
+      const r=wn*Math.sqrt(z*z-1);
+      const s1=-z*wn+r, s2=-z*wn-r;
+      return 1+(s2*Math.exp(s1*t)-s1*Math.exp(s2*t))/(s1-s2);
+    }
+  }
+
+  function okZeta(V,P){
+    const c=function(p){
+      const wn=Math.hypot(p.re,p.im);
+      const z=wn>1e-9? -p.re/wn : 1;
+      return z>=V.zmin;
+    };
+    return c(P.p1)&&c(P.p2);
+  }
+  function okSigma(V,P){
+    return (-P.p1.re>=V.smin)&&(-P.p2.re>=V.smin);
+  }
+
+  function draw(){
+    const W=cv.width,H=cv.height;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#fafaf8';ctx.fillRect(0,0,W,H);
+    const V=vals();
+
+    // region shading
+    const img=ctx.getImageData(0,0,W,H);
+    const d=img.data;
+    for(let py=0;py<H;py++){
+      for(let px=0;px<W;px++){
+        const sx=XMIN+(px+0.5)/W*(XMAX-XMIN);
+        const sy=YMAX-(py+0.5)/H*(YMAX-YMIN);
+        if(sx>0) continue;
+        const wn=Math.hypot(sx,sy);
+        const z=wn>1e-9? -sx/wn : 1;
+        const oz=(z>=V.zmin);
+        const os=((-sx)>=V.smin);
+        if(!oz&&!os) continue;
+        const i=(py*W+px)*4;
+        let r,g,b2,al;
+        if(oz&&os){ r=34;g=197;b2=94;al=0.32; }
+        else if(oz){ r=124;g=58;b2=237;al=0.16; }
+        else { r=8;g=145;b2=178;al=0.16; }
+        d[i]  = d[i]*(1-al)+r*al;
+        d[i+1]= d[i+1]*(1-al)+g*al;
+        d[i+2]= d[i+2]*(1-al)+b2*al;
+      }
+    }
+    ctx.putImageData(img,0,0);
+
+    // grid & axes
+    ctx.strokeStyle='#e5e7eb';ctx.lineWidth=1;
+    for(let x=Math.ceil(XMIN);x<=XMAX;x++){const q=toPx(x,0);ctx.beginPath();ctx.moveTo(q[0],0);ctx.lineTo(q[0],H);ctx.stroke();}
+    for(let y=Math.ceil(YMIN);y<=YMAX;y++){const q=toPx(0,y);ctx.beginPath();ctx.moveTo(0,q[1]);ctx.lineTo(W,q[1]);ctx.stroke();}
+    const o=toPx(0,0);
+    ctx.strokeStyle='#334155';ctx.lineWidth=1.8;
+    ctx.beginPath();ctx.moveTo(0,o[1]);ctx.lineTo(W,o[1]);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(o[0],0);ctx.lineTo(o[0],H);ctx.stroke();
+    ctx.fillStyle='#64748b';ctx.font="10px 'JetBrains Mono'";ctx.textAlign='center';
+    for(let x=Math.ceil(XMIN);x<=XMAX;x+=2){if(x===0)continue;const q=toPx(x,0);ctx.fillText(x,q[0],o[1]+13);}
+    ctx.textAlign='right';
+    for(let y=Math.ceil(YMIN);y<=YMAX;y+=2){if(y===0)continue;const q=toPx(0,y);ctx.fillText(y+'j',o[0]-5,q[1]+3);}
+    ctx.fillStyle='#475569';ctx.font="11px 'Noto Sans JP'";ctx.textAlign='left';
+    ctx.fillText('Re',W-24,o[1]-6);ctx.fillText('Im',o[0]+6,12);
+
+    // boundaries
+    ctx.setLineDash([6,4]);ctx.lineWidth=2;
+    const pv=toPx(-V.smin,0);
+    ctx.strokeStyle='#0891b2';
+    ctx.beginPath();ctx.moveTo(pv[0],0);ctx.lineTo(pv[0],H);ctx.stroke();
+    ctx.strokeStyle='#7c3aed';
+    const ang=Math.acos(Math.min(1,Math.max(0,V.zmin)));
+    for(let k=0;k<2;k++){
+      const sgn=(k===0)?1:-1;
+      const x=-14*Math.cos(ang), y=sgn*14*Math.sin(ang);
+      const A=toPx(0,0),B=toPx(x,y);
+      ctx.beginPath();ctx.moveTo(A[0],A[1]);ctx.lineTo(B[0],B[1]);ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // poles
+    const P=poles(V.a,V.b);
+    const ok=okZeta(V,P)&&okSigma(V,P);
+    const list=[P.p1,P.p2];
+    for(let i=0;i<list.length;i++){
+      const q=toPx(list[i].re,list[i].im);
+      ctx.strokeStyle=ok?'#16a34a':'#dc2626';ctx.lineWidth=3.2;
+      const r=8;
+      ctx.beginPath();ctx.moveTo(q[0]-r,q[1]-r);ctx.lineTo(q[0]+r,q[1]+r);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(q[0]-r,q[1]+r);ctx.lineTo(q[0]+r,q[1]-r);ctx.stroke();
+    }
+    if(P.kind==='complex'){
+      const A=toPx(0,0),B=toPx(P.p1.re,P.p1.im);
+      ctx.strokeStyle='rgba(100,116,139,0.55)';ctx.lineWidth=1.2;ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(A[0],A[1]);ctx.lineTo(B[0],B[1]);ctx.stroke();ctx.setLineDash([]);
+    }
+  }
+
+  function ds(color,w,dash){return{data:[],borderColor:color,borderWidth:w,borderDash:dash||[],pointRadius:0,fill:false,tension:0.1};}
+  const chart=new Chart(document.getElementById('chart').getContext('2d'),{
+    type:'line',
+    data:{datasets:[ds('#2563eb',2.5),ds('#0891b2',1.2,[4,3]),ds('#0891b2',1.2,[4,3]),ds('#94a3b8',1.2,[2,3])]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+      scales:{
+        x:{type:'linear',min:0,max:12,title:{display:true,text:'t [s]',font:{size:10}},ticks:{stepSize:2,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+        y:{min:0,max:2,ticks:{stepSize:0.5,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+      },
+      plugins:{legend:{display:false},tooltip:{enabled:false}}
+    }
+  });
+
+  function fmt(v,n){return (v===null||!isFinite(v))?'—':v.toFixed(n===undefined?2:n);}
+  function judge(ok){return ok?'<span class="pass">○</span>':'<span class="fail">×</span>';}
+
+  function update(){
+    const V=vals();
+    document.getElementById('val-a').textContent=V.a.toFixed(2);
+    document.getElementById('val-b').textContent=V.b.toFixed(1);
+    document.getElementById('val-z').textContent=V.zmin.toFixed(2);
+    document.getElementById('val-s').textContent=V.smin.toFixed(2);
+    document.getElementById('poly-box').innerHTML='s² + '+V.a.toFixed(2)+' s + '+V.b.toFixed(1)+' = 0';
+
+    const P=poles(V.a,V.b);
+    const wn=Math.sqrt(V.b), z=V.a/(2*wn);
+    const oz=okZeta(V,P), os=okSigma(V,P);
+
+    document.getElementById('row-disc').textContent=fmt(P.D,2);
+    document.getElementById('row-kind').innerHTML=(P.kind==='complex')
+      ? '<span class="badge cx">共役複素根</span>' : '<span class="badge re">実数根</span>';
+    document.getElementById('row-pole').textContent=(P.kind==='complex')
+      ? fmt(P.p1.re,2)+' ± '+fmt(Math.abs(P.p1.im),2)+'j'
+      : fmt(P.p1.re,2)+' ,  '+fmt(P.p2.re,2);
+    document.getElementById('row-zeta').textContent=fmt(z,3);
+    document.getElementById('row-zeta-req').textContent='≥ '+fmt(V.zmin,2);
+    document.getElementById('row-zeta-j').innerHTML=judge(oz);
+    const reMax=Math.max(P.p1.re,P.p2.re);
+    document.getElementById('row-re').textContent=fmt(reMax,2);
+    document.getElementById('row-re-req').textContent='≤ '+fmt(-V.smin,2);
+    document.getElementById('row-re-j').innerHTML=judge(os);
+    document.getElementById('row-wn').textContent=fmt(wn,2)+' rad/s';
+    const Mp=(z<1)?Math.exp(-Math.PI*z/Math.sqrt(1-z*z))*100:0;
+    document.getElementById('row-mp').textContent=(z<1)?fmt(Mp,1)+' %':'0 %（行き過ぎなし）';
+    document.getElementById('row-ts').textContent=fmt(4/Math.abs(reMax),2)+' s';
+
+    const v=document.getElementById('verdict');
+    if(oz&&os){
+      v.className='verdict ok';
+      v.textContent='✓ 2つの極はどちらも仕様領域（緑）の中にあります';
+    }else{
+      const ng=[];
+      if(!oz)ng.push('ζ条件（扇形）');
+      if(!os)ng.push('σ条件（垂直線）');
+      v.className='verdict ng';
+      v.textContent='✗ 未達：'+ng.join(' ・ ')+'　a, b を調整してください';
+    }
+
+    const N=600,TMAX=12;
+    const yd=[],p2=[],m2=[],ref=[];
+    for(let i=0;i<=N;i++){
+      const t=i/N*TMAX;
+      yd.push({x:t,y:stepResp(t,V.a,V.b)});
+      p2.push({x:t,y:1.02});m2.push({x:t,y:0.98});ref.push({x:t,y:1});
+    }
+    chart.data.datasets[0].data=yd;
+    chart.data.datasets[1].data=p2;
+    chart.data.datasets[2].data=m2;
+    chart.data.datasets[3].data=ref;
+    chart.update();
+
+    draw();
+  }
+
+  [slA,slB,slZ,slS].forEach(function(s){s.addEventListener('input',update);});
+
+  document.getElementById('btn-auto').addEventListener('click',function(){
+    const V=vals();
+    const z=Math.min(0.92,V.zmin+0.05);
+    const sig=V.smin*1.15;
+    const wn=sig/z;
+    const a=2*z*wn, b=wn*wn;
+    slA.value=Math.min(10,Math.max(0,a)).toFixed(2);
+    slB.value=Math.min(25,Math.max(0.1,b)).toFixed(1);
+    update();
+  });
+  document.getElementById('btn-reset').addEventListener('click',function(){
+    slA.value=2.00; slB.value=4.0; slZ.value=0.50; slS.value=1.00;
+    update();
+  });
+
+  update();
+})();
+</script>
+</body>
+</html>
