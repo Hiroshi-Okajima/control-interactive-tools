@@ -28,6 +28,7 @@
 | 16 | ドローン着陸 | 正確に着陸させる | `control_drone_game.html` |
 | 17 | ブランコ共振 | 共振を利用してブランコを揺らす | `control_swing_game.html` |
 | 18 | レーンキープ制御 | 小学生向けゲーム | `control_lane_game.html` |
+| c1 | 極と設計仕様 | S平面と応答 | `control_spec_region.html` |
 
 ## GitHub Pages URL
 
@@ -56,7 +57,7 @@ https://hiroshi-okajima.github.io/control-interactive-tools/
 - [ドローン着陸](https://hiroshi-okajima.github.io/control-interactive-tools/control_drone_game.html)
 - [ブランコ共振](https://hiroshi-okajima.github.io/control-interactive-tools/control_swing_game.html) 
 - [レーンキープ](https://hiroshi-okajima.github.io/control-interactive-tools/control_lane_game.html)
-
+- [極と設計仕様](https://hiroshi-okajima.github.io/control-interactive-tools/control_spec_region.html)
 
 
 ## 使い方
