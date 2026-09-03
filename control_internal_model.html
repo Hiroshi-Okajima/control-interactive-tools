@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>内部モデル原理</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#134e4a,#0f766e,#2dd4bf);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.88;max-width:720px;margin:0 auto;}
+.main{max-width:1100px;margin:0 auto;padding:1rem;}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:880px){.layout{grid-template-columns:1fr;}}
+.col{display:flex;flex-direction:column;gap:0.7rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;}
+.opt-grid.four{grid-template-columns:1fr 1fr;}
+.opt{padding:0.5em 0.4em;border:2px solid var(--border);border-radius:9px;background:var(--card);cursor:pointer;text-align:center;font-size:0.75rem;font-weight:700;color:var(--text2);transition:all 0.15s;line-height:1.4;}
+.opt.active{border-color:var(--teal);background:#f0fdfa;color:#0f766e;}
+.opt:hover{border-color:var(--teal);}
+.opt .sub{display:block;font-weight:400;font-size:0.66rem;color:var(--text3);margin-top:0.1rem;}
+.opt.active .sub{color:#0d9488;}
+.formula{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.55rem 0.8rem;line-height:1.95;color:var(--text);font-size:0.82rem;}
+.frac{display:inline-flex;flex-direction:column;align-items:stretch;vertical-align:middle;margin:0 0.3em;}
+.frac .num{border-bottom:1.6px solid var(--text2);padding:0 0.6em 0.1em;line-height:1.4;text-align:center;white-space:nowrap;}
+.frac .den{padding:0.1em 0.6em 0;line-height:1.4;text-align:center;white-space:nowrap;}
+.ctrl-group{margin-bottom:0.5rem;}
+.ctrl-label{font-size:0.75rem;font-weight:600;color:var(--text2);margin-bottom:0.12rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.84rem;padding:0.1em 0.5em;border-radius:4px;min-width:4em;text-align:center;color:var(--teal);background:#f0fdfa;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--teal);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--teal);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+.verdict{border-radius:var(--r);padding:0.55rem 0.85rem;font-size:0.82rem;font-weight:700;margin-top:0.55rem;line-height:1.65;}
+.verdict.ok{background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;}
+.verdict.ng{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;}
+.chart-wrap{position:relative;height:185px;}
+.chart-wrap.sm{height:150px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:0.25rem;font-size:0.71rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.25rem;}
+.sw{width:15px;height:3px;border-radius:2px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.matrix{width:100%;border-collapse:collapse;font-size:0.72rem;margin-top:0.3rem;}
+.matrix th,.matrix td{padding:0.3rem 0.25rem;border:1px solid var(--border);text-align:center;}
+.matrix th{background:#f8fafc;font-size:0.66rem;color:var(--text2);font-weight:700;}
+.matrix th.rowh{text-align:left;font-weight:600;background:#fafafa;}
+.matrix td.zero{background:#ecfdf5;color:#065f46;font-weight:700;}
+.matrix td.nz{background:#fef2f2;color:#991b1b;font-weight:600;}
+.matrix td.cur{outline:2.5px solid var(--teal);outline-offset:-2.5px;}
+.insight{background:linear-gradient(135deg,#f0fdfa,#ccfbf1);border:1px solid #5eead4;border-radius:var(--r);padding:0.6rem 0.9rem;font-size:0.79rem;line-height:1.75;color:#134e4a;}
+.insight strong{color:#0f766e;}
+.note{font-size:0.71rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>内部モデル原理</h1>
+  <p>制御器が目標値・外乱と同じモードを内部に持たない限り、定常偏差は消えない</p>
+</div>
+<div class="main">
+<div class="layout">
+
+<!-- LEFT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--teal);">① 目標値 r(t) の種類</div>
+    <div class="opt-grid">
+      <div class="opt active" id="r-step" onclick="setRef('step')">ステップ<span class="sub">1</span></div>
+      <div class="opt" id="r-ramp" onclick="setRef('ramp')">ランプ<span class="sub">0.2 t</span></div>
+      <div class="opt" id="r-sine" onclick="setRef('sine')">正弦波<span class="sub">sin ωt</span></div>
+    </div>
+    <div class="formula" style="margin-top:0.5rem;" id="ref-box"></div>
+    <div class="ctrl-group" id="w-group" style="margin-top:0.5rem;display:none;">
+      <div class="ctrl-label">正弦波の角周波数 ω [rad/s]</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-w" min="0.3" max="3" step="0.1" value="1.0">
+        <span class="ctrl-val" id="val-w">1.0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--teal);">② 制御器の構造</div>
+    <div class="opt-grid four">
+      <div class="opt active" id="c-P" onclick="setCtrl('P')">P 制御<span class="sub">積分器なし</span></div>
+      <div class="opt" id="c-PI" onclick="setCtrl('PI')">PI 制御<span class="sub">積分器 1個</span></div>
+      <div class="opt" id="c-PII" onclick="setCtrl('PII')">2重積分<span class="sub">積分器 2個</span></div>
+      <div class="opt" id="c-PIR" onclick="setCtrl('PIR')">PI + 共振要素<span class="sub">1/(s²+ω²)</span></div>
+    </div>
+    <div class="formula" style="margin-top:0.5rem;" id="ctrl-box"></div>
+    <div class="note">制御対象は P(s) = 1/(s+1)（1次遅れ系）で固定です。</div>
+    <div class="verdict" id="verdict"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--text3);">③ 組み合わせ一覧（定常偏差）</div>
+    <table class="matrix" id="matrix"></table>
+    <div class="note">緑＝定常偏差ゼロ、赤＝偏差が残る。枠が現在の選択です。</div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">目標値 r(t) と出力 y(t)</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw dash" style="border-color:#94a3b8;"></span>目標値 r(t)</span>
+      <span class="legend-item"><span class="sw" style="background:#2563eb;"></span>出力 y(t)</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-y"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">偏差 e(t) = r(t) − y(t)</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#dc2626;"></span>偏差 e(t)</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#059669;"></span>e = 0</span>
+    </div>
+    <div class="chart-wrap sm"><canvas id="chart-e"></canvas></div>
+    <div class="note" id="e-note"></div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 内部モデル原理</strong><br>
+    ・定常偏差をゼロにするには、<strong>一巡伝達関数が目標値（外乱）のラプラス変換の極を含む</strong>必要がある<br>
+    ・<strong>ステップ</strong> 1/s → 制御器に<strong>積分器1個</strong>（1/s）が必要<br>
+    ・<strong>ランプ</strong> 1/s² → <strong>積分器2個</strong>が必要。積分器1個では偏差が残る<br>
+    ・<strong>正弦波</strong> ω/(s²+ω²) → <strong>共振要素 1/(s²+ω²)</strong> が必要。積分器をいくら増やしても消えない<br>
+    ・これがサーボ系設計の指針であり、繰り返し外乱の除去（共振制御・繰返し制御）の根拠でもある<br>
+    ・共振要素は<strong>周波数 ω が一致していないと効かない</strong>。ωを変えて確かめてみよう
+  </div>
+</div>
+
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — 内部モデル原理</div>
+
+<script>
+(function(){
+  const slW=document.getElementById('sl-w');
+  let refType='step', ctrlType='P';
+
+  const KP=5.0, KI=4.0, KI2=1.5, KR=8.0;
+
+  window.setRef=function(t){
+    refType=t;
+    ['step','ramp','sine'].forEach(function(k){
+      document.getElementById('r-'+k).className='opt'+(k===t?' active':'');
+    });
+    document.getElementById('w-group').style.display=(t==='sine')?'block':'none';
+    update();
+  };
+  window.setCtrl=function(c){
+    ctrlType=c;
+    ['P','PI','PII','PIR'].forEach(function(k){
+      document.getElementById('c-'+k).className='opt'+(k===c?' active':'');
+    });
+    update();
+  };
+
+  function refVal(t,w){
+    if(refType==='step')return 1.0;
+    if(refType==='ramp')return 0.2*t;
+    return Math.sin(w*t);
+  }
+
+  // simulate closed loop; returns arrays and steady-state error metric
+  function simulate(rt,ct,w,T,dt,wCtrl){
+    let xp=0,xi=0,xi2=0,xr1=0,xr2=0;
+    const ys=[],rs=[],es=[];
+    const n=Math.round(T/dt);
+    let tailMax=0;
+    for(let i=0;i<=n;i++){
+      const t=i*dt;
+      const r=(rt==='step')?1.0:((rt==='ramp')?0.2*t:Math.sin(w*t));
+      const y=xp, e=r-y;
+      let u=KP*e;
+      if(ct==='PI'||ct==='PII'||ct==='PIR')u+=KI*xi;
+      if(ct==='PII')u+=KI2*xi2;
+      if(ct==='PIR')u+=KR*xr1;
+      ys.push({x:t,y:cap(y)});rs.push({x:t,y:cap(r)});es.push({x:t,y:cap(e)});
+      if(t>T*0.8)tailMax=Math.max(tailMax,Math.abs(e));
+      // integrate
+      xp+=dt*(-xp+u);
+      if(ct==='PI'||ct==='PII'||ct==='PIR')xi+=dt*e;
+      if(ct==='PII')xi2+=dt*xi;
+      if(ct==='PIR'){
+        const d1=xr2, d2=-wCtrl*wCtrl*xr1+e;
+        xr1+=dt*d1; xr2+=dt*d2;
+      }
+      if(!isFinite(xp)||Math.abs(xp)>1e10)break;
+    }
+    return {ys:ys,rs:rs,es:es,tail:tailMax};
+  }
+  function cap(v){ if(!isFinite(v))return null; return Math.max(-1e4,Math.min(1e4,v)); }
+
+  function ds(color,w,dash){return{data:[],borderColor:color,borderWidth:w,borderDash:dash||[],pointRadius:0,fill:false,tension:0.06};}
+  function mkChart(id){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',min:0,max:30,title:{display:true,text:'t [s]',font:{size:10}},ticks:{stepSize:5,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chY=mkChart('chart-y'), chE=mkChart('chart-e');
+
+  // does controller contain the reference mode?
+  function containsMode(rt,ct){
+    if(rt==='step')return (ct==='PI'||ct==='PII'||ct==='PIR');
+    if(rt==='ramp')return (ct==='PII');
+    return (ct==='PIR');
+  }
+
+  const REF_TEX={
+    step:'r(t) = 1　（ステップ）　ℒ[r] = <span class="frac"><span class="num">1</span><span class="den">s</span></span>　極：s = 0',
+    ramp:'r(t) = 0.2 t　（ランプ）　ℒ[r] = <span class="frac"><span class="num">0.2</span><span class="den">s²</span></span>　極：s = 0（2重）',
+    sine:'r(t) = sin(ωt)　（正弦波）　ℒ[r] = <span class="frac"><span class="num">ω</span><span class="den">s² + ω²</span></span>　極：s = ± jω'
+  };
+  function ctrlTex(w){
+    if(ctrlType==='P')return 'C(s) = '+KP+'　（積分器なし）';
+    if(ctrlType==='PI')return 'C(s) = '+KP+' + <span class="frac"><span class="num">'+KI+'</span><span class="den">s</span></span>　（積分器 1個）';
+    if(ctrlType==='PII')return 'C(s) = '+KP+' + <span class="frac"><span class="num">'+KI+'</span><span class="den">s</span></span> + <span class="frac"><span class="num">'+KI2+'</span><span class="den">s²</span></span>　（積分器 2個）';
+    return 'C(s) = '+KP+' + <span class="frac"><span class="num">'+KI+'</span><span class="den">s</span></span> + <span class="frac"><span class="num">'+KR+'</span><span class="den">s² + '+(w*w).toFixed(2)+'</span></span>　（共振要素 ω='+w.toFixed(1)+'）';
+  }
+
+  const CT_NAMES={P:'P 制御',PI:'PI（積分1個）',PII:'積分2個',PIR:'PI+共振'};
+  const RT_NAMES={step:'ステップ',ramp:'ランプ',sine:'正弦波'};
+
+  function buildMatrix(w){
+    const tbl=document.getElementById('matrix');
+    let html='<tr><th class="rowh">制御器 \\ 目標値</th>';
+    ['step','ramp','sine'].forEach(function(rt){html+='<th>'+RT_NAMES[rt]+'</th>';});
+    html+='</tr>';
+    ['P','PI','PII','PIR'].forEach(function(ct){
+      html+='<tr><th class="rowh">'+CT_NAMES[ct]+'</th>';
+      ['step','ramp','sine'].forEach(function(rt){
+        const ok=containsMode(rt,ct);
+        const cur=(rt===refType&&ct===ctrlType)?' cur':'';
+        html+='<td class="'+(ok?'zero':'nz')+cur+'">'+(ok?'0':'残る')+'</td>';
+      });
+      html+='</tr>';
+    });
+    tbl.innerHTML=html;
+  }
+
+  function update(){
+    const w=parseFloat(slW.value);
+    document.getElementById('val-w').textContent=w.toFixed(1);
+    document.getElementById('ref-box').innerHTML=REF_TEX[refType];
+    document.getElementById('ctrl-box').innerHTML=ctrlTex(w);
+
+    const T=30, dt=0.0005;
+    const S=simulate(refType,ctrlType,w,T,dt,w);
+
+    // decimate
+    const step=Math.max(1,Math.floor(S.ys.length/800));
+    const ys=[],rs=[],es=[],zero=[];
+    for(let i=0;i<S.ys.length;i+=step){
+      ys.push(S.ys[i]);rs.push(S.rs[i]);es.push(S.es[i]);
+      zero.push({x:S.ys[i].x,y:0});
+    }
+    const dr=ds('#94a3b8',1.6,[6,4]);dr.data=rs;
+    const dy=ds('#2563eb',2.4);dy.data=ys;
+    chY.data.datasets=[dr,dy];
+    let lo=0,hi=1;
+    ys.concat(rs).forEach(function(p){if(p.y!==null){lo=Math.min(lo,p.y);hi=Math.max(hi,p.y);}});
+    const pad=(hi-lo)*0.12+0.1;
+    chY.options.scales.y.min=lo-pad; chY.options.scales.y.max=hi+pad;
+    chY.update();
+
+    const de=ds('#dc2626',2.4);de.data=es;
+    const dz=ds('#059669',1.4,[5,4]);dz.data=zero;
+    chE.data.datasets=[de,dz];
+    let elo=-0.1,ehi=0.1;
+    es.forEach(function(p){if(p.y!==null){elo=Math.min(elo,p.y);ehi=Math.max(ehi,p.y);}});
+    const ep=(ehi-elo)*0.15+0.05;
+    chE.options.scales.y.min=elo-ep; chE.options.scales.y.max=ehi+ep;
+    chE.update();
+
+    const ok=containsMode(refType,ctrlType);
+    const v=document.getElementById('verdict');
+    if(ok){
+      v.className='verdict ok';
+      v.innerHTML='✓ 制御器が目標値のモードを含んでいます　→　<strong>定常偏差ゼロ</strong>（最終区間の |e| ≒ '+S.tail.toFixed(4)+'）';
+    }else{
+      v.className='verdict ng';
+      let why;
+      if(refType==='step')why='ステップ目標には積分器（1/s）が必要です。';
+      else if(refType==='ramp')why='ランプ目標には積分器が2個必要です。1個では偏差が残ります。';
+      else why='正弦波目標には共振要素 1/(s²+ω²) が必要です。積分器を増やしても消えません。';
+      v.innerHTML='✗ 制御器に目標値のモードが入っていません　→　<strong>定常偏差が残る</strong>（最終区間の |e| ≒ '+S.tail.toFixed(4)+'）<br>'+why;
+    }
+    document.getElementById('e-note').textContent=
+      ok? '偏差が時間とともに 0 へ収束しています。'
+        : '偏差が 0 に収束せず残り続けています（一定値または振動として）。';
+
+    buildMatrix(w);
+  }
+
+  slW.addEventListener('input',update);
+  update();
+})();
+</script>
+</body>
+</html>
