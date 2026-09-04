@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ナイキスト安定判別とロバスト安定性</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#0c4a6e,#0e7490,#22d3ee);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.9;max-width:740px;margin:0 auto;}
+.main{max-width:1150px;margin:0 auto;padding:1rem;}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:900px){.layout{grid-template-columns:1fr;}}
+.col{display:flex;flex-direction:column;gap:0.7rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.ctrl-group{margin-bottom:0.5rem;}
+.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.74rem;font-weight:600;color:var(--text2);margin-bottom:0.1rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.83rem;padding:0.1em 0.5em;border-radius:4px;min-width:4.2em;text-align:center;}
+.v-k{color:var(--blue);background:#eef2ff;}
+.v-t{color:var(--teal);background:#f0fdfa;}
+.v-r{color:var(--red);background:#fef2f2;}
+.v-w{color:var(--purple);background:#f3eeff;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--teal);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--teal);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input.sk::-webkit-slider-thumb,input.sk::-moz-range-thumb{background:var(--blue);}
+input.sr::-webkit-slider-thumb,input.sr::-moz-range-thumb{background:var(--red);}
+input.sw::-webkit-slider-thumb,input.sw::-moz-range-thumb{background:var(--purple);}
+.canvas-wrap{position:relative;background:#fafaf8;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+canvas#nyq{display:block;width:100%;}
+.verdict{border-radius:var(--r);padding:0.55rem 0.85rem;font-size:0.81rem;font-weight:700;margin-top:0.5rem;line-height:1.65;}
+.verdict.ok{background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;}
+.verdict.warn{background:#fffbeb;color:#92400e;border:1px solid #fcd34d;}
+.verdict.ng{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;}
+.info-table{width:100%;border-collapse:collapse;font-size:0.76rem;margin-top:0.3rem;}
+.info-table th,.info-table td{padding:0.28rem 0.4rem;border-bottom:1px solid var(--border);text-align:left;}
+.info-table th{font-size:0.66rem;color:var(--text3);font-weight:700;}
+.info-table td.num{font-family:'JetBrains Mono',monospace;font-weight:600;text-align:right;}
+.pass{color:var(--green);font-weight:700;}
+.fail{color:var(--red);font-weight:700;}
+.chart-wrap{position:relative;height:165px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:0.25rem;font-size:0.71rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.25rem;}
+.sw2{width:15px;height:3px;border-radius:2px;}
+.sw2.dash{height:0;border-top:2px dashed;}
+.formula{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.5rem 0.75rem;line-height:1.85;color:var(--text2);font-size:0.76rem;}
+.frac{display:inline-flex;flex-direction:column;align-items:stretch;vertical-align:middle;margin:0 0.3em;}
+.frac .num{border-bottom:1.6px solid var(--text2);padding:0 0.6em 0.1em;line-height:1.4;text-align:center;white-space:nowrap;}
+.frac .den{padding:0.1em 0.6em 0;line-height:1.4;text-align:center;white-space:nowrap;}
+.toggle-row{display:flex;gap:0.45rem;flex-wrap:wrap;margin-bottom:0.45rem;}
+.tgl{padding:0.3em 0.75em;border:2px solid var(--border);border-radius:20px;background:var(--card);cursor:pointer;font-size:0.71rem;font-weight:700;color:var(--text2);}
+.tgl.on{border-color:var(--teal);background:#f0fdfa;color:#0f766e;}
+.insight{background:linear-gradient(135deg,#ecfeff,#cffafe);border:1px solid #67e8f9;border-radius:var(--r);padding:0.6rem 0.9rem;font-size:0.79rem;line-height:1.75;color:#164e63;}
+.insight strong{color:#0e7490;}
+.note{font-size:0.71rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+.btn{padding:0.4em 0.9em;border:none;border-radius:7px;font-weight:700;font-size:0.74rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:var(--teal);color:#fff;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>ナイキスト安定判別とロバスト安定性</h1>
+  <p>−1点との距離が安定余裕を決め、不確かさの円が−1点に届くかどうかがロバスト安定性を決める</p>
+</div>
+<div class="main">
+<div class="layout">
+
+<!-- LEFT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--teal);">ナイキスト線図</div>
+    <div class="toggle-row">
+      <div class="tgl on" id="t-circ" onclick="toggle('circ')">不確かさの円</div>
+      <div class="tgl on" id="t-marg" onclick="toggle('marg')">安定余裕</div>
+      <div class="tgl on" id="t-unit" onclick="toggle('unit')">単位円</div>
+    </div>
+    <div class="canvas-wrap"><canvas id="nyq"></canvas></div>
+    <div class="legend-row" style="margin-top:0.35rem;">
+      <span class="legend-item"><span class="sw2" style="background:#0891b2;"></span>L(jω)</span>
+      <span class="legend-item"><span class="sw2" style="background:#dc2626;height:9px;width:9px;border-radius:50%;"></span>−1 点</span>
+      <span class="legend-item"><span class="sw2" style="background:#fca5a5;"></span>不確かさの円</span>
+    </div>
+    <div class="verdict" id="verdict"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">一巡伝達関数 L(s)</div>
+    <div class="formula" id="l-box"></div>
+    <div class="ctrl-group" style="margin-top:0.5rem;">
+      <div class="ctrl-label" style="color:var(--blue);">ゲイン K</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-k" class="sk" min="0.1" max="30" step="0.1" value="5">
+        <span class="ctrl-val v-k" id="val-k">5.0</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--teal);">時定数 T₁</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-t1" min="0.1" max="3" step="0.05" value="1.0">
+        <span class="ctrl-val v-t" id="val-t1">1.00</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--teal);">時定数 T₂</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-t2" min="0.05" max="2" step="0.05" value="0.5">
+        <span class="ctrl-val v-t" id="val-t2">0.50</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--teal);">時定数 T₃</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-t3" min="0.02" max="1" step="0.02" value="0.2">
+        <span class="ctrl-val v-t" id="val-t3">0.20</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">乗法的不確かさ</div>
+    <div class="formula">
+      実際のプラント：P<sub>real</sub>(s) = P(s)·(1 + Δ(s))　|Δ(jω)| ≤ r<br>
+      → 実際の一巡伝達関数は L(jω) を中心、半径 r|L(jω)| の<strong>円内</strong>のどこか<br>
+      <strong>ロバスト安定条件</strong>：すべての ω で |1 + L(jω)| &gt; r·|L(jω)|<br>
+      （＝どの円も −1 点を含まない）
+    </div>
+    <div class="ctrl-group" style="margin-top:0.5rem;">
+      <div class="ctrl-label" style="color:var(--red);">不確かさの大きさ r</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-r" class="sr" min="0" max="1.2" step="0.01" value="0.30">
+        <span class="ctrl-val v-r" id="val-r">0.30</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:0.4rem;margin-top:0.4rem;flex-wrap:wrap;">
+      <button class="btn btn-p" id="btn-rmax">限界の r に設定</button>
+      <button class="btn" id="btn-reset">リセット</button>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">安定余裕とロバスト性</div>
+    <table class="info-table">
+      <tr><th>項目</th><th style="text-align:right;">値</th><th style="text-align:center;">判定</th></tr>
+      <tr><td>ゲイン交差周波数 ω<sub>gc</sub></td><td class="num" id="r-wgc">—</td><td></td></tr>
+      <tr><td>位相余裕 PM</td><td class="num" id="r-pm">—</td><td style="text-align:center;" id="r-pm-j">—</td></tr>
+      <tr><td>位相交差周波数 ω<sub>pc</sub></td><td class="num" id="r-wpc">—</td><td></td></tr>
+      <tr><td>ゲイン余裕 GM</td><td class="num" id="r-gm">—</td><td style="text-align:center;" id="r-gm-j">—</td></tr>
+      <tr><td>−1点への最短距離</td><td class="num" id="r-dist">—</td><td></td></tr>
+      <tr><td>補感度のピーク ‖T‖<sub>∞</sub></td><td class="num" id="r-tinf">—</td><td></td></tr>
+      <tr><td>許容できる最大の r</td><td class="num" id="r-rmax">—</td><td style="text-align:center;" id="r-rob-j">—</td></tr>
+    </table>
+    <div class="note">許容できる最大の r は 1/‖T‖<sub>∞</sub> に一致します（小ゲイン定理）。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">ロバスト安定条件の余裕　|1+L| − r|L|</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw2" style="background:#0891b2;"></span>|1+L| − r|L|</span>
+      <span class="legend-item"><span class="sw2 dash" style="border-color:#dc2626;"></span>0（限界）</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-rob"></canvas></div>
+    <div class="note" id="rob-note"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">ゲイン線図と位相線図</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw2" style="background:#0891b2;"></span>|L| [dB]</span>
+      <span class="legend-item"><span class="sw2 dash" style="border-color:#94a3b8;"></span>0 dB</span>
+    </div>
+    <div class="chart-wrap" style="height:130px;"><canvas id="chart-mag"></canvas></div>
+    <div class="legend-row" style="margin-top:0.4rem;">
+      <span class="legend-item"><span class="sw2" style="background:#7c3aed;"></span>∠L [deg]</span>
+      <span class="legend-item"><span class="sw2 dash" style="border-color:#94a3b8;"></span>−180°</span>
+    </div>
+    <div class="chart-wrap" style="height:130px;"><canvas id="chart-pha"></canvas></div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・ナイキスト線図が <strong>−1 点にどれだけ近づくか</strong>が安定余裕そのもの<br>
+    ・<strong>ゲイン余裕</strong>：負実軸を横切る点から −1 までの距離の逆数。<strong>位相余裕</strong>：単位円を横切る点の角度と −180° の差<br>
+    ・モデルに <strong>r（相対誤差）</strong>の不確かさがあると、真の L はピンクの円内のどこかにある<br>
+    ・<strong>どの円も −1 点を含まなければロバスト安定</strong>。円が −1 に触れた瞬間、不安定になりうる<br>
+    ・許容できる最大の r は <strong>1/‖T‖<sub>∞</sub></strong>（T = L/(1+L)：補感度関数）。<strong>‖T‖<sub>∞</sub> が小さいほど頑丈</strong><br>
+    ・安定余裕を大きく取ることは、モデル誤差に強い設計をすることと同じ意味を持つ
+  </div>
+</div>
+
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — ナイキスト安定判別とロバスト安定性</div>
+
+<script>
+(function(){
+  const cv=document.getElementById('nyq'), ctx=cv.getContext('2d');
+  // 数値整形は必ずこの関数を通す（null/undefined/NaN/Infinity を安全に処理）
+  function nf(v,n){
+    n=(n===undefined)?2:n;
+    const x=(typeof v==='number')?v:parseFloat(v);
+    return (v===null||v===undefined||!isFinite(x))?'—':x.toFixed(n);
+  }
+
+  const slK=document.getElementById('sl-k'),slT1=document.getElementById('sl-t1');
+  const slT2=document.getElementById('sl-t2'),slT3=document.getElementById('sl-t3');
+  const slR=document.getElementById('sl-r');
+  let show={circ:true,marg:true,unit:true};
+
+  window.toggle=function(k){
+    show[k]=!show[k];
+    document.getElementById('t-'+k).className='tgl'+(show[k]?' on':'');
+    render();
+  };
+
+  function vals(){
+    return {K:parseFloat(slK.value),T1:parseFloat(slT1.value),
+            T2:parseFloat(slT2.value),T3:parseFloat(slT3.value),
+            r:parseFloat(slR.value)};
+  }
+
+  // L(jw) = K / ((1+jwT1)(1+jwT2)(1+jwT3))
+  function Lval(V,w){
+    let re=1,im=0;
+    [V.T1,V.T2,V.T3].forEach(function(T){
+      const a=1, b=w*T;
+      const nr=re*a-im*b, ni=re*b+im*a;
+      re=nr; im=ni;
+    });
+    const d=re*re+im*im;
+    return {re:V.K*re/d, im:-V.K*im/d};
+  }
+  function abs(c){return Math.hypot(c.re,c.im);}
+  function arg(c){return Math.atan2(c.im,c.re)*180/Math.PI;}
+
+  const NW=1600, WL=[];
+  for(let i=0;i<NW;i++){WL.push(Math.pow(10,-2.5+i/(NW-1)*5));}
+
+  function resize(){
+    const r=cv.parentElement.getBoundingClientRect();
+    cv.width=r.width; cv.height=Math.round(r.width*0.72);
+  }
+  resize(); window.addEventListener('resize',function(){resize();render();});
+
+  function drawNyq(V,S){
+    const W=cv.width,H=cv.height;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#fafaf8';ctx.fillRect(0,0,W,H);
+    // view range
+    let mx=1.6;
+    S.pts.forEach(function(p){mx=Math.max(mx,Math.abs(p.re),Math.abs(p.im));});
+    mx=Math.min(mx,Math.max(3,V.K*0.5))*1.15;
+    const cx=W*0.62, cy=H/2, sc=Math.min(W*0.42,H*0.44)/mx;
+    function px(x){return cx+x*sc;}
+    function py(y){return cy-y*sc;}
+    // grid
+    ctx.strokeStyle='#e5e7eb';ctx.lineWidth=1;
+    for(let g=-Math.ceil(mx);g<=Math.ceil(mx);g++){
+      ctx.beginPath();ctx.moveTo(px(g),0);ctx.lineTo(px(g),H);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,py(g));ctx.lineTo(W,py(g));ctx.stroke();
+    }
+    ctx.strokeStyle='#334155';ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.moveTo(0,py(0));ctx.lineTo(W,py(0));ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px(0),0);ctx.lineTo(px(0),H);ctx.stroke();
+    ctx.fillStyle='#64748b';ctx.font="10px 'JetBrains Mono'";ctx.textAlign='center';
+    for(let g=-Math.ceil(mx);g<=Math.ceil(mx);g++){
+      if(g===0)continue;
+      ctx.fillText(g,px(g),py(0)+13);
+    }
+    ctx.textAlign='left';ctx.fillStyle='#475569';ctx.font="11px 'Noto Sans JP'";
+    ctx.fillText('Re',W-24,py(0)-6);ctx.fillText('Im',px(0)+6,13);
+
+    // unit circle
+    if(show.unit){
+      ctx.strokeStyle='rgba(148,163,184,0.8)';ctx.lineWidth=1.3;ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.arc(px(0),py(0),sc,0,2*Math.PI);ctx.stroke();ctx.setLineDash([]);
+    }
+
+    // uncertainty circles
+    if(show.circ && V.r>0){
+      const stepC=Math.max(1,Math.floor(S.pts.length/70));
+      ctx.strokeStyle='rgba(252,165,165,0.75)';ctx.lineWidth=1;
+      for(let i=0;i<S.pts.length;i+=stepC){
+        const p=S.pts[i];
+        const rad=V.r*Math.hypot(p.re,p.im)*sc;
+        if(rad<0.5||rad>Math.max(W,H))continue;
+        ctx.beginPath();ctx.arc(px(p.re),py(p.im),rad,0,2*Math.PI);ctx.stroke();
+      }
+      // worst-case circle highlighted
+      const pw=S.pts[S.worstIdx];
+      if(pw){
+        ctx.strokeStyle='#dc2626';ctx.lineWidth=2;
+        ctx.beginPath();ctx.arc(px(pw.re),py(pw.im),V.r*Math.hypot(pw.re,pw.im)*sc,0,2*Math.PI);ctx.stroke();
+      }
+    }
+
+    // Nyquist curve (positive w) and mirror
+    ctx.strokeStyle='#0891b2';ctx.lineWidth=2.6;
+    ctx.beginPath();
+    S.pts.forEach(function(p,i){ if(i===0)ctx.moveTo(px(p.re),py(p.im)); else ctx.lineTo(px(p.re),py(p.im)); });
+    ctx.stroke();
+    ctx.strokeStyle='rgba(8,145,178,0.35)';ctx.lineWidth=1.6;
+    ctx.beginPath();
+    S.pts.forEach(function(p,i){ if(i===0)ctx.moveTo(px(p.re),py(-p.im)); else ctx.lineTo(px(p.re),py(-p.im)); });
+    ctx.stroke();
+
+    // margins
+    if(show.marg){
+      // GM point on negative real axis
+      if(S.pcIdx>=0){
+        const p=S.pts[S.pcIdx];
+        ctx.strokeStyle='#059669';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(px(p.re),py(0));ctx.lineTo(px(-1),py(0));ctx.stroke();
+        ctx.fillStyle='#059669';
+        ctx.beginPath();ctx.arc(px(p.re),py(0),4.5,0,2*Math.PI);ctx.fill();
+        ctx.font="10px 'Noto Sans JP'";ctx.textAlign='center';
+        ctx.fillText('GM',(px(p.re)+px(-1))/2,py(0)-7);
+      }
+      // PM arc
+      if(S.gcIdx>=0){
+        const p=S.pts[S.gcIdx];
+        ctx.strokeStyle='#7c3aed';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(px(0),py(0));ctx.lineTo(px(p.re),py(p.im));ctx.stroke();
+        const a1=Math.PI, a2=Math.atan2(p.im,p.re);
+        ctx.beginPath();ctx.arc(px(0),py(0),sc*0.42,-a1,-a2,a2<a1);
+        ctx.strokeStyle='rgba(124,58,237,0.75)';ctx.lineWidth=2;ctx.stroke();
+        ctx.fillStyle='#7c3aed';
+        ctx.beginPath();ctx.arc(px(p.re),py(p.im),4.5,0,2*Math.PI);ctx.fill();
+        ctx.font="10px 'Noto Sans JP'";ctx.textAlign='left';
+        ctx.fillText('PM',px(0)-sc*0.55,py(0)-sc*0.16);
+      }
+    }
+
+    // -1 point
+    ctx.fillStyle='#dc2626';
+    ctx.beginPath();ctx.arc(px(-1),py(0),6,0,2*Math.PI);ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(px(-1),py(0),6,0,2*Math.PI);ctx.stroke();
+    ctx.fillStyle='#991b1b';ctx.font="bold 11px 'JetBrains Mono'";ctx.textAlign='center';
+    ctx.fillText('−1',px(-1),py(0)-11);
+  }
+
+  function ds(color,w,dash){return{data:[],borderColor:color,borderWidth:w,borderDash:dash||[],pointRadius:0,fill:false,tension:0};}
+  function mkChart(id,yTitle){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'logarithmic',min:0.01,max:100,title:{display:true,text:'ω [rad/s]',font:{size:9}},
+             ticks:{font:{family:"'JetBrains Mono'",size:8},
+               callback:function(v){const l=Math.log10(v);return (Math.abs(l-Math.round(l))<1e-9)?v.toString():'';}},
+             grid:{color:'#f0f0f0'}},
+          y:{title:{display:true,text:yTitle,font:{size:9}},ticks:{font:{family:"'JetBrains Mono'",size:8}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chRob=mkChart('chart-rob','|1+L|−r|L|');
+  const chMag=mkChart('chart-mag','|L| [dB]');
+  const chPha=mkChart('chart-pha','∠L [deg]');
+
+  function compute(V){
+    const pts=[], magD=[], phaD=[], robD=[], zeroD=[];
+    let gcIdx=-1, pcIdx=-1, minDist=1e9, minDistW=0, worst=1e9, worstIdx=-1, tinf=0, rmax=1e9;
+    let prevMag=null, prevIm=null, prevRe=null;
+    let phUnw=0, prevRaw=null;   // unwrapped phase
+    const phU=[];
+    for(let i=0;i<WL.length;i++){
+      const w=WL[i];
+      const L=Lval(V,w);
+      pts.push(L);
+      const m=abs(L), raw=arg(L);
+      // unwrap
+      if(prevRaw===null){ phUnw=raw; }
+      else{
+        let d=raw-prevRaw;
+        while(d>180)d-=360;
+        while(d<-180)d+=360;
+        phUnw+=d;
+      }
+      prevRaw=raw; phU.push(phUnw);
+      if(w>=0.01&&w<=100){
+        magD.push({x:w,y:20*Math.log10(m)});
+        phaD.push({x:w,y:phUnw});
+      }
+      // gain crossover: |L| crosses 1
+      if(prevMag!==null && (prevMag-1)*(m-1)<0 && gcIdx<0) gcIdx=i;
+      // phase crossover: crosses negative real axis (Im changes sign while Re<0)
+      if(prevIm!==null && prevRe<0 && L.re<0 && prevIm*L.im<0 && pcIdx<0) pcIdx=i;
+      prevMag=m; prevIm=L.im; prevRe=L.re;
+      // distance to -1
+      const d2=Math.hypot(L.re+1,L.im);
+      if(d2<minDist){minDist=d2;minDistW=w;}
+      const rm=d2-V.r*m;
+      if(w>=0.01&&w<=100){robD.push({x:w,y:rm});zeroD.push({x:w,y:0});}
+      if(rm<worst){worst=rm;worstIdx=i;}
+      const t=m/Math.max(d2,1e-12);
+      if(t>tinf)tinf=t;
+      const rr=d2/Math.max(m,1e-12);
+      if(rr<rmax)rmax=rr;
+    }
+    // exact nominal stability by Routh on (1+T1 s)(1+T2 s)(1+T3 s) + K = 0
+    // a3 s^3 + a2 s^2 + a1 s + a0
+    const a3=V.T1*V.T2*V.T3;
+    const a2=V.T1*V.T2+V.T2*V.T3+V.T3*V.T1;
+    const a1=V.T1+V.T2+V.T3;
+    const a0=1+V.K;
+    const nomStable=(a1*a2>a3*a0);
+    const Kcrit=(a1*a2/a3)-1;
+    return {pts:pts,magD:magD,phaD:phaD,robD:robD,zeroD:zeroD,phU:phU,
+            gcIdx:gcIdx,pcIdx:pcIdx,minDist:minDist,minDistW:minDistW,
+            worst:worst,worstIdx:worstIdx,tinf:tinf,rmax:rmax,
+            nomStable:nomStable,Kcrit:Kcrit};
+  }
+
+  function fmt(v,n){return nf(v,n);}
+
+  function render(){
+    const V=vals();
+    document.getElementById('val-k').textContent=nf(V.K,1);
+    document.getElementById('val-t1').textContent=nf(V.T1,2);
+    document.getElementById('val-t2').textContent=nf(V.T2,2);
+    document.getElementById('val-t3').textContent=nf(V.T3,2);
+    document.getElementById('val-r').textContent=nf(V.r,2);
+    document.getElementById('l-box').innerHTML=
+      'L(s) = <span class="frac"><span class="num">'+nf(V.K,1)+'</span>'+
+      '<span class="den">(1+'+nf(V.T1,2)+'s)(1+'+nf(V.T2,2)+'s)(1+'+nf(V.T3,2)+'s)</span></span>';
+
+    const S=compute(V);
+
+    // margins
+    let PM=null,GM=null,wgc=null,wpc=null;
+    if(S.gcIdx>=0){
+      wgc=WL[S.gcIdx];
+      PM=180+S.phU[S.gcIdx];
+      while(PM>180)PM-=360;
+      while(PM<-180)PM+=360;
+    }
+    if(S.pcIdx>=0){ wpc=WL[S.pcIdx]; GM=-20*Math.log10(abs(S.pts[S.pcIdx])); }
+    document.getElementById('r-wgc').textContent=wgc?fmt(wgc,3)+' rad/s':'—';
+    document.getElementById('r-pm').textContent=(PM!==null)?fmt(PM,1)+'°':'—';
+    document.getElementById('r-pm-j').innerHTML=(PM===null)?'—':((PM>0)?'<span class="pass">○</span>':'<span class="fail">×</span>');
+    document.getElementById('r-wpc').textContent=wpc?fmt(wpc,3)+' rad/s':'—';
+    document.getElementById('r-gm').textContent=(GM!==null)?fmt(GM,2)+' dB':'—';
+    document.getElementById('r-gm-j').innerHTML=(GM===null)?'—':((GM>0)?'<span class="pass">○</span>':'<span class="fail">×</span>');
+    document.getElementById('r-dist').textContent=fmt(S.minDist,3)+'  (ω='+fmt(S.minDistW,2)+')';
+    
+    document.getElementById('r-tinf').textContent=fmt(S.tinf,3);
+    document.getElementById('r-rmax').textContent=fmt(S.rmax,3);
+    const robOK=(S.worst>0);
+    document.getElementById('r-rob-j').innerHTML=robOK?'<span class="pass">○</span>':'<span class="fail">×</span>';
+
+    // verdict
+    const nomStable=S.nomStable;
+    const v=document.getElementById('verdict');
+    if(!nomStable){
+      v.className='verdict ng';
+      v.innerHTML='✗ <strong>公称系が不安定</strong>：ナイキスト線図が −1 点を囲んでいます。安定限界は K = '+fmt(S.Kcrit,2)+' なので、K をそれ未満に下げてください。';
+    }else{
+      const mtxt=(PM!==null?'PM='+fmt(PM,1)+'°':'PM=—')+', '+(GM!==null?'GM='+fmt(GM,2)+'dB':'GM=—');
+      if(!robOK){
+        v.className='verdict warn';
+        v.innerHTML='△ 公称系は安定（'+mtxt+'）ですが、<strong>不確かさ r='+nf(V.r,2)+' では安定を保証できません</strong>。円が −1 点を含みます（許容できる r は '+fmt(S.rmax,3)+' まで）。';
+      }else{
+        v.className='verdict ok';
+        v.innerHTML='✓ <strong>ロバスト安定</strong>：'+mtxt+'。r='+nf(V.r,2)+' のどの不確かさでも安定（限界は r='+fmt(S.rmax,3)+'）。';
+      }
+    }
+
+    // charts
+    const a=ds('#0891b2',2.4);a.data=S.robD;
+    const b=ds('#dc2626',1.4,[5,4]);b.data=S.zeroD;
+    chRob.data.datasets=[a,b];
+    let lo=0,hi=0.5;
+    S.robD.forEach(function(p){lo=Math.min(lo,p.y);hi=Math.max(hi,p.y);});
+    chRob.options.scales.y.min=lo-0.15;chRob.options.scales.y.max=hi+0.15;
+    chRob.update();
+
+    const m1=ds('#0891b2',2.2);m1.data=S.magD;
+    const m0=ds('#94a3b8',1.3,[5,4]);m0.data=S.magD.map(function(p){return {x:p.x,y:0};});
+    chMag.data.datasets=[m1,m0];chMag.update();
+
+    const p1=ds('#7c3aed',2.2);p1.data=S.phaD;
+    const p0=ds('#94a3b8',1.3,[5,4]);p0.data=S.phaD.map(function(p){return {x:p.x,y:-180};});
+    chPha.data.datasets=[p1,p0];chPha.update();
+
+    const wWorst=(S.worstIdx>=0&&S.worstIdx<WL.length)?WL[S.worstIdx]:null;
+    document.getElementById('rob-note').textContent= robOK
+      ? '全周波数で正なのでロバスト安定です。最小値は '+fmt(S.worst,3)+'（ω='+fmt(wWorst,2)+'）。'
+      : '負になる周波数帯があります（最小 '+fmt(S.worst,3)+' at ω='+fmt(wWorst,2)+'）。そこで円が −1 点に届いています。';
+
+    drawNyq(V,S);
+  }
+
+  [slK,slT1,slT2,slT3,slR].forEach(function(s){s.addEventListener('input',render);});
+  document.getElementById('btn-rmax').addEventListener('click',function(){
+    const V=vals(); const S=compute(V);
+    slR.value=nf(Math.min(1.2,Math.max(0,S.rmax)),2);
+    render();
+  });
+  document.getElementById('btn-reset').addEventListener('click',function(){
+    slK.value=5;slT1.value=1.0;slT2.value=0.5;slT3.value=0.2;slR.value=0.30;render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

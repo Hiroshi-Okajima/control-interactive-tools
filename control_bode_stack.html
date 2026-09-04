@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ボード線図の積み上げ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#3b0764,#6b21a8,#a855f7);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.88;max-width:720px;margin:0 auto;}
+.main{max-width:1150px;margin:0 auto;padding:1rem;}
+.layout{display:grid;grid-template-columns:390px 1fr;gap:1rem;}
+@media(max-width:900px){.layout{grid-template-columns:1fr;}}
+.col{display:flex;flex-direction:column;gap:0.7rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.add-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;}
+.add-btn{padding:0.5em 0.4em;border:2px dashed var(--border);border-radius:9px;background:#fafafa;cursor:pointer;text-align:center;font-size:0.74rem;font-weight:700;color:var(--text2);transition:all 0.15s;line-height:1.4;}
+.add-btn:hover{border-color:var(--purple);color:#6b21a8;background:#faf5ff;}
+.add-btn .sub{display:block;font-weight:400;font-size:0.65rem;color:var(--text3);margin-top:0.1rem;font-family:'JetBrains Mono',monospace;}
+.el-list{display:flex;flex-direction:column;gap:0.45rem;margin-top:0.5rem;}
+.el{border:1px solid var(--border);border-left-width:5px;border-radius:var(--r);padding:0.5rem 0.6rem;background:#fafafa;}
+.el.off{opacity:0.45;}
+.el-top{display:flex;align-items:center;gap:0.5rem;}
+.el-name{font-size:0.78rem;font-weight:700;flex:1;}
+.el-expr{font-family:'JetBrains Mono',monospace;font-size:0.74rem;color:var(--text2);}
+.el-btn{width:24px;height:24px;border:none;border-radius:6px;cursor:pointer;font-size:0.8rem;font-weight:700;background:#e5e5e5;color:#444;line-height:1;}
+.el-btn:hover{opacity:0.8;}
+.el-btn.del{background:#fee2e2;color:#991b1b;}
+.el-param{margin-top:0.35rem;}
+.el-param .ctrl-row{display:flex;align-items:center;gap:0.45rem;}
+.el-param .lbl{font-size:0.68rem;color:var(--text2);min-width:5.6em;}
+.el-param .val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.75rem;padding:0.05em 0.4em;border-radius:4px;min-width:3.6em;text-align:center;background:#eef2ff;color:var(--blue);}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--purple);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--purple);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+.formula{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.55rem 0.8rem;line-height:1.9;color:var(--text);font-size:0.8rem;word-break:break-all;}
+.chart-wrap{position:relative;height:230px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:0.25rem;font-size:0.71rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.25rem;}
+.sw{width:15px;height:3px;border-radius:2px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.toggle-row{display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.4rem;}
+.tgl{padding:0.3em 0.75em;border:2px solid var(--border);border-radius:20px;background:var(--card);cursor:pointer;font-size:0.71rem;font-weight:700;color:var(--text2);}
+.tgl.on{border-color:var(--purple);background:#faf5ff;color:#6b21a8;}
+.info-table{width:100%;border-collapse:collapse;font-size:0.73rem;margin-top:0.3rem;}
+.info-table th,.info-table td{padding:0.26rem 0.4rem;border-bottom:1px solid var(--border);text-align:left;}
+.info-table th{font-size:0.65rem;color:var(--text3);font-weight:700;}
+.info-table td.num{font-family:'JetBrains Mono',monospace;font-weight:600;text-align:right;}
+.insight{background:linear-gradient(135deg,#faf5ff,#f3e8ff);border:1px solid #d8b4fe;border-radius:var(--r);padding:0.6rem 0.9rem;font-size:0.79rem;line-height:1.75;color:#4c1d95;}
+.insight strong{color:#6b21a8;}
+.note{font-size:0.71rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+.btn{padding:0.4em 0.9em;border:none;border-radius:7px;font-weight:700;font-size:0.74rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:var(--purple);color:#fff;}
+.empty{font-size:0.75rem;color:var(--text3);text-align:center;padding:0.8rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>ボード線図の積み上げ</h1>
+  <p>直列結合された各要素のボード線図を足し合わせると、全体のボード線図になる</p>
+</div>
+<div class="main">
+<div class="layout">
+
+<!-- LEFT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">要素を追加</div>
+    <div class="add-grid">
+      <div class="add-btn" onclick="addEl('gain')">ゲイン<span class="sub">K</span></div>
+      <div class="add-btn" onclick="addEl('int')">積分器<span class="sub">1/s</span></div>
+      <div class="add-btn" onclick="addEl('diff')">微分器<span class="sub">s</span></div>
+      <div class="add-btn" onclick="addEl('lag')">1次遅れ<span class="sub">1/(1+Ts)</span></div>
+      <div class="add-btn" onclick="addEl('lead')">1次進み<span class="sub">1+Ts</span></div>
+      <div class="add-btn" onclick="addEl('lag2')">2次遅れ<span class="sub">ωn²/(s²+2ζωn s+ωn²)</span></div>
+    </div>
+    <div style="display:flex;gap:0.4rem;margin-top:0.55rem;flex-wrap:wrap;">
+      <button class="btn btn-p" onclick="preset(1)">例1：K/(s(1+Ts))</button>
+      <button class="btn btn-p" onclick="preset(2)">例2：進み補償</button>
+      <button class="btn" onclick="clearAll()">全消去</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">要素リスト（直列結合）</div>
+    <div class="el-list" id="el-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">全体の伝達関数 G(s)</div>
+    <div class="formula" id="g-box"></div>
+    <table class="info-table" id="info-table"></table>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="col">
+  <div class="card">
+    <div class="toggle-row">
+      <div class="tgl on" id="t-parts" onclick="toggle('parts')">各要素を表示</div>
+      <div class="tgl on" id="t-asym" onclick="toggle('asym')">折れ線近似</div>
+      <div class="tgl on" id="t-exact" onclick="toggle('exact')">厳密値</div>
+    </div>
+    <div class="card-label" style="color:var(--red);">ゲイン線図 [dB]</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#2563eb;"></span>全体（厳密）</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#2563eb;"></span>全体（折れ線）</span>
+      <span class="legend-item"><span class="sw" style="background:#cbd5e1;"></span>各要素</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-mag"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">位相線図 [deg]</div>
+    <div class="chart-wrap"><canvas id="chart-pha"></canvas></div>
+    <div class="note">各要素のゲイン[dB]と位相[deg]は、直列結合では単純に足し算になります。</div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・直列結合 G = G₁G₂G₃… では、<strong>ゲインは dB で足し算</strong>（log の性質）、<strong>位相もそのまま足し算</strong><br>
+    ・<strong>積分器 1/s</strong>：−20 dB/dec の直線、位相は常に −90°<br>
+    ・<strong>1次遅れ 1/(1+Ts)</strong>：折点 ω = 1/T より上で −20 dB/dec、位相は 0° → −90°<br>
+    ・<strong>1次進み 1+Ts</strong>：折点より上で +20 dB/dec、位相は 0° → +90°<br>
+    ・折れ線近似と厳密値の差は折点で最大 <strong>3 dB</strong>（20log₁₀√2 ≈ 3.01 dB）、位相は折点で ±45°<br>
+    ・要素を1つずつ足しながら、全体の線図がどう変わるかを追うのが作図のコツ
+  </div>
+</div>
+
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — ボード線図の積み上げ</div>
+
+<script>
+(function(){
+  const PART_COLORS=['#f59e0b','#10b981','#ef4444','#8b5cf6','#06b6d4','#ec4899','#84cc16'];
+  let elements=[];
+  let uid=1;
+  let show={parts:true,asym:true,exact:true};
+
+  const DEF={
+    gain:{name:'ゲイン',param:{K:10},range:{K:[0.1,100]}},
+    int:{name:'積分器',param:{},range:{}},
+    diff:{name:'微分器',param:{},range:{}},
+    lag:{name:'1次遅れ',param:{T:1},range:{T:[0.05,20]}},
+    lead:{name:'1次進み',param:{T:0.2},range:{T:[0.05,20]}},
+    lag2:{name:'2次遅れ',param:{wn:2,z:0.3},range:{wn:[0.1,20],z:[0.05,1.5]}}
+  };
+
+  window.addEl=function(kind){
+    const d=DEF[kind];
+    elements.push({id:uid++,kind:kind,on:true,param:Object.assign({},d.param)});
+    render();
+  };
+  window.clearAll=function(){elements=[];render();};
+  window.toggle=function(k){
+    show[k]=!show[k];
+    document.getElementById('t-'+k).className='tgl'+(show[k]?' on':'');
+    render();
+  };
+  window.preset=function(n){
+    elements=[];uid=1;
+    if(n===1){
+      elements.push({id:uid++,kind:'gain',on:true,param:{K:10}});
+      elements.push({id:uid++,kind:'int',on:true,param:{}});
+      elements.push({id:uid++,kind:'lag',on:true,param:{T:1}});
+    }else{
+      elements.push({id:uid++,kind:'gain',on:true,param:{K:5}});
+      elements.push({id:uid++,kind:'int',on:true,param:{}});
+      elements.push({id:uid++,kind:'lag',on:true,param:{T:1}});
+      elements.push({id:uid++,kind:'lead',on:true,param:{T:0.3}});
+      elements.push({id:uid++,kind:'lag',on:true,param:{T:0.08}});
+    }
+    render();
+  };
+  window.delEl=function(id){elements=elements.filter(function(e){return e.id!==id;});render();};
+  window.toggleEl=function(id){
+    elements.forEach(function(e){if(e.id===id)e.on=!e.on;});
+    render();
+  };
+  window.setParam=function(id,key,v){
+    elements.forEach(function(e){if(e.id===id)e.param[key]=parseFloat(v);});
+    render();
+  };
+
+  // frequency grid
+  const NW=500;
+  const W=[];
+  for(let i=0;i<NW;i++){W.push(Math.pow(10,-2+i/(NW-1)*4));}  // 1e-2 .. 1e2
+
+  function expr(e){
+    const p=e.param;
+    if(e.kind==='gain')return String(round(p.K,3));
+    if(e.kind==='int')return '1/s';
+    if(e.kind==='diff')return 's';
+    if(e.kind==='lag')return '1/(1+'+round(p.T,3)+'s)';
+    if(e.kind==='lead')return '(1+'+round(p.T,3)+'s)';
+    return round(p.wn,2)+'²/(s²+2·'+round(p.z,2)+'·'+round(p.wn,2)+'s+'+round(p.wn,2)+'²)';
+  }
+  function round(v,n){
+    const s=v.toFixed(n===undefined?2:n);
+    return s.replace(/\.?0+$/,'')||'0';
+  }
+
+  // exact magnitude(dB) & phase(deg) of one element
+  function elResp(e,w){
+    const p=e.param;
+    if(e.kind==='gain'){return {db:20*Math.log10(Math.abs(p.K)),ph:(p.K<0?180:0)};}
+    if(e.kind==='int'){return {db:-20*Math.log10(w),ph:-90};}
+    if(e.kind==='diff'){return {db:20*Math.log10(w),ph:90};}
+    if(e.kind==='lag'){
+      const x=p.T*w;
+      return {db:-10*Math.log10(1+x*x),ph:-Math.atan(x)*180/Math.PI};
+    }
+    if(e.kind==='lead'){
+      const x=p.T*w;
+      return {db:10*Math.log10(1+x*x),ph:Math.atan(x)*180/Math.PI};
+    }
+    // 2nd order lag
+    const wn=p.wn,z=p.z;
+    const u=w/wn;
+    const re=1-u*u, im=2*z*u;
+    const m=Math.sqrt(re*re+im*im);
+    let ph=-Math.atan2(im,re)*180/Math.PI;
+    return {db:-20*Math.log10(m),ph:ph};
+  }
+  // asymptotic (折れ線近似)
+  function elAsym(e,w){
+    const p=e.param;
+    if(e.kind==='gain')return {db:20*Math.log10(Math.abs(p.K)),ph:(p.K<0?180:0)};
+    if(e.kind==='int')return {db:-20*Math.log10(w),ph:-90};
+    if(e.kind==='diff')return {db:20*Math.log10(w),ph:90};
+    if(e.kind==='lag'){
+      const wc=1/p.T;
+      const db=(w<wc)?0:-20*Math.log10(w/wc);
+      let ph;
+      if(w<wc/10)ph=0; else if(w>wc*10)ph=-90; else ph=-45*(Math.log10(w/(wc/10)));
+      return {db:db,ph:ph};
+    }
+    if(e.kind==='lead'){
+      const wc=1/p.T;
+      const db=(w<wc)?0:20*Math.log10(w/wc);
+      let ph;
+      if(w<wc/10)ph=0; else if(w>wc*10)ph=90; else ph=45*(Math.log10(w/(wc/10)));
+      return {db:db,ph:ph};
+    }
+    const wn=p.wn;
+    const db=(w<wn)?0:-40*Math.log10(w/wn);
+    let ph;
+    if(w<wn/10)ph=0; else if(w>wn*10)ph=-180; else ph=-90*(Math.log10(w/(wn/10)));
+    return {db:db,ph:ph};
+  }
+
+  function corner(e){
+    if(e.kind==='lag'||e.kind==='lead')return 1/e.param.T;
+    if(e.kind==='lag2')return e.param.wn;
+    return null;
+  }
+
+  // charts
+  function ds(color,w,dash){return{data:[],borderColor:color,borderWidth:w,borderDash:dash||[],pointRadius:0,fill:false,tension:0};}
+  function mkChart(id,yTitle,ymin,ymax,step){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'logarithmic',min:0.01,max:100,
+             title:{display:true,text:'ω [rad/s]',font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9},
+               callback:function(v){
+                 const l=Math.log10(v);
+                 return (Math.abs(l-Math.round(l))<1e-9)? v.toString() : '';
+               }},
+             grid:{color:'#f0f0f0'}},
+          y:{min:ymin,max:ymax,title:{display:true,text:yTitle,font:{size:10}},
+             ticks:{stepSize:step,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chMag=mkChart('chart-mag','ゲイン [dB]',-80,60,20);
+  const chPha=mkChart('chart-pha','位相 [deg]',-270,120,45);
+
+  function render(){
+    // element list UI
+    const list=document.getElementById('el-list');
+    if(elements.length===0){
+      list.innerHTML='<div class="empty">上のボタンから要素を追加してください</div>';
+    }else{
+      list.innerHTML='';
+      elements.forEach(function(e,idx){
+        const col=PART_COLORS[idx%PART_COLORS.length];
+        const div=document.createElement('div');
+        div.className='el'+(e.on?'':' off');
+        div.style.borderLeftColor=col;
+        let html='<div class="el-top">'+
+          '<span class="el-name">'+DEF[e.kind].name+'</span>'+
+          '<span class="el-expr">'+expr(e)+'</span>'+
+          '<button class="el-btn" onclick="toggleEl('+e.id+')" title="有効/無効">'+(e.on?'◉':'○')+'</button>'+
+          '<button class="el-btn del" onclick="delEl('+e.id+')" title="削除">×</button>'+
+          '</div>';
+        const rg=DEF[e.kind].range;
+        Object.keys(rg).forEach(function(k){
+          const r=rg[k];
+          const isLog=(k==='K'||k==='T'||k==='wn');
+          const v=e.param[k];
+          const sv=isLog? Math.log10(v) : v;
+          const smin=isLog? Math.log10(r[0]) : r[0];
+          const smax=isLog? Math.log10(r[1]) : r[1];
+          const label=(k==='K')?'ゲイン K':(k==='T')?'時定数 T':(k==='wn')?'ωn':'ζ';
+          html+='<div class="el-param"><div class="ctrl-row">'+
+            '<span class="lbl">'+label+'</span>'+
+            '<input type="range" min="'+smin+'" max="'+smax+'" step="0.01" value="'+sv+'" '+
+            'oninput="setParam('+e.id+',\''+k+'\', '+(isLog?'Math.pow(10,this.value)':'this.value')+')">'+
+            '<span class="val">'+round(v,2)+'</span></div></div>';
+        });
+        div.innerHTML=html;
+        list.appendChild(div);
+      });
+    }
+
+    // transfer function string
+    const act=elements.filter(function(e){return e.on;});
+    document.getElementById('g-box').innerHTML= act.length
+      ? 'G(s) = '+act.map(expr).join(' · ')
+      : 'G(s) = 1（要素なし）';
+
+    // info table
+    const it=document.getElementById('info-table');
+    let ih='<tr><th>要素</th><th style="text-align:right;">折点 ω [rad/s]</th><th style="text-align:right;">傾き変化</th></tr>';
+    act.forEach(function(e,i){
+      const c=corner(e);
+      let slope='—';
+      if(e.kind==='int')slope='−20 dB/dec（全域）';
+      else if(e.kind==='diff')slope='+20 dB/dec（全域）';
+      else if(e.kind==='lag')slope='−20 dB/dec';
+      else if(e.kind==='lead')slope='+20 dB/dec';
+      else if(e.kind==='lag2')slope='−40 dB/dec';
+      else slope='0（一定）';
+      ih+='<tr><td>'+DEF[e.kind].name+'</td><td class="num">'+(c?round(c,3):'—')+'</td><td class="num">'+slope+'</td></tr>';
+    });
+    it.innerHTML=act.length? ih : '';
+
+    // compute data
+    const totalEx=[],totalAs=[],totalExP=[],totalAsP=[];
+    const partsMag=act.map(function(){return [];});
+    const partsPha=act.map(function(){return [];});
+    for(let i=0;i<W.length;i++){
+      const w=W[i];
+      let se=0,sa=0,sep=0,sap=0;
+      act.forEach(function(e,k){
+        const ex=elResp(e,w), as=elAsym(e,w);
+        se+=ex.db; sa+=as.db; sep+=ex.ph; sap+=as.ph;
+        partsMag[k].push({x:w,y:ex.db});
+        partsPha[k].push({x:w,y:ex.ph});
+      });
+      totalEx.push({x:w,y:se}); totalAs.push({x:w,y:sa});
+      totalExP.push({x:w,y:sep}); totalAsP.push({x:w,y:sap});
+    }
+
+    const magSets=[],phaSets=[];
+    if(show.parts){
+      act.forEach(function(e,k){
+        const col=PART_COLORS[k%PART_COLORS.length];
+        const d1=ds(col,1.4);d1.data=partsMag[k];d1.borderDash=[3,3];magSets.push(d1);
+        const d2=ds(col,1.4);d2.data=partsPha[k];d2.borderDash=[3,3];phaSets.push(d2);
+      });
+    }
+    if(show.asym){
+      const a1=ds('#2563eb',2,[7,4]);a1.data=totalAs;magSets.push(a1);
+      const a2=ds('#2563eb',2,[7,4]);a2.data=totalAsP;phaSets.push(a2);
+    }
+    if(show.exact){
+      const e1=ds('#2563eb',2.8);e1.data=totalEx;magSets.push(e1);
+      const e2=ds('#2563eb',2.8);e2.data=totalExP;phaSets.push(e2);
+    }
+    chMag.data.datasets=magSets;
+    chPha.data.datasets=phaSets;
+
+    // autoscale
+    let lo=-40,hi=20;
+    totalEx.forEach(function(p){lo=Math.min(lo,p.y);hi=Math.max(hi,p.y);});
+    chMag.options.scales.y.min=Math.max(-160,Math.floor((lo-10)/20)*20);
+    chMag.options.scales.y.max=Math.min(160,Math.ceil((hi+10)/20)*20);
+    let plo=-100,phi=20;
+    totalExP.forEach(function(p){plo=Math.min(plo,p.y);phi=Math.max(phi,p.y);});
+    chPha.options.scales.y.min=Math.floor((plo-20)/45)*45;
+    chPha.options.scales.y.max=Math.ceil((phi+20)/45)*45;
+
+    chMag.update(); chPha.update();
+  }
+
+  preset(1);
+})();
+</script>
+</body>
+</html>

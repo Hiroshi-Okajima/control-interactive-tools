@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>並列結合のボード線図</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#7c2d12,#c2410c,#fb923c);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.9;max-width:740px;margin:0 auto;}
+.main{max-width:1150px;margin:0 auto;padding:1rem;}
+.layout{display:grid;grid-template-columns:390px 1fr;gap:1rem;}
+@media(max-width:900px){.layout{grid-template-columns:1fr;}}
+.col{display:flex;flex-direction:column;gap:0.7rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.warn{background:linear-gradient(135deg,#fef2f2,#fee2e2);border:1px solid #fca5a5;border-radius:var(--r);padding:0.55rem 0.8rem;font-size:0.78rem;line-height:1.7;color:#7f1d1d;}
+.warn strong{color:#991b1b;}
+.add-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;}
+.add-btn{padding:0.5em 0.4em;border:2px dashed var(--border);border-radius:9px;background:#fafafa;cursor:pointer;text-align:center;font-size:0.74rem;font-weight:700;color:var(--text2);transition:all 0.15s;line-height:1.4;}
+.add-btn:hover{border-color:var(--orange);color:#c2410c;background:#fff7ed;}
+.add-btn .sub{display:block;font-weight:400;font-size:0.65rem;color:var(--text3);margin-top:0.1rem;font-family:'JetBrains Mono',monospace;}
+.el-list{display:flex;flex-direction:column;gap:0.45rem;margin-top:0.5rem;}
+.el{border:1px solid var(--border);border-left-width:5px;border-radius:var(--r);padding:0.5rem 0.6rem;background:#fafafa;}
+.el.off{opacity:0.42;}
+.el-top{display:flex;align-items:center;gap:0.5rem;}
+.el-name{font-size:0.78rem;font-weight:700;flex:1;}
+.el-expr{font-family:'JetBrains Mono',monospace;font-size:0.73rem;color:var(--text2);}
+.el-btn{width:24px;height:24px;border:none;border-radius:6px;cursor:pointer;font-size:0.8rem;font-weight:700;background:#e5e5e5;color:#444;line-height:1;}
+.el-btn:hover{opacity:0.8;}
+.el-btn.del{background:#fee2e2;color:#991b1b;}
+.el-param{margin-top:0.35rem;}
+.el-param .ctrl-row{display:flex;align-items:center;gap:0.45rem;}
+.el-param .lbl{font-size:0.68rem;color:var(--text2);min-width:5.4em;}
+.el-param .val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.75rem;padding:0.05em 0.4em;border-radius:4px;min-width:3.8em;text-align:center;background:#fff7ed;color:var(--orange);}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--orange);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--orange);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+.formula{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.55rem 0.8rem;line-height:1.9;color:var(--text);font-size:0.8rem;word-break:break-all;}
+.chart-wrap{position:relative;height:225px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:0.25rem;font-size:0.71rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.25rem;}
+.sw{width:15px;height:3px;border-radius:2px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.toggle-row{display:flex;gap:0.45rem;flex-wrap:wrap;margin-bottom:0.5rem;}
+.tgl{padding:0.3em 0.75em;border:2px solid var(--border);border-radius:20px;background:var(--card);cursor:pointer;font-size:0.71rem;font-weight:700;color:var(--text2);}
+.tgl.on{border-color:var(--orange);background:#fff7ed;color:#c2410c;}
+.dom-bar{display:flex;height:22px;border-radius:6px;overflow:hidden;border:1px solid var(--border);margin-top:0.3rem;}
+.dom-seg{flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:0.6rem;color:#fff;font-weight:700;}
+.dom-axis{display:flex;justify-content:space-between;font-size:0.62rem;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-top:0.1rem;}
+.vec{display:flex;gap:0.7rem;align-items:center;flex-wrap:wrap;}
+.vec-canvas{border:1px solid var(--border);border-radius:var(--r);background:#fafaf8;}
+.vec-info{font-size:0.73rem;color:var(--text2);line-height:1.7;font-family:'JetBrains Mono',monospace;}
+.insight{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid #fdba74;border-radius:var(--r);padding:0.6rem 0.9rem;font-size:0.79rem;line-height:1.75;color:#7c2d12;}
+.insight strong{color:#c2410c;}
+.note{font-size:0.71rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+.btn{padding:0.4em 0.9em;border:none;border-radius:7px;font-weight:700;font-size:0.74rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:var(--orange);color:#fff;}
+.empty{font-size:0.75rem;color:var(--text3);text-align:center;padding:0.8rem;}
+.wsl{display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem;}
+.wsl .val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.78rem;padding:0.05em 0.45em;border-radius:4px;background:#eef2ff;color:var(--blue);min-width:5em;text-align:center;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>並列結合のボード線図</h1>
+  <p>G(s) = G₁(s) + G₂(s) + … のとき、ゲインと位相は単純な足し算にならない</p>
+</div>
+<div class="main">
+<div class="layout">
+
+<!-- LEFT -->
+<div class="col">
+  <div class="card">
+    <div class="warn">
+      <strong>直列との違い</strong><br>
+      直列 G₁·G₂ … ゲイン[dB]も位相[deg]も<strong>そのまま足せる</strong><br>
+      並列 G₁+G₂ … <strong>複素数として足してから</strong>絶対値と偏角を取る。dBの足し算は<strong>誤り</strong>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--orange);">要素を並列に追加</div>
+    <div class="add-grid">
+      <div class="add-btn" onclick="addEl('gain')">比例<span class="sub">Kp</span></div>
+      <div class="add-btn" onclick="addEl('int')">積分<span class="sub">Ki/s</span></div>
+      <div class="add-btn" onclick="addEl('diff')">微分<span class="sub">Kd·s</span></div>
+      <div class="add-btn" onclick="addEl('lag')">1次遅れ<span class="sub">K/(1+Ts)</span></div>
+      <div class="add-btn" onclick="addEl('lead')">1次進み<span class="sub">K(1+Ts)</span></div>
+      <div class="add-btn" onclick="addEl('res')">2次共振<span class="sub">K/(s²+ωn²)</span></div>
+    </div>
+    <div style="display:flex;gap:0.4rem;margin-top:0.55rem;flex-wrap:wrap;">
+      <button class="btn btn-p" onclick="preset(1)">PID</button>
+      <button class="btn btn-p" onclick="preset(2)">比例＋1次遅れ</button>
+      <button class="btn btn-p" onclick="preset(3)">打ち消し合い</button>
+      <button class="btn" onclick="clearAll()">全消去</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--orange);">要素リスト（並列結合）</div>
+    <div class="el-list" id="el-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">全体の伝達関数 G(s)</div>
+    <div class="formula" id="g-box"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">複素平面でのベクトル和</div>
+    <div class="wsl">
+      <span style="font-size:0.72rem;color:var(--text2);white-space:nowrap;">ω =</span>
+      <input type="range" id="sl-w" min="-2" max="2" step="0.02" value="0">
+      <span class="val" id="val-w">1.00</span>
+    </div>
+    <div class="vec" style="margin-top:0.5rem;">
+      <canvas id="vec-canvas" class="vec-canvas" width="200" height="200"></canvas>
+      <div class="vec-info" id="vec-info"></div>
+    </div>
+    <div class="note">各要素を複素ベクトルとして継ぎ足すと、合成ベクトル（太い矢印）になります。</div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="col">
+  <div class="card">
+    <div class="toggle-row">
+      <div class="tgl on" id="t-parts" onclick="toggle('parts')">各要素を表示</div>
+      <div class="tgl on" id="t-sum" onclick="toggle('sum')">正しい合成</div>
+      <div class="tgl" id="t-naive" onclick="toggle('naive')">誤：dBの単純加算</div>
+    </div>
+    <div class="card-label" style="color:var(--red);">ゲイン線図 [dB]</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#c2410c;"></span>合成 |G₁+G₂+…|</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#94a3b8;"></span>各要素</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#dc2626;"></span>dB単純加算（誤り）</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-mag"></canvas></div>
+    <div class="card-label" style="color:var(--text3);margin-top:0.6rem;">周波数ごとの支配要素</div>
+    <div class="dom-bar" id="dom-bar"></div>
+    <div class="dom-axis"><span>0.01</span><span>0.1</span><span>1</span><span>10</span><span>100</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">位相線図 [deg]</div>
+    <div class="chart-wrap"><canvas id="chart-pha"></canvas></div>
+    <div class="note" id="pha-note"></div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・並列では、各周波数で<strong>もっとも大きい要素が支配的</strong>になる（下の色帯で確認）<br>
+    ・<strong>PID</strong>：低域は積分（−20 dB/dec, −90°）、中域は比例（平坦, 0°）、高域は微分（+20 dB/dec, +90°）の<strong>V字型</strong><br>
+    ・支配要素が切り替わる周波数が<strong>折れ曲がり点</strong>になる。PIDでは ω=Ki/Kp と ω=Kp/Kd<br>
+    ・<strong>比例＋1次遅れ</strong>は、低域で Kp+K、高域で Kp に漸近する。PIDとは違い高域が持ち上がらない<br>
+    ・要素の位相が逆向きだと<strong>打ち消し合ってゲインが落ち込む</strong>（プリセット「打ち消し合い」）<br>
+    ・dBの単純加算（赤の破線）は並列では<strong>まったく別の曲線</strong>になる。直列と混同しないこと
+  </div>
+</div>
+
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — 並列結合のボード線図</div>
+
+<script>
+(function(){
+  const PART_COLORS=['#0891b2','#059669','#7c3aed','#ec4899','#84cc16','#f59e0b'];
+  let elements=[], uid=1;
+  let show={parts:true,sum:true,naive:false};
+
+  const DEF={
+    gain:{name:'比例',param:{K:1},range:{K:[0.01,100]}},
+    int:{name:'積分',param:{K:1},range:{K:[0.01,100]}},
+    diff:{name:'微分',param:{K:1},range:{K:[0.001,10]}},
+    lag:{name:'1次遅れ',param:{K:1,T:1},range:{K:[0.01,100],T:[0.01,50]}},
+    lead:{name:'1次進み',param:{K:1,T:0.5},range:{K:[0.01,100],T:[0.01,50]}},
+    res:{name:'2次共振',param:{K:1,wn:1},range:{K:[0.01,100],wn:[0.05,20]}}
+  };
+
+  window.addEl=function(k){elements.push({id:uid++,kind:k,on:true,param:Object.assign({},DEF[k].param)});render();};
+  window.clearAll=function(){elements=[];render();};
+  window.delEl=function(id){elements=elements.filter(function(e){return e.id!==id;});render();};
+  window.toggleEl=function(id){elements.forEach(function(e){if(e.id===id)e.on=!e.on;});render();};
+  window.setParam=function(id,key,v){elements.forEach(function(e){if(e.id===id)e.param[key]=parseFloat(v);});render();};
+  window.toggle=function(k){
+    show[k]=!show[k];
+    document.getElementById('t-'+k).className='tgl'+(show[k]?' on':'');
+    render();
+  };
+  window.preset=function(n){
+    elements=[];uid=1;
+    if(n===1){
+      elements.push({id:uid++,kind:'gain',on:true,param:{K:1}});
+      elements.push({id:uid++,kind:'int',on:true,param:{K:1}});
+      elements.push({id:uid++,kind:'diff',on:true,param:{K:1}});
+    }else if(n===2){
+      elements.push({id:uid++,kind:'gain',on:true,param:{K:0.2}});
+      elements.push({id:uid++,kind:'lag',on:true,param:{K:1,T:1}});
+    }else{
+      elements.push({id:uid++,kind:'gain',on:true,param:{K:1}});
+      elements.push({id:uid++,kind:'lag',on:true,param:{K:-1,T:1}});
+    }
+    render();
+  };
+
+  const NW=500, W=[];
+  for(let i=0;i<NW;i++){W.push(Math.pow(10,-2+i/(NW-1)*4));}
+
+  function round(v,n){
+    const s=v.toFixed(n===undefined?2:n);
+    return s.replace(/\.?0+$/,'')||'0';
+  }
+  function expr(e){
+    const p=e.param;
+    if(e.kind==='gain')return round(p.K,3);
+    if(e.kind==='int')return round(p.K,3)+'/s';
+    if(e.kind==='diff')return round(p.K,3)+'s';
+    if(e.kind==='lag')return round(p.K,3)+'/(1+'+round(p.T,3)+'s)';
+    if(e.kind==='lead')return round(p.K,3)+'(1+'+round(p.T,3)+'s)';
+    return round(p.K,3)+'/(s²+'+round(p.wn*p.wn,3)+')';
+  }
+
+  // complex value of element at w  -> {re,im}
+  function elVal(e,w){
+    const p=e.param;
+    if(e.kind==='gain')return {re:p.K,im:0};
+    if(e.kind==='int')return {re:0,im:-p.K/w};              // K/(jw) = -jK/w
+    if(e.kind==='diff')return {re:0,im:p.K*w};              // K jw
+    if(e.kind==='lag'){
+      const d=1+p.T*p.T*w*w;
+      return {re:p.K/d, im:-p.K*p.T*w/d};
+    }
+    if(e.kind==='lead')return {re:p.K, im:p.K*p.T*w};
+    const den=(p.wn*p.wn-w*w);
+    return {re:(Math.abs(den)<1e-9)?1e9:p.K/den, im:0};
+  }
+  function cAdd(a,b){return {re:a.re+b.re,im:a.im+b.im};}
+  function cAbs(a){return Math.hypot(a.re,a.im);}
+  function cArg(a){return Math.atan2(a.im,a.re)*180/Math.PI;}
+  function toDb(m){return 20*Math.log10(Math.max(m,1e-12));}
+
+  function ds(color,w,dash){return{data:[],borderColor:color,borderWidth:w,borderDash:dash||[],pointRadius:0,fill:false,tension:0};}
+  function mkChart(id,yTitle,ymin,ymax,step){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'logarithmic',min:0.01,max:100,title:{display:true,text:'ω [rad/s]',font:{size:10}},
+             ticks:{font:{family:"'JetBrains Mono'",size:9},
+               callback:function(v){const l=Math.log10(v);return (Math.abs(l-Math.round(l))<1e-9)?v.toString():'';}},
+             grid:{color:'#f0f0f0'}},
+          y:{min:ymin,max:ymax,title:{display:true,text:yTitle,font:{size:10}},
+             ticks:{stepSize:step,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chMag=mkChart('chart-mag','ゲイン [dB]',-60,60,20);
+  const chPha=mkChart('chart-pha','位相 [deg]',-180,180,45);
+
+  function drawVec(act,w){
+    const cv=document.getElementById('vec-canvas'), c=cv.getContext('2d');
+    const Wd=cv.width,Hd=cv.height;
+    c.clearRect(0,0,Wd,Hd);
+    c.fillStyle='#fafaf8';c.fillRect(0,0,Wd,Hd);
+    // compute total & scale
+    let tot={re:0,im:0};
+    const vals=act.map(function(e){const v=elVal(e,w);tot=cAdd(tot,v);return v;});
+    let mx=cAbs(tot);
+    let run={re:0,im:0};
+    vals.forEach(function(v){run=cAdd(run,v);mx=Math.max(mx,cAbs(run),cAbs(v));});
+    mx=Math.max(mx,1e-6)*1.25;
+    const cx=Wd/2, cy=Hd/2, sc=Math.min(Wd,Hd)/2/mx;
+    // axes
+    c.strokeStyle='#e5e7eb';c.lineWidth=1;
+    c.beginPath();c.moveTo(0,cy);c.lineTo(Wd,cy);c.stroke();
+    c.beginPath();c.moveTo(cx,0);c.lineTo(cx,Hd);c.stroke();
+    c.fillStyle='#94a3b8';c.font="9px 'JetBrains Mono'";
+    c.fillText('Re',Wd-18,cy-4);c.fillText('Im',cx+4,10);
+    function arrow(x0,y0,x1,y1,col,lw){
+      c.strokeStyle=col;c.lineWidth=lw;
+      c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.stroke();
+      const a=Math.atan2(y1-y0,x1-x0), h=6+lw;
+      c.fillStyle=col;
+      c.beginPath();
+      c.moveTo(x1,y1);
+      c.lineTo(x1-h*Math.cos(a-0.4),y1-h*Math.sin(a-0.4));
+      c.lineTo(x1-h*Math.cos(a+0.4),y1-h*Math.sin(a+0.4));
+      c.closePath();c.fill();
+    }
+    // chain of element vectors
+    let px=cx,py=cy;
+    vals.forEach(function(v,i){
+      const nx=px+v.re*sc, ny=py-v.im*sc;
+      arrow(px,py,nx,ny,PART_COLORS[i%PART_COLORS.length],1.8);
+      px=nx;py=ny;
+    });
+    // resultant
+    if(act.length>0) arrow(cx,cy,cx+tot.re*sc,cy-tot.im*sc,'#c2410c',3);
+    return tot;
+  }
+
+  function render(){
+    // list
+    const list=document.getElementById('el-list');
+    if(elements.length===0){
+      list.innerHTML='<div class="empty">上のボタンから要素を追加してください</div>';
+    }else{
+      list.innerHTML='';
+      elements.forEach(function(e,idx){
+        const col=PART_COLORS[idx%PART_COLORS.length];
+        const div=document.createElement('div');
+        div.className='el'+(e.on?'':' off');
+        div.style.borderLeftColor=col;
+        let html='<div class="el-top">'+
+          '<span class="el-name">'+DEF[e.kind].name+'</span>'+
+          '<span class="el-expr">'+expr(e)+'</span>'+
+          '<button class="el-btn" onclick="toggleEl('+e.id+')">'+(e.on?'◉':'○')+'</button>'+
+          '<button class="el-btn del" onclick="delEl('+e.id+')">×</button></div>';
+        const rg=DEF[e.kind].range;
+        Object.keys(rg).forEach(function(k){
+          const r=rg[k], v=e.param[k];
+          const neg=(v<0);
+          const av=Math.abs(v)||r[0];
+          const sv=Math.log10(av);
+          const label=(k==='K')?'ゲイン K':(k==='T')?'時定数 T':'ωn';
+          html+='<div class="el-param"><div class="ctrl-row">'+
+            '<span class="lbl">'+label+'</span>'+
+            '<input type="range" min="'+Math.log10(r[0])+'" max="'+Math.log10(r[1])+'" step="0.01" value="'+sv+'" '+
+            'oninput="setParam('+e.id+',\''+k+'\', '+(neg?'-':'')+'Math.pow(10,this.value))">'+
+            '<span class="val">'+round(v,3)+'</span></div></div>';
+        });
+        div.innerHTML=html;
+        list.appendChild(div);
+      });
+    }
+
+    const act=elements.filter(function(e){return e.on;});
+    document.getElementById('g-box').innerHTML= act.length
+      ? 'G(s) = '+act.map(expr).join('  +  ')
+      : 'G(s) = 0（要素なし）';
+
+    // compute curves
+    const sumMag=[],sumPha=[],naiveMag=[],naivePha=[];
+    const pMag=act.map(function(){return [];});
+    const pPha=act.map(function(){return [];});
+    const domIdx=[];
+    for(let i=0;i<W.length;i++){
+      const w=W[i];
+      let tot={re:0,im:0}, nDb=0, nPh=0;
+      let best=-1, bestM=-1;
+      act.forEach(function(e,k){
+        const v=elVal(e,w);
+        tot=cAdd(tot,v);
+        const m=cAbs(v);
+        nDb+=toDb(m); nPh+=cArg(v);
+        pMag[k].push({x:w,y:toDb(m)});
+        pPha[k].push({x:w,y:cArg(v)});
+        if(m>bestM){bestM=m;best=k;}
+      });
+      sumMag.push({x:w,y:toDb(cAbs(tot))});
+      sumPha.push({x:w,y:cArg(tot)});
+      naiveMag.push({x:w,y:nDb});
+      naivePha.push({x:w,y:nPh});
+      domIdx.push(best);
+    }
+
+    const magSets=[],phaSets=[];
+    if(show.parts){
+      act.forEach(function(e,k){
+        const col=PART_COLORS[k%PART_COLORS.length];
+        const a=ds(col,1.4,[4,3]);a.data=pMag[k];magSets.push(a);
+        const b=ds(col,1.4,[4,3]);b.data=pPha[k];phaSets.push(b);
+      });
+    }
+    if(show.naive){
+      const a=ds('#dc2626',1.8,[6,4]);a.data=naiveMag;magSets.push(a);
+      const b=ds('#dc2626',1.8,[6,4]);b.data=naivePha;phaSets.push(b);
+    }
+    if(show.sum){
+      const a=ds('#c2410c',3);a.data=sumMag;magSets.push(a);
+      const b=ds('#c2410c',3);b.data=sumPha;phaSets.push(b);
+    }
+    chMag.data.datasets=magSets;chPha.data.datasets=phaSets;
+
+    let lo=-40,hi=20;
+    sumMag.forEach(function(p){if(isFinite(p.y)){lo=Math.min(lo,p.y);hi=Math.max(hi,p.y);}});
+    if(show.naive)naiveMag.forEach(function(p){if(isFinite(p.y)){lo=Math.min(lo,p.y);hi=Math.max(hi,p.y);}});
+    chMag.options.scales.y.min=Math.max(-200,Math.floor((lo-10)/20)*20);
+    chMag.options.scales.y.max=Math.min(200,Math.ceil((hi+10)/20)*20);
+    let plo=-100,phi=100;
+    sumPha.forEach(function(p){plo=Math.min(plo,p.y);phi=Math.max(phi,p.y);});
+    if(show.naive)naivePha.forEach(function(p){plo=Math.min(plo,p.y);phi=Math.max(phi,p.y);});
+    chPha.options.scales.y.min=Math.floor((plo-20)/45)*45;
+    chPha.options.scales.y.max=Math.ceil((phi+20)/45)*45;
+    chMag.update();chPha.update();
+
+    // dominance bar
+    const bar=document.getElementById('dom-bar');
+    bar.innerHTML='';
+    if(act.length===0){bar.style.display='none';}
+    else{
+      bar.style.display='flex';
+      let start=0;
+      for(let i=1;i<=domIdx.length;i++){
+        if(i===domIdx.length||domIdx[i]!==domIdx[start]){
+          const frac=(i-start)/domIdx.length*100;
+          const k=domIdx[start];
+          const seg=document.createElement('div');
+          seg.className='dom-seg';
+          seg.style.width=frac+'%';
+          seg.style.background=PART_COLORS[k%PART_COLORS.length];
+          if(frac>10)seg.textContent=DEF[act[k].kind].name;
+          bar.appendChild(seg);
+          start=i;
+        }
+      }
+    }
+
+    // vector diagram
+    const w=Math.pow(10,parseFloat(document.getElementById('sl-w').value));
+    document.getElementById('val-w').textContent=w.toFixed(w<1?3:2);
+    const tot=drawVec(act,w);
+    const vi=document.getElementById('vec-info');
+    if(act.length){
+      let rows='';
+      act.forEach(function(e,k){
+        const v=elVal(e,w);
+        rows+='<span style="color:'+PART_COLORS[k%PART_COLORS.length]+';">■</span> '+
+          DEF[e.kind].name+': '+v.re.toFixed(2)+(v.im>=0?' + ':' − ')+Math.abs(v.im).toFixed(2)+'j<br>';
+      });
+      rows+='<span style="color:#c2410c;">■</span> <strong>合成: '+tot.re.toFixed(2)+
+        (tot.im>=0?' + ':' − ')+Math.abs(tot.im).toFixed(2)+'j</strong><br>'+
+        '　|G| = '+cAbs(tot).toFixed(3)+' ('+toDb(cAbs(tot)).toFixed(1)+' dB)<br>'+
+        '　∠G = '+cArg(tot).toFixed(1)+'°';
+      vi.innerHTML=rows;
+    }else vi.innerHTML='—';
+
+    // phase note
+    const pn=document.getElementById('pha-note');
+    pn.textContent= show.naive
+      ? '赤の破線（各要素の位相を単純に足したもの）は、正しい合成位相とまったく異なります。'
+      : '「誤：dBの単純加算」をオンにすると、直列と同じ扱いをした場合の誤りが見えます。';
+  }
+
+  document.getElementById('sl-w').addEventListener('input',render);
+  preset(1);
+})();
+</script>
+</body>
+</html>

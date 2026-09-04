@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ゼロ入力応答とゼロ状態応答</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#14532d,#15803d,#4ade80);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.9;max-width:740px;margin:0 auto;}
+.main{max-width:1150px;margin:0 auto;padding:1rem;}
+.layout{display:grid;grid-template-columns:370px 1fr;gap:1rem;}
+@media(max-width:900px){.layout{grid-template-columns:1fr;}}
+.col{display:flex;flex-direction:column;gap:0.7rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.ctrl-group{margin-bottom:0.5rem;}
+.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.74rem;font-weight:600;color:var(--text2);margin-bottom:0.1rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.83rem;padding:0.1em 0.5em;border-radius:4px;min-width:4.2em;text-align:center;}
+.v-sys{color:var(--blue);background:#eef2ff;}
+.v-ic{color:var(--purple);background:#f3eeff;}
+.v-in{color:var(--orange);background:#fff7ed;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--blue);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--blue);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input.ic::-webkit-slider-thumb,input.ic::-moz-range-thumb{background:var(--purple);}
+input.inp::-webkit-slider-thumb,input.inp::-moz-range-thumb{background:var(--orange);}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;}
+.opt{padding:0.45em 0.4em;border:2px solid var(--border);border-radius:9px;background:var(--card);cursor:pointer;text-align:center;font-size:0.74rem;font-weight:700;color:var(--text2);transition:all 0.15s;line-height:1.4;}
+.opt.active{border-color:var(--orange);background:#fff7ed;color:#c2410c;}
+.opt:hover{border-color:var(--orange);}
+.opt .sub{display:block;font-weight:400;font-size:0.65rem;color:var(--text3);margin-top:0.1rem;font-family:'JetBrains Mono',monospace;}
+.formula{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.5rem 0.75rem;line-height:1.9;color:var(--text);font-size:0.79rem;}
+.frac{display:inline-flex;flex-direction:column;align-items:stretch;vertical-align:middle;margin:0 0.3em;}
+.frac .num{border-bottom:1.6px solid var(--text2);padding:0 0.6em 0.1em;line-height:1.4;text-align:center;white-space:nowrap;}
+.frac .den{padding:0.1em 0.6em 0;line-height:1.4;text-align:center;white-space:nowrap;}
+.chart-wrap{position:relative;height:150px;}
+.chart-wrap.big{height:205px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:0.25rem;font-size:0.71rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.25rem;}
+.sw{width:15px;height:3px;border-radius:2px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.eqbar{display:flex;align-items:center;justify-content:center;gap:0.6rem;flex-wrap:wrap;font-weight:700;font-size:0.84rem;padding:0.5rem;background:#f0fdf4;border:1px solid #86efac;border-radius:var(--r);color:#14532d;margin-top:0.3rem;}
+.eqbar .b{padding:0.15em 0.6em;border-radius:6px;font-size:0.78rem;}
+.eqbar .b1{background:#f3eeff;color:#5b21b6;}
+.eqbar .b2{background:#fff7ed;color:#c2410c;}
+.eqbar .b3{background:#dbeafe;color:#1d4ed8;}
+.info-table{width:100%;border-collapse:collapse;font-size:0.75rem;margin-top:0.3rem;}
+.info-table th,.info-table td{padding:0.28rem 0.4rem;border-bottom:1px solid var(--border);text-align:left;}
+.info-table th{font-size:0.65rem;color:var(--text3);font-weight:700;}
+.info-table td.num{font-family:'JetBrains Mono',monospace;font-weight:600;text-align:right;}
+.insight{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:var(--r);padding:0.6rem 0.9rem;font-size:0.79rem;line-height:1.75;color:#14532d;}
+.insight strong{color:#166534;}
+.note{font-size:0.71rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+.preset-row{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.5rem;}
+.btn{padding:0.4em 0.85em;border:none;border-radius:7px;font-weight:700;font-size:0.73rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:var(--green);color:#fff;}
+.check-line{font-family:'JetBrains Mono',monospace;font-size:0.73rem;color:var(--green);margin-top:0.3rem;font-weight:700;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>ゼロ入力応答とゼロ状態応答</h1>
+  <p>線形システムの応答は、初期値だけによる応答と入力だけによる応答の和に分解できる</p>
+</div>
+<div class="main">
+<div class="layout">
+
+<!-- LEFT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">システム</div>
+    <div class="formula">
+      ÿ + a·ẏ + b·y = b·u<br>
+      G(s) = <span class="frac"><span class="num">b</span><span class="den">s² + a s + b</span></span>
+      　（G(0)=1）
+    </div>
+    <div class="ctrl-group" style="margin-top:0.5rem;">
+      <div class="ctrl-label" style="color:var(--blue);">a（減衰に関わる係数）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-a" min="0.1" max="6" step="0.05" value="1.0">
+        <span class="ctrl-val v-sys" id="val-a">1.00</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--blue);">b（固有振動数の2乗）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-b" min="0.2" max="16" step="0.1" value="4.0">
+        <span class="ctrl-val v-sys" id="val-b">4.0</span>
+      </div>
+    </div>
+    <div class="note" id="sys-note"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">① 初期値 x(0)</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--purple);">y(0)（初期の位置）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-y0" class="ic" min="-2" max="2" step="0.05" value="1.5">
+        <span class="ctrl-val v-ic" id="val-y0">1.50</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--purple);">ẏ(0)（初期の速度）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-v0" class="ic" min="-3" max="3" step="0.05" value="-0.5">
+        <span class="ctrl-val v-ic" id="val-v0">-0.50</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--orange);">② 入力 u(t)</div>
+    <div class="opt-grid">
+      <div class="opt active" id="u-step" onclick="setU('step')">ステップ<span class="sub">A</span></div>
+      <div class="opt" id="u-ramp" onclick="setU('ramp')">ランプ<span class="sub">A·t/5</span></div>
+      <div class="opt" id="u-sine" onclick="setU('sine')">正弦波<span class="sub">A sin(ωt)</span></div>
+      <div class="opt" id="u-zero" onclick="setU('zero')">入力なし<span class="sub">0</span></div>
+    </div>
+    <div class="ctrl-group" style="margin-top:0.5rem;">
+      <div class="ctrl-label" style="color:var(--orange);">振幅 A</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-A" class="inp" min="-2" max="2" step="0.05" value="1.0">
+        <span class="ctrl-val v-in" id="val-A">1.00</span>
+      </div>
+    </div>
+    <div class="ctrl-group" id="w-group" style="display:none;">
+      <div class="ctrl-label" style="color:var(--orange);">角周波数 ω</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-w" class="inp" min="0.2" max="5" step="0.05" value="1.5">
+        <span class="ctrl-val v-in" id="val-w">1.50</span>
+      </div>
+    </div>
+    <div class="preset-row">
+      <button class="btn btn-p" id="b-both">初期値も入力もあり</button>
+      <button class="btn btn-p" id="b-ic">初期値のみ</button>
+      <button class="btn btn-p" id="b-in">入力のみ</button>
+      <button class="btn" id="b-reset">リセット</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--green);">重ね合わせの確認</div>
+    <table class="info-table">
+      <tr><th>時刻 t</th><th style="text-align:right;">ゼロ入力</th><th style="text-align:right;">ゼロ状態</th><th style="text-align:right;">和</th><th style="text-align:right;">全応答</th></tr>
+      <tbody id="chk-body"></tbody>
+    </table>
+    <div class="check-line" id="chk-line"></div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--orange);">入力 u(t)</div>
+    <div class="chart-wrap" style="height:110px;"><canvas id="chart-u"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">① ゼロ入力応答　y<sub>zi</sub>(t)</div>
+    <div class="note" style="margin:0 0 0.3rem;">初期値 x(0) のみによる応答（u ≡ 0 とした場合）</div>
+    <div class="chart-wrap"><canvas id="chart-zi"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--orange);">② ゼロ状態応答　y<sub>zs</sub>(t)</div>
+    <div class="note" style="margin:0 0 0.3rem;">入力 u(t) のみによる応答（x(0) = 0 とした場合）</div>
+    <div class="chart-wrap"><canvas id="chart-zs"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="eqbar">
+      <span class="b b1">① ゼロ入力応答</span> ＋ <span class="b b2">② ゼロ状態応答</span> ＝ <span class="b b3">全応答</span>
+    </div>
+    <div class="legend-row" style="margin-top:0.5rem;">
+      <span class="legend-item"><span class="sw dash" style="border-color:#7c3aed;"></span>① ゼロ入力</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#ea580c;"></span>② ゼロ状態</span>
+      <span class="legend-item"><span class="sw" style="background:#2563eb;"></span>全応答（①+②）</span>
+    </div>
+    <div class="chart-wrap big"><canvas id="chart-sum"></canvas></div>
+    <div class="note">青の実線は、微分方程式を初期値・入力の両方込みで直接解いた結果です。破線2本の和とぴったり重なります。</div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・線形システムでは <strong>y(t) = y<sub>zi</sub>(t) + y<sub>zs</sub>(t)</strong> が常に成り立つ（重ね合わせの原理）<br>
+    ・<strong>ゼロ入力応答</strong>：初期値だけで決まる。安定なら時間とともに 0 へ減衰する<br>
+    ・<strong>ゼロ状態応答</strong>：入力だけで決まる。<strong>伝達関数が表すのはこちら</strong>（初期値ゼロが前提）<br>
+    ・したがって伝達関数モデルは、初期値の影響を含んでいない点に注意が必要<br>
+    ・定常状態では、ゼロ入力応答が消えるため<strong>全応答はゼロ状態応答に一致</strong>する<br>
+    ・「入力なし」を選ぶと全応答＝ゼロ入力応答になり、初期値の影響だけが残ることが確認できる
+  </div>
+</div>
+
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — ゼロ入力応答とゼロ状態応答</div>
+
+<script>
+(function(){
+  const slA=document.getElementById('sl-a'),slB=document.getElementById('sl-b');
+  const slY0=document.getElementById('sl-y0'),slV0=document.getElementById('sl-v0');
+  const slAmp=document.getElementById('sl-A'),slW=document.getElementById('sl-w');
+  let uType='step';
+
+  function nf(v,n){
+    n=(n===undefined)?2:n;
+    const x=(typeof v==='number')?v:parseFloat(v);
+    return (v===null||v===undefined||!isFinite(x))?'—':x.toFixed(n);
+  }
+
+  window.setU=function(t){
+    uType=t;
+    ['step','ramp','sine','zero'].forEach(function(k){
+      document.getElementById('u-'+k).className='opt'+(k===t?' active':'');
+    });
+    document.getElementById('w-group').style.display=(t==='sine')?'block':'none';
+    render();
+  };
+
+  function vals(){
+    return {a:parseFloat(slA.value),b:parseFloat(slB.value),
+            y0:parseFloat(slY0.value),v0:parseFloat(slV0.value),
+            A:parseFloat(slAmp.value),w:parseFloat(slW.value)};
+  }
+  function uAt(t,V){
+    if(uType==='zero')return 0;
+    if(uType==='step')return V.A;
+    if(uType==='ramp')return V.A*t/5;
+    return V.A*Math.sin(V.w*t);
+  }
+
+  const TMAX=12, DT=0.0005, NPLOT=700;
+  function simulate(V,y0,v0,useInput){
+    let y=y0,yp=v0;
+    const n=Math.round(TMAX/DT);
+    const out=new Float64Array(NPLOT+1);
+    const every=n/NPLOT;
+    let k=0,next=0;
+    for(let i=0;i<=n;i++){
+      const t=i*DT;
+      if(i>=next&&k<=NPLOT){out[k]=y;k++;next=k*every;}
+      const u=useInput?uAt(t,V):0;
+      const ypp=-V.a*yp-V.b*y+V.b*u;
+      yp+=DT*ypp; y+=DT*yp;
+      if(!isFinite(y))break;
+    }
+    while(k<=NPLOT){out[k]=y;k++;}
+    return out;
+  }
+
+  function ds(color,w,dash){return{data:[],borderColor:color,borderWidth:w,borderDash:dash||[],pointRadius:0,fill:false,tension:0.06};}
+  function mkChart(id,yTitle){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',min:0,max:TMAX,title:{display:true,text:'t [s]',font:{size:9}},
+             ticks:{stepSize:2,font:{family:"'JetBrains Mono'",size:8}},grid:{color:'#f0f0f0'}},
+          y:{title:{display:true,text:yTitle,font:{size:9}},ticks:{font:{family:"'JetBrains Mono'",size:8}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chU=mkChart('chart-u','u(t)');
+  const chZi=mkChart('chart-zi','y_zi');
+  const chZs=mkChart('chart-zs','y_zs');
+  const chSum=mkChart('chart-sum','y(t)');
+
+  function setRange(ch,arrs,pad){
+    let lo=1e9,hi=-1e9;
+    arrs.forEach(function(a){a.forEach(function(p){if(isFinite(p.y)){lo=Math.min(lo,p.y);hi=Math.max(hi,p.y);}});});
+    if(!isFinite(lo)){lo=-1;hi=1;}
+    const m=Math.max(0.2,(hi-lo)*(pad||0.15));
+    ch.options.scales.y.min=lo-m; ch.options.scales.y.max=hi+m;
+  }
+
+  function render(){
+    const V=vals();
+    document.getElementById('val-a').textContent=nf(V.a,2);
+    document.getElementById('val-b').textContent=nf(V.b,1);
+    document.getElementById('val-y0').textContent=nf(V.y0,2);
+    document.getElementById('val-v0').textContent=nf(V.v0,2);
+    document.getElementById('val-A').textContent=nf(V.A,2);
+    document.getElementById('val-w').textContent=nf(V.w,2);
+
+    const wn=Math.sqrt(V.b), z=V.a/(2*wn);
+    document.getElementById('sys-note').textContent=
+      'ωn = '+nf(wn,2)+' rad/s, ζ = '+nf(z,3)+'　'+(z<1?'（振動的）':(Math.abs(z-1)<0.02?'（臨界減衰）':'（過減衰）'));
+
+    const zi=simulate(V,V.y0,V.v0,false);
+    const zs=simulate(V,0,0,true);
+    const full=simulate(V,V.y0,V.v0,true);
+
+    const dZi=[],dZs=[],dFull=[],dSum=[],dU=[],dZero=[];
+    let maxErr=0;
+    for(let k=0;k<=NPLOT;k++){
+      const t=k/NPLOT*TMAX;
+      dZi.push({x:t,y:zi[k]});
+      dZs.push({x:t,y:zs[k]});
+      dFull.push({x:t,y:full[k]});
+      dSum.push({x:t,y:zi[k]+zs[k]});
+      dU.push({x:t,y:uAt(t,V)});
+      dZero.push({x:t,y:0});
+      maxErr=Math.max(maxErr,Math.abs(zi[k]+zs[k]-full[k]));
+    }
+
+    // input chart
+    const u0=ds('#ea580c',2.2);u0.data=dU;
+    const uz=ds('#cbd5e1',1.2,[4,3]);uz.data=dZero;
+    chU.data.datasets=[u0,uz];setRange(chU,[dU],0.2);chU.update();
+
+    // zero-input
+    const a0=ds('#7c3aed',2.4);a0.data=dZi;
+    const az=ds('#cbd5e1',1.2,[4,3]);az.data=dZero;
+    chZi.data.datasets=[a0,az];setRange(chZi,[dZi]);chZi.update();
+
+    // zero-state
+    const b0=ds('#ea580c',2.4);b0.data=dZs;
+    const bz=ds('#cbd5e1',1.2,[4,3]);bz.data=dZero;
+    chZs.data.datasets=[b0,bz];setRange(chZs,[dZs]);chZs.update();
+
+    // sum
+    const c1=ds('#7c3aed',1.6,[6,4]);c1.data=dZi;
+    const c2=ds('#ea580c',1.6,[6,4]);c2.data=dZs;
+    const c3=ds('#2563eb',2.8);c3.data=dFull;
+    chSum.data.datasets=[c1,c2,c3];
+    setRange(chSum,[dZi,dZs,dFull]);chSum.update();
+
+    // table
+    const tb=document.getElementById('chk-body');
+    let html='';
+    [0,1,3,8].forEach(function(tt){
+      const k=Math.round(tt/TMAX*NPLOT);
+      html+='<tr><td>'+tt+' s</td><td class="num">'+nf(zi[k],3)+'</td><td class="num">'+nf(zs[k],3)+
+        '</td><td class="num">'+nf(zi[k]+zs[k],3)+'</td><td class="num">'+nf(full[k],3)+'</td></tr>';
+    });
+    tb.innerHTML=html;
+    document.getElementById('chk-line').textContent=
+      '最大誤差 |①+②−全| = '+maxErr.toExponential(2)+'　→　重ね合わせが成立';
+  }
+
+  [slA,slB,slY0,slV0,slAmp,slW].forEach(function(s){s.addEventListener('input',render);});
+  document.getElementById('b-both').addEventListener('click',function(){
+    slY0.value=1.5;slV0.value=-0.5;slAmp.value=1.0;setU('step');});
+  document.getElementById('b-ic').addEventListener('click',function(){
+    slY0.value=1.5;slV0.value=-0.5;setU('zero');});
+  document.getElementById('b-in').addEventListener('click',function(){
+    slY0.value=0;slV0.value=0;slAmp.value=1.0;setU('step');});
+  document.getElementById('b-reset').addEventListener('click',function(){
+    slA.value=1.0;slB.value=4.0;slY0.value=1.5;slV0.value=-0.5;slAmp.value=1.0;slW.value=1.5;setU('step');});
+
+  render();
+})();
+</script>
+</body>
+</html>

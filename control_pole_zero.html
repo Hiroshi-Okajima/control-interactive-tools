@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>極と零点の効果</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#1e1b4b,#4338ca,#818cf8);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.88;max-width:740px;margin:0 auto;}
+.main{max-width:1150px;margin:0 auto;padding:1rem;}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:900px){.layout{grid-template-columns:1fr;}}
+.col{display:flex;flex-direction:column;gap:0.7rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.ctrl-group{margin-bottom:0.5rem;}
+.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.74rem;font-weight:600;color:var(--text2);margin-bottom:0.1rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.83rem;padding:0.1em 0.5em;border-radius:4px;min-width:4.4em;text-align:center;}
+.v-z{color:var(--orange);background:#fff7ed;}
+.v-p{color:var(--blue);background:#eef2ff;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--blue);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--blue);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input.sz::-webkit-slider-thumb,input.sz::-moz-range-thumb{background:var(--orange);}
+.canvas-wrap{position:relative;background:#fafaf8;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+canvas#splane{display:block;width:100%;cursor:crosshair;}
+.badge{display:inline-block;font-size:0.68rem;font-weight:700;padding:0.2em 0.8em;border-radius:20px;}
+.badge.min{background:#dcfce7;color:#166534;}
+.badge.nonmin{background:#fee2e2;color:#991b1b;}
+.badge.nozero{background:#e0e7ff;color:#3730a3;}
+.verdict{border-radius:var(--r);padding:0.55rem 0.85rem;font-size:0.81rem;font-weight:700;margin-top:0.5rem;line-height:1.65;}
+.verdict.ok{background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;}
+.verdict.warn{background:#fffbeb;color:#92400e;border:1px solid #fcd34d;}
+.verdict.ng{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;}
+.info-table{width:100%;border-collapse:collapse;font-size:0.76rem;margin-top:0.3rem;}
+.info-table th,.info-table td{padding:0.28rem 0.4rem;border-bottom:1px solid var(--border);text-align:left;}
+.info-table th{font-size:0.66rem;color:var(--text3);font-weight:700;}
+.info-table td.num{font-family:'JetBrains Mono',monospace;font-weight:600;text-align:right;}
+.chart-wrap{position:relative;height:190px;}
+.chart-wrap.sm{height:135px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:0.25rem;font-size:0.71rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.25rem;}
+.sw{width:15px;height:3px;border-radius:2px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.formula{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.5rem 0.75rem;line-height:1.85;color:var(--text);font-size:0.8rem;}
+.frac{display:inline-flex;flex-direction:column;align-items:stretch;vertical-align:middle;margin:0 0.3em;}
+.frac .num{border-bottom:1.6px solid var(--text2);padding:0 0.6em 0.1em;line-height:1.4;text-align:center;white-space:nowrap;}
+.frac .den{padding:0.1em 0.6em 0;line-height:1.4;text-align:center;white-space:nowrap;}
+.preset-row{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.5rem;}
+.btn{padding:0.4em 0.85em;border:none;border-radius:7px;font-weight:700;font-size:0.73rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:var(--blue);color:#fff;}
+.insight{background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1px solid #a5b4fc;border-radius:var(--r);padding:0.6rem 0.9rem;font-size:0.79rem;line-height:1.75;color:#312e81;}
+.insight strong{color:#3730a3;}
+.note{font-size:0.71rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+.tgl{padding:0.3em 0.75em;border:2px solid var(--border);border-radius:20px;background:var(--card);cursor:pointer;font-size:0.71rem;font-weight:700;color:var(--text2);}
+.tgl.on{border-color:var(--blue);background:#eff6ff;color:#1d4ed8;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>極と零点の効果</h1>
+  <p>極は応答の「形」を、零点は応答の「立ち上がり方」を決める。特に右半平面の零点は逆応答を生む</p>
+</div>
+<div class="main">
+<div class="layout">
+
+<!-- LEFT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">s平面（クリック／ドラッグで零点を移動）</div>
+    <div class="canvas-wrap"><canvas id="splane"></canvas></div>
+    <div class="legend-row" style="margin-top:0.35rem;">
+      <span class="legend-item"><span style="color:#2563eb;font-weight:700;">×</span> 極</span>
+      <span class="legend-item"><span style="color:#ea580c;font-weight:700;">○</span> 零点</span>
+      <span class="legend-item"><span class="sw" style="background:rgba(220,38,38,0.10);height:10px;"></span>右半平面（不安定領域）</span>
+    </div>
+    <div class="note">オレンジの○をドラッグすると零点が動きます（実軸上のみ）。</div>
+    <div class="verdict" id="verdict"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">伝達関数 G(s)</div>
+    <div class="formula" id="g-box"></div>
+    <div class="note">直流ゲインが常に 1 になるよう正規化しています（G(0)=1）。</div>
+    <div class="ctrl-group" style="margin-top:0.5rem;">
+      <div class="ctrl-label" style="color:var(--orange);">零点の位置 z</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-z" class="sz" min="-8" max="8" step="0.05" value="-5">
+        <span class="ctrl-val v-z" id="val-z">-5.00</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--blue);">極1 の位置 p₁</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-p1" min="-6" max="-0.2" step="0.05" value="-1">
+        <span class="ctrl-val v-p" id="val-p1">-1.00</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--blue);">極2 の位置 p₂</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-p2" min="-6" max="-0.2" step="0.05" value="-2">
+        <span class="ctrl-val v-p" id="val-p2">-2.00</span>
+      </div>
+    </div>
+    <div class="preset-row">
+      <button class="btn btn-p" id="b-far">零点が遠い</button>
+      <button class="btn btn-p" id="b-near">零点が極に近い</button>
+      <button class="btn btn-p" id="b-rhp">右半平面零点</button>
+      <button class="btn" id="b-reset">リセット</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">最小位相系との比較</div>
+    <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+      <div class="tgl" id="t-mirror" onclick="toggleMirror()">鏡像の零点と比較</div>
+      <span class="note" style="margin:0;">零点を実軸に対し符号反転（z → −z）した系と重ねます</span>
+    </div>
+    <div class="note" style="margin-top:0.35rem;">ゲイン特性は<strong>まったく同じ</strong>で、位相と時間応答だけが変わることを確認できます。</div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">ステップ応答</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#2563eb;"></span>y(t)</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#94a3b8;"></span>目標値 1</span>
+      <span class="legend-item" id="lg-mirror" style="display:none;"><span class="sw dash" style="border-color:#059669;"></span>鏡像零点の系</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-step"></canvas></div>
+    <div class="note" id="step-note"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">応答の特性値</div>
+    <table class="info-table">
+      <tr><th>項目</th><th style="text-align:right;">値</th></tr>
+      <tr><td>零点の種類</td><td class="num" id="r-kind">—</td></tr>
+      <tr><td>初期の傾き dy/dt(0⁺)</td><td class="num" id="r-slope">—</td></tr>
+      <tr><td>最小値（アンダーシュート）</td><td class="num" id="r-under">—</td></tr>
+      <tr><td>最大値（オーバーシュート）</td><td class="num" id="r-over">—</td></tr>
+      <tr><td>整定時間 T<sub>s</sub>（±2%）</td><td class="num" id="r-ts">—</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">ゲイン線図と位相線図</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#2563eb;"></span>|G| [dB]</span>
+      <span class="legend-item" id="lg-mag2" style="display:none;"><span class="sw dash" style="border-color:#059669;"></span>鏡像零点</span>
+    </div>
+    <div class="chart-wrap sm"><canvas id="chart-mag"></canvas></div>
+    <div class="legend-row" style="margin-top:0.4rem;">
+      <span class="legend-item"><span class="sw" style="background:#7c3aed;"></span>∠G [deg]</span>
+      <span class="legend-item" id="lg-pha2" style="display:none;"><span class="sw dash" style="border-color:#059669;"></span>鏡像零点</span>
+    </div>
+    <div class="chart-wrap sm"><canvas id="chart-pha"></canvas></div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・<strong>極</strong>は応答の減衰の速さ・振動の有無という「形」を決める<br>
+    ・<strong>零点</strong>は各モードの重み（留数）を変え、立ち上がり方を変える<br>
+    ・零点が<strong>極から遠い</strong>ほど影響は小さく、応答は極だけで決まるものに近づく<br>
+    ・零点が<strong>左半平面で極に近い</strong>と、オーバーシュートが大きくなる<br>
+    ・零点が<strong>右半平面（z &gt; 0）</strong>にあると、いったん逆方向に動く<strong>逆応答</strong>が現れる（非最小位相系）<br>
+    ・非最小位相系は、<strong>ゲイン特性が同じでも位相が大きく遅れる</strong>ため制御が難しく、達成できる帯域が制限される<br>
+    ・倒立振子や船の舵、ボイラーの水位などが非最小位相系の実例
+  </div>
+</div>
+
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — 極と零点の効果</div>
+
+<script>
+(function(){
+  const cv=document.getElementById('splane'), ctx=cv.getContext('2d');
+  const slZ=document.getElementById('sl-z'),slP1=document.getElementById('sl-p1'),slP2=document.getElementById('sl-p2');
+  let showMirror=false;
+
+  function nf(v,n){
+    n=(n===undefined)?2:n;
+    const x=(typeof v==='number')?v:parseFloat(v);
+    return (v===null||v===undefined||!isFinite(x))?'—':x.toFixed(n);
+  }
+
+  window.toggleMirror=function(){
+    showMirror=!showMirror;
+    document.getElementById('t-mirror').className='tgl'+(showMirror?' on':'');
+    ['lg-mirror','lg-mag2','lg-pha2'].forEach(function(id){
+      document.getElementById(id).style.display=showMirror?'flex':'none';
+    });
+    render();
+  };
+
+  function vals(){
+    return {z:parseFloat(slZ.value),p1:parseFloat(slP1.value),p2:parseFloat(slP2.value)};
+  }
+
+  const XMIN=-9,XMAX=9,YMIN=-4,YMAX=4;
+  function resize(){
+    const r=cv.parentElement.getBoundingClientRect();
+    cv.width=r.width; cv.height=Math.round(r.width*0.44);
+  }
+  resize(); window.addEventListener('resize',function(){resize();render();});
+  function toPx(x,y){return [(x-XMIN)/(XMAX-XMIN)*cv.width,(YMAX-y)/(YMAX-YMIN)*cv.height];}
+  function toS(px){return XMIN+px/cv.width*(XMAX-XMIN);}
+
+  // Step response of G(s)=K(s-z)/((s-p1)(s-p2)), G(0)=1
+  // y(t)=1 + A1 e^{p1 t} + A2 e^{p2 t}
+  function stepCoef(z,p1,p2){
+    if(Math.abs(z)<1e-6) return null;
+    const K=(p1*p2)/(-z);
+    const A1=K*(p1-z)/(p1*(p1-p2));
+    const A2=K*(p2-z)/(p2*(p2-p1));
+    return {K:K,A1:A1,A2:A2};
+  }
+  function stepAt(t,c,p1,p2){
+    return 1+c.A1*Math.exp(p1*t)+c.A2*Math.exp(p2*t);
+  }
+
+  function freqResp(w,z,p1,p2){
+    const K=(p1*p2)/(-z);
+    // numerator K(jw - z)
+    const nr=K*(-z), ni=K*w;
+    // denominator (jw-p1)(jw-p2)
+    const ar=-p1, ai=w, br=-p2, bi=w;
+    const dr=ar*br-ai*bi, di=ar*bi+ai*br;
+    const d=dr*dr+di*di;
+    return {re:(nr*dr+ni*di)/d, im:(ni*dr-nr*di)/d};
+  }
+
+  function drawPlane(V){
+    const W=cv.width,H=cv.height;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#fafaf8';ctx.fillRect(0,0,W,H);
+    const o=toPx(0,0);
+    // RHP tint
+    ctx.fillStyle='rgba(220,38,38,0.10)';
+    ctx.fillRect(o[0],0,W-o[0],H);
+    // grid
+    ctx.strokeStyle='#e5e7eb';ctx.lineWidth=1;
+    for(let x=XMIN;x<=XMAX;x++){const q=toPx(x,0);ctx.beginPath();ctx.moveTo(q[0],0);ctx.lineTo(q[0],H);ctx.stroke();}
+    for(let y=YMIN;y<=YMAX;y++){const q=toPx(0,y);ctx.beginPath();ctx.moveTo(0,q[1]);ctx.lineTo(W,q[1]);ctx.stroke();}
+    // axes
+    ctx.strokeStyle='#334155';ctx.lineWidth=1.8;
+    ctx.beginPath();ctx.moveTo(0,o[1]);ctx.lineTo(W,o[1]);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(o[0],0);ctx.lineTo(o[0],H);ctx.stroke();
+    ctx.fillStyle='#64748b';ctx.font="10px 'JetBrains Mono'";ctx.textAlign='center';
+    for(let x=XMIN;x<=XMAX;x+=2){if(x===0)continue;const q=toPx(x,0);ctx.fillText(x,q[0],o[1]+13);}
+    ctx.fillStyle='#991b1b';ctx.font="10px 'Noto Sans JP'";ctx.textAlign='left';
+    ctx.fillText('右半平面',o[0]+6,14);
+    ctx.fillStyle='#475569';ctx.textAlign='left';
+    ctx.fillText('Re',W-24,o[1]-6);
+
+    // poles ×
+    [V.p1,V.p2].forEach(function(p){
+      const q=toPx(p,0);
+      ctx.strokeStyle='#2563eb';ctx.lineWidth=3;
+      const r=8;
+      ctx.beginPath();ctx.moveTo(q[0]-r,q[1]-r);ctx.lineTo(q[0]+r,q[1]+r);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(q[0]-r,q[1]+r);ctx.lineTo(q[0]+r,q[1]-r);ctx.stroke();
+    });
+    // zero ○
+    const qz=toPx(V.z,0);
+    ctx.strokeStyle=(V.z>0)?'#dc2626':'#ea580c';ctx.lineWidth=3;
+    ctx.beginPath();ctx.arc(qz[0],qz[1],9,0,2*Math.PI);ctx.stroke();
+    // mirror zero
+    if(showMirror){
+      const qm=toPx(-V.z,0);
+      ctx.strokeStyle='rgba(5,150,105,0.75)';ctx.lineWidth=2.2;ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.arc(qm[0],qm[1],9,0,2*Math.PI);ctx.stroke();ctx.setLineDash([]);
+    }
+  }
+
+  function ds(color,w,dash){return{data:[],borderColor:color,borderWidth:w,borderDash:dash||[],pointRadius:0,fill:false,tension:0.08};}
+  function mkChart(id,yTitle,logX){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x: logX
+            ? {type:'logarithmic',min:0.01,max:100,title:{display:true,text:'ω [rad/s]',font:{size:9}},
+               ticks:{font:{family:"'JetBrains Mono'",size:8},
+                 callback:function(v){const l=Math.log10(v);return (Math.abs(l-Math.round(l))<1e-9)?v.toString():'';}},
+               grid:{color:'#f0f0f0'}}
+            : {type:'linear',min:0,max:10,title:{display:true,text:'t [s]',font:{size:9}},
+               ticks:{stepSize:1,font:{family:"'JetBrains Mono'",size:8}},grid:{color:'#f0f0f0'}},
+          y:{title:{display:true,text:yTitle,font:{size:9}},ticks:{font:{family:"'JetBrains Mono'",size:8}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chStep=mkChart('chart-step','y(t)',false);
+  const chMag=mkChart('chart-mag','|G| [dB]',true);
+  const chPha=mkChart('chart-pha','∠G [deg]',true);
+
+  function render(){
+    const V=vals();
+    document.getElementById('val-z').textContent=nf(V.z,2);
+    document.getElementById('val-p1').textContent=nf(V.p1,2);
+    document.getElementById('val-p2').textContent=nf(V.p2,2);
+
+    // avoid identical poles (numerical)
+    if(Math.abs(V.p1-V.p2)<1e-3){V.p2=V.p1-1e-3;}
+
+    // formula
+    const zs=(V.z<0)?('s + '+nf(-V.z,2)):('s − '+nf(V.z,2));
+    const p1s=('s + '+nf(-V.p1,2)), p2s=('s + '+nf(-V.p2,2));
+    const K=(V.p1*V.p2)/(-V.z);
+    document.getElementById('g-box').innerHTML=
+      'G(s) = '+nf(K,3)+' · <span class="frac"><span class="num">'+zs+'</span>'+
+      '<span class="den">('+p1s+')('+p2s+')</span></span>';
+
+    const c=stepCoef(V.z,V.p1,V.p2);
+    const cm=stepCoef(-V.z,V.p1,V.p2);
+
+    // step data
+    const N=800,TMAX=10;
+    const yd=[],ref=[],ym=[];
+    let mn=1e9,mx=-1e9,tsettle=null;
+    for(let i=0;i<=N;i++){
+      const t=i/N*TMAX;
+      const y=c?stepAt(t,c,V.p1,V.p2):1;
+      yd.push({x:t,y:y}); ref.push({x:t,y:1});
+      if(cm)ym.push({x:t,y:stepAt(t,cm,V.p1,V.p2)});
+      mn=Math.min(mn,y);mx=Math.max(mx,y);
+    }
+    // settling time (last time outside ±2%)
+    for(let i=N;i>=0;i--){
+      if(Math.abs(yd[i].y-1)>0.02){tsettle=yd[i].x;break;}
+    }
+    const sets=[];
+    const d0=ds('#2563eb',2.6);d0.data=yd;sets.push(d0);
+    const d1=ds('#94a3b8',1.4,[5,4]);d1.data=ref;sets.push(d1);
+    if(showMirror&&cm){const d2=ds('#059669',2,[6,4]);d2.data=ym;sets.push(d2);}
+    chStep.data.datasets=sets;
+    let lo=Math.min(-0.2,mn-0.15), hi=Math.max(1.4,mx+0.15);
+    if(showMirror&&cm){ym.forEach(function(p){lo=Math.min(lo,p.y-0.1);hi=Math.max(hi,p.y+0.1);});}
+    chStep.options.scales.y.min=lo;chStep.options.scales.y.max=hi;
+    chStep.update();
+
+    // frequency data
+    const magD=[],phaD=[],magM=[],phaM=[];
+    let prevRaw=null,phUnw=0,prevRawM=null,phUnwM=0;
+    for(let i=0;i<400;i++){
+      const w=Math.pow(10,-2+i/399*4);
+      const G=freqResp(w,V.z,V.p1,V.p2);
+      const m=Math.hypot(G.re,G.im), raw=Math.atan2(G.im,G.re)*180/Math.PI;
+      if(prevRaw===null)phUnw=raw; else{let d=raw-prevRaw;while(d>180)d-=360;while(d<-180)d+=360;phUnw+=d;}
+      prevRaw=raw;
+      magD.push({x:w,y:20*Math.log10(m)});phaD.push({x:w,y:phUnw});
+      if(showMirror){
+        const Gm=freqResp(w,-V.z,V.p1,V.p2);
+        const mm=Math.hypot(Gm.re,Gm.im), rawm=Math.atan2(Gm.im,Gm.re)*180/Math.PI;
+        if(prevRawM===null)phUnwM=rawm; else{let d=rawm-prevRawM;while(d>180)d-=360;while(d<-180)d+=360;phUnwM+=d;}
+        prevRawM=rawm;
+        magM.push({x:w,y:20*Math.log10(mm)});phaM.push({x:w,y:phUnwM});
+      }
+    }
+    const ms=[];const a0=ds('#2563eb',2.2);a0.data=magD;ms.push(a0);
+    if(showMirror){const a1=ds('#059669',1.8,[6,4]);a1.data=magM;ms.push(a1);}
+    chMag.data.datasets=ms;chMag.update();
+    const ps=[];const b0=ds('#7c3aed',2.2);b0.data=phaD;ps.push(b0);
+    if(showMirror){const b1=ds('#059669',1.8,[6,4]);b1.data=phaM;ps.push(b1);}
+    chPha.data.datasets=ps;chPha.update();
+
+    // metrics
+    const slope0=c?(c.A1*V.p1+c.A2*V.p2):0;
+    const kindEl=document.getElementById('r-kind');
+    if(Math.abs(V.z)<0.06){kindEl.innerHTML='<span class="badge nozero">原点付近</span>';}
+    else if(V.z>0){kindEl.innerHTML='<span class="badge nonmin">右半平面（非最小位相）</span>';}
+    else{kindEl.innerHTML='<span class="badge min">左半平面（最小位相）</span>';}
+    document.getElementById('r-slope').textContent=nf(slope0,3);
+    document.getElementById('r-under').textContent=nf(mn,3);
+    document.getElementById('r-over').textContent=nf(mx,3)+'  ('+nf((mx-1)*100,1)+' %)';
+    document.getElementById('r-ts').textContent=(tsettle===null)?'—':nf(tsettle,2)+' s';
+
+    const v=document.getElementById('verdict');
+    if(V.z>0.05){
+      v.className='verdict ng';
+      v.innerHTML='非最小位相系：零点が右半平面にあるため、<strong>いったん逆方向へ動く逆応答</strong>が現れます（最小値 '+nf(mn,3)+'）。';
+    }else if(V.z>-0.05){
+      v.className='verdict warn';
+      v.innerHTML='零点が原点に近く、直流ゲインの正規化が効きにくくなっています。零点を原点から離してください。';
+    }else if(V.z>Math.min(V.p1,V.p2)*0.9){
+      v.className='verdict warn';
+      v.innerHTML='零点が極に近い位置にあります。<strong>オーバーシュートが大きく</strong>なります（最大 '+nf(mx,3)+'）。';
+    }else{
+      v.className='verdict ok';
+      v.innerHTML='零点が極から十分離れており、応答はほぼ<strong>極だけで決まる</strong>形になっています。';
+    }
+    document.getElementById('step-note').textContent=
+      (V.z>0.05)? '零点が右半平面にあると、初期の傾きが目標と逆向きになります。'
+                : '零点が左半平面なら逆応答は起きません。極に近づくほどオーバーシュートが増えます。';
+
+    drawPlane(V);
+  }
+
+  // drag zero on s-plane
+  let dragging=false;
+  function setFromEvent(e){
+    const r=cv.getBoundingClientRect();
+    const cxp=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+    const px=cxp*cv.width/r.width;
+    let x=toS(px);
+    x=Math.max(-8,Math.min(8,x));
+    if(Math.abs(x)<0.06)x=(x<0)?-0.06:0.06;
+    slZ.value=x.toFixed(2);
+    render();
+  }
+  cv.addEventListener('mousedown',function(e){dragging=true;setFromEvent(e);});
+  window.addEventListener('mousemove',function(e){if(dragging)setFromEvent(e);});
+  window.addEventListener('mouseup',function(){dragging=false;});
+  cv.addEventListener('touchstart',function(e){dragging=true;setFromEvent(e);e.preventDefault();},{passive:false});
+  cv.addEventListener('touchmove',function(e){if(dragging)setFromEvent(e);e.preventDefault();},{passive:false});
+  window.addEventListener('touchend',function(){dragging=false;});
+
+  [slZ,slP1,slP2].forEach(function(s){s.addEventListener('input',render);});
+  document.getElementById('b-far').addEventListener('click',function(){slZ.value=-7;slP1.value=-1;slP2.value=-2;render();});
+  document.getElementById('b-near').addEventListener('click',function(){slZ.value=-0.5;slP1.value=-1;slP2.value=-2;render();});
+  document.getElementById('b-rhp').addEventListener('click',function(){slZ.value=0.5;slP1.value=-1;slP2.value=-2;render();});
+  document.getElementById('b-reset').addEventListener('click',function(){slZ.value=-5;slP1.value=-1;slP2.value=-2;render();});
+
+  render();
+})();
+</script>
+</body>
+</html>
