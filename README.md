@@ -47,6 +47,12 @@
 | 12 | 部分分数分解 | 部分分数分解と逆ラプラス変換 | `control_partial_fraction.html` |
 | 13 | 閉ループ安定 | 不安定な極零相殺と応答 | `control_cancellation.html` |
 | 14 | 内部モデル原理 | 参照信号と制御器の内部モデル | `control_internal_model.html` |
+| 15 | ボード線図1 | 伝達関数の直列接続とボード線図 | `control_bode_stack.html` |
+| 16 | ボード線図2 | 伝達関数の並列接続とボード線図 | `control_bode_parallel.html` |
+| 17 | ナイキスト線図 | 参照信号と制御器の内部モデル | `control_nyquist_robust.html` |
+| 18 | 極と零点 | 極零配置と応答の関係 | `control_pole_zero.html` |
+| 19 | 応答 | 零入力応答と零状態応答 | `control_zero_input_state.html` |
+
 
 各教材への直リンク：
 
@@ -64,6 +70,11 @@
 - [部分分数分解](https://hiroshi-okajima.github.io/control-interactive-tools/control_partial_fraction.html) 
 - [閉ループ安定性](https://hiroshi-okajima.github.io/control-interactive-tools/control_cancellation.html)
 - [内部モデル原理](https://hiroshi-okajima.github.io/control-interactive-tools/control_internal_model.html)
+- [ボード線図1](https://hiroshi-okajima.github.io/control-interactive-tools/control_bode_stack.html)
+- [ボード線図2](https://hiroshi-okajima.github.io/control-interactive-tools/control_bode_parallel.html)
+- [ナイキスト線図](https://hiroshi-okajima.github.io/control-interactive-tools/control_nyquist_robust.html)
+- [極と零点](https://hiroshi-okajima.github.io/control-interactive-tools/control_pole_zero.html)
+- [零入力・零状態応答](https://hiroshi-okajima.github.io/control-interactive-tools/control_zero_input_state.html)
 
 ## GitHub Pages URL
 
