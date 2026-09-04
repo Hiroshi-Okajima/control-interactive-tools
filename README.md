@@ -7,7 +7,30 @@
 <img width="1087" height="807" alt="20260613184403" src="https://github.com/user-attachments/assets/9faa63eb-6a1c-4a6c-bc0d-87a6941f1740" />
 
 
-## 教材一覧
+## 教材一覧（教育）
+| # | 教材名 | 内容 | ファイル |
+|---|--------|------|----------|
+| 1 | 追跡パトカー | 小学生向けゲーム | `control_acc_game.html` |
+| 2 | 荷物運び | 小学生向けゲーム | `control_crane_game.html` |
+| 3 | ボール＆ビーム | 小学生向けゲーム | `control_ballbeam_game.html` |
+| 4 | タンクシステム | 小学生向けゲーム | `control_tank_game.html` |
+| 5 | 追跡パトカー2 | 小学生向けゲーム（ドライバー視点） | `control_acc_game2.html` |
+| 6 | ドローン着陸 | 正確に着陸させる | `control_drone_game.html` |
+| 7 | ブランコ共振 | 共振を利用してブランコを揺らす | `control_swing_game.html` |
+| 8 | レーンキープ制御 | 小学生向けゲーム | `control_lane_game.html` |
+
+各教材への直リンク：
+
+- [追跡パトカー（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_acc_game.html)
+- [荷物運び（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_crane_game.html)
+- [ボール＆ビーム（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_ballbeam_game.html)
+- [タンクシステム（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_tank_game.html)
+- [追跡パトカー（ドライバー視点，Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_acc_game2.html)
+- [ドローン着陸](https://hiroshi-okajima.github.io/control-interactive-tools/control_drone_game.html)
+- [ブランコ共振](https://hiroshi-okajima.github.io/control-interactive-tools/control_swing_game.html) 
+- [レーンキープ](https://hiroshi-okajima.github.io/control-interactive-tools/control_lane_game.html)
+
+## 教材一覧（学部講義）
 | # | 教材名 | 内容 | ファイル |
 |---|--------|------|----------|
 | 01 | 1次系の応答 | ステップ応答・インパルス応答 (K, T) | `control_1st_order.html` |
@@ -20,28 +43,13 @@
 | 08 | 適応クルーズ制御 | ビークルのクルーズコントロール（状態FB） | `control_acc.html` |
 | 09 | 倒立振子 | 倒立振子の目標値追従制御（状態FB） | `control_invpend.html` |
 | 10 | 部屋の温度制御 | 3つの条件の比較（目標温度18度） | `control_temperature.html` |
-| 11 | 追跡パトカー | 小学生向けゲーム | `control_acc_game.html` |
-| 12 | 荷物運び | 小学生向けゲーム | `control_crane_game.html` |
-| 13 | ボール＆ビーム | 小学生向けゲーム | `control_ballbeam_game.html` |
-| 14 | タンクシステム | 小学生向けゲーム | `control_tank_game.html` |
-| 15 | 追跡パトカー2 | 小学生向けゲーム（ドライバー視点） | `control_acc_game2.html` |
-| 16 | ドローン着陸 | 正確に着陸させる | `control_drone_game.html` |
-| 17 | ブランコ共振 | 共振を利用してブランコを揺らす | `control_swing_game.html` |
-| 18 | レーンキープ制御 | 小学生向けゲーム | `control_lane_game.html` |
-| c1 | 極と設計仕様 | S平面と応答 | `control_spec_region.html` |
-| c2 | 部分分数分解 | 部分分数分解と逆ラプラス変換 | `control_partial_fraction.html` |
-| c3 | 閉ループ安定 | 不安定な極零相殺と応答 | `control_cancellation.html` |
-| c4 | 内部モデル原理 | 参照信号と制御器の内部モデル | `control_internal_model.html` |
-
-## GitHub Pages URL
-
-以下のURLでアクセスできます：
-
-```
-https://hiroshi-okajima.github.io/control-interactive-tools/
-```
+| 11 | 極と設計仕様 | S平面と応答 | `control_spec_region.html` |
+| 12 | 部分分数分解 | 部分分数分解と逆ラプラス変換 | `control_partial_fraction.html` |
+| 13 | 閉ループ安定 | 不安定な極零相殺と応答 | `control_cancellation.html` |
+| 14 | 内部モデル原理 | 参照信号と制御器の内部モデル | `control_internal_model.html` |
 
 各教材への直リンク：
+
 - [1次系](https://hiroshi-okajima.github.io/control-interactive-tools/control_1st_order.html)
 - [2次系](https://hiroshi-okajima.github.io/control-interactive-tools/control_2nd_order.html)
 - [ボード線図](https://hiroshi-okajima.github.io/control-interactive-tools/control_bode.html)
@@ -52,18 +60,19 @@ https://hiroshi-okajima.github.io/control-interactive-tools/
 - [適応クルーズ制御](https://hiroshi-okajima.github.io/control-interactive-tools/control_acc.html)
 - [倒立振子の制御](https://hiroshi-okajima.github.io/control-interactive-tools/control_invpend.html) 
 - [部屋の温度制御](https://hiroshi-okajima.github.io/control-interactive-tools/control_temperature.html)
-- [追跡パトカー（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_acc_game.html)
-- [荷物運び（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_crane_game.html)
-- [ボール＆ビーム（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_ballbeam_game.html)
-- [タンクシステム（Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_tank_game.html)
-- [追跡パトカー（ドライバー視点，Kids）](https://hiroshi-okajima.github.io/control-interactive-tools/control_acc_game2.html)
-- [ドローン着陸](https://hiroshi-okajima.github.io/control-interactive-tools/control_drone_game.html)
-- [ブランコ共振](https://hiroshi-okajima.github.io/control-interactive-tools/control_swing_game.html) 
-- [レーンキープ](https://hiroshi-okajima.github.io/control-interactive-tools/control_lane_game.html)
 - [極と設計仕様](https://hiroshi-okajima.github.io/control-interactive-tools/control_spec_region.html)
 - [部分分数分解](https://hiroshi-okajima.github.io/control-interactive-tools/control_partial_fraction.html) 
 - [閉ループ安定性](https://hiroshi-okajima.github.io/control-interactive-tools/control_cancellation.html)
 - [内部モデル原理](https://hiroshi-okajima.github.io/control-interactive-tools/control_internal_model.html)
+
+## GitHub Pages URL
+
+以下のURLでアクセスできます：
+
+```
+https://hiroshi-okajima.github.io/control-interactive-tools/
+```
+
 
 
 
