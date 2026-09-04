@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>根軌跡</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#164e63,#0e7490,#06b6d4);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.9;max-width:740px;margin:0 auto;}
+.main{max-width:1150px;margin:0 auto;padding:1rem;}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:900px){.layout{grid-template-columns:1fr;}}
+.col{display:flex;flex-direction:column;gap:0.7rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.ctrl-group{margin-bottom:0.5rem;}
+.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.74rem;font-weight:600;color:var(--text2);margin-bottom:0.1rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.85rem;padding:0.1em 0.5em;border-radius:4px;min-width:4.6em;text-align:center;}
+.v-k{color:var(--teal);background:#f0fdfa;}
+.v-p{color:var(--blue);background:#eef2ff;}
+.v-z{color:var(--orange);background:#fff7ed;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--teal);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:var(--teal);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input.sp::-webkit-slider-thumb,input.sp::-moz-range-thumb{background:var(--blue);}
+input.sz::-webkit-slider-thumb,input.sz::-moz-range-thumb{background:var(--orange);}
+.canvas-wrap{position:relative;background:#fafaf8;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+canvas#splane{display:block;width:100%;}
+.verdict{border-radius:var(--r);padding:0.55rem 0.85rem;font-size:0.81rem;font-weight:700;margin-top:0.5rem;line-height:1.65;}
+.verdict.ok{background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;}
+.verdict.warn{background:#fffbeb;color:#92400e;border:1px solid #fcd34d;}
+.verdict.ng{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;}
+.info-table{width:100%;border-collapse:collapse;font-size:0.75rem;margin-top:0.3rem;}
+.info-table th,.info-table td{padding:0.28rem 0.4rem;border-bottom:1px solid var(--border);text-align:left;}
+.info-table th{font-size:0.65rem;color:var(--text3);font-weight:700;}
+.info-table td.num{font-family:'JetBrains Mono',monospace;font-weight:600;text-align:right;}
+.chart-wrap{position:relative;height:185px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:0.25rem;font-size:0.71rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.25rem;}
+.sw{width:15px;height:3px;border-radius:2px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.formula{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.5rem 0.75rem;line-height:1.9;color:var(--text);font-size:0.79rem;}
+.frac{display:inline-flex;flex-direction:column;align-items:stretch;vertical-align:middle;margin:0 0.3em;}
+.frac .num{border-bottom:1.6px solid var(--text2);padding:0 0.6em 0.1em;line-height:1.4;text-align:center;white-space:nowrap;}
+.frac .den{padding:0.1em 0.6em 0;line-height:1.4;text-align:center;white-space:nowrap;}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;}
+.opt{padding:0.45em 0.4em;border:2px solid var(--border);border-radius:9px;background:var(--card);cursor:pointer;text-align:center;font-size:0.73rem;font-weight:700;color:var(--text2);line-height:1.4;}
+.opt.active{border-color:var(--teal);background:#f0fdfa;color:#0f766e;}
+.opt:hover{border-color:var(--teal);}
+.opt .sub{display:block;font-weight:400;font-size:0.63rem;color:var(--text3);margin-top:0.1rem;font-family:'JetBrains Mono',monospace;}
+.tgl{padding:0.3em 0.75em;border:2px solid var(--border);border-radius:20px;background:var(--card);cursor:pointer;font-size:0.71rem;font-weight:700;color:var(--text2);}
+.tgl.on{border-color:var(--teal);background:#f0fdfa;color:#0f766e;}
+.toggle-row{display:flex;gap:0.45rem;flex-wrap:wrap;margin-bottom:0.45rem;}
+.insight{background:linear-gradient(135deg,#ecfeff,#cffafe);border:1px solid #67e8f9;border-radius:var(--r);padding:0.6rem 0.9rem;font-size:0.79rem;line-height:1.75;color:#164e63;}
+.insight strong{color:#0e7490;}
+.note{font-size:0.71rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+.btn{padding:0.4em 0.85em;border:none;border-radius:7px;font-weight:700;font-size:0.73rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:var(--teal);color:#fff;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>根軌跡</h1>
+  <p>ゲイン K を 0 から増やしていくと、閉ループ極が s 平面上をどう動くか</p>
+</div>
+<div class="main">
+<div class="layout">
+
+<!-- LEFT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--teal);">s平面と根軌跡</div>
+    <div class="toggle-row">
+      <div class="tgl on" id="t-asym" onclick="toggle('asym')">漸近線</div>
+      <div class="tgl on" id="t-break" onclick="toggle('break')">分岐点</div>
+      <div class="tgl" id="t-trace" onclick="toggle('trace')">軌跡を全て表示</div>
+    </div>
+    <div class="canvas-wrap"><canvas id="splane"></canvas></div>
+    <div class="legend-row" style="margin-top:0.35rem;">
+      <span class="legend-item"><span style="color:#2563eb;font-weight:700;">×</span> 開ループ極</span>
+      <span class="legend-item"><span style="color:#ea580c;font-weight:700;">○</span> 開ループ零点</span>
+      <span class="legend-item"><span class="sw" style="background:#0891b2;height:9px;width:9px;border-radius:50%;"></span>現在の閉ループ極</span>
+      <span class="legend-item"><span class="sw" style="background:#cbd5e1;"></span>根軌跡</span>
+    </div>
+    <div class="verdict" id="verdict"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--teal);">ゲイン K</div>
+    <div class="ctrl-row">
+      <input type="range" id="sl-k" min="-2" max="2.2" step="0.005" value="0">
+      <span class="ctrl-val v-k" id="val-k">1.00</span>
+    </div>
+    <div class="note">対数目盛りのスライダーです（0.01 〜 158）。</div>
+    <div style="display:flex;gap:0.4rem;margin-top:0.5rem;flex-wrap:wrap;">
+      <button class="btn btn-p" id="b-crit">安定限界の K へ</button>
+      <button class="btn" id="b-reset">リセット</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">一巡伝達関数 L(s) = K·N(s)/D(s)</div>
+    <div class="opt-grid">
+      <div class="opt active" id="s-1" onclick="setSys(1)">3重極<span class="sub">1/(s(s+1)(s+2))</span></div>
+      <div class="opt" id="s-2" onclick="setSys(2)">零点あり<span class="sub">(s+3)/(s(s+1)(s+2))</span></div>
+      <div class="opt" id="s-3" onclick="setSys(3)">2次系<span class="sub">1/(s(s+2))</span></div>
+      <div class="opt" id="s-4" onclick="setSys(4)">不安定極<span class="sub">1/((s−1)(s+3))</span></div>
+    </div>
+    <div class="formula" style="margin-top:0.5rem;" id="l-box"></div>
+    <table class="info-table">
+      <tr><th>項目</th><th style="text-align:right;">値</th></tr>
+      <tr><td>開ループ極</td><td class="num" id="r-poles">—</td></tr>
+      <tr><td>開ループ零点</td><td class="num" id="r-zeros">—</td></tr>
+      <tr><td>漸近線の本数 n−m</td><td class="num" id="r-nasym">—</td></tr>
+      <tr><td>漸近線の重心</td><td class="num" id="r-centroid">—</td></tr>
+      <tr><td>漸近線の角度</td><td class="num" id="r-angles">—</td></tr>
+      <tr><td>安定限界のゲイン</td><td class="num" id="r-kcrit">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">現在の閉ループ極</div>
+    <table class="info-table">
+      <tr><th>#</th><th style="text-align:right;">極</th><th style="text-align:right;">ζ</th><th style="text-align:right;">ωn</th><th style="text-align:center;">安定</th></tr>
+      <tbody id="pole-body"></tbody>
+    </table>
+    <div class="note" id="dom-note"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">閉ループ系のステップ応答</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#0891b2;"></span>y(t)</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#94a3b8;"></span>目標値 1</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-step"></canvas></div>
+    <div class="note">閉ループ伝達関数 T(s) = L/(1+L) のステップ応答です。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">最大実部の推移（K に対して）</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#7c3aed;"></span>max Re(閉ループ極)</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#dc2626;"></span>0（安定限界）</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#0891b2;"></span>現在の K</span>
+    </div>
+    <div class="chart-wrap" style="height:150px;"><canvas id="chart-re"></canvas></div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・根軌跡は <strong>1 + K·N(s)/D(s) = 0</strong> を満たす s の軌跡。K=0 で開ループ極から出発し、K→∞ で零点または無限遠へ向かう<br>
+    ・<strong>軌跡の本数＝極の数</strong>。零点のない向きの軌跡は<strong>漸近線</strong>に沿って無限遠へ<br>
+    ・<strong>分岐点</strong>：実軸上の2つの極が出会い、複素平面へ飛び出す点<br>
+    ・軌跡が<strong>虚軸を横切る K が安定限界</strong>。それを超えると閉ループが不安定になる<br>
+    ・<strong>零点を加える</strong>と軌跡が零点に引き寄せられ、安定範囲が広がることがある（「零点あり」で比較）<br>
+    ・K を上げると速くなるが減衰比 ζ が下がる、というトレードオフが軌跡の形として見える
+  </div>
+</div>
+
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — 根軌跡</div>
+
+<script>
+(function(){
+  const cv=document.getElementById('splane'), ctx=cv.getContext('2d');
+  const slK=document.getElementById('sl-k');
+  let sysId=1;
+  let show={asym:true,break:true,trace:false};
+
+  function nf(v,n){
+    n=(n===undefined)?2:n;
+    const x=(typeof v==='number')?v:parseFloat(v);
+    return (v===null||v===undefined||!isFinite(x))?'—':x.toFixed(n);
+  }
+
+  // ---- polynomial helpers (arrays: highest degree first) ----
+  function pmul(a,b){
+    const r=new Array(a.length+b.length-1).fill(0);
+    for(let i=0;i<a.length;i++)for(let j=0;j<b.length;j++)r[i+j]+=a[i]*b[j];
+    return r;
+  }
+  function padd(a,b){
+    const n=Math.max(a.length,b.length), r=new Array(n).fill(0);
+    for(let i=0;i<a.length;i++)r[n-a.length+i]+=a[i];
+    for(let i=0;i<b.length;i++)r[n-b.length+i]+=b[i];
+    return r;
+  }
+  function pder(a){
+    const n=a.length-1, r=[];
+    for(let i=0;i<n;i++)r.push(a[i]*(n-i));
+    return r.length?r:[0];
+  }
+  // Durand-Kerner root finder
+  function roots(coef){
+    let c=coef.slice();
+    while(c.length>1&&Math.abs(c[0])<1e-14)c.shift();
+    const n=c.length-1;
+    if(n<1)return [];
+    const a=c.map(function(x){return x/c[0];});
+    let z=[];
+    for(let i=0;i<n;i++){
+      const ang=2*Math.PI*i/n+0.4;
+      z.push({re:0.7*Math.cos(ang),im:0.7*Math.sin(ang)});
+    }
+    function pv(zz){
+      let r={re:0,im:0};
+      for(let i=0;i<a.length;i++){
+        r={re:r.re*zz.re-r.im*zz.im+a[i], im:r.re*zz.im+r.im*zz.re};
+      }
+      return r;
+    }
+    // careful Horner (avoid overwriting)
+    function peval(zz){
+      let re=0,im=0;
+      for(let i=0;i<a.length;i++){
+        const nr=re*zz.re-im*zz.im+a[i];
+        const ni=re*zz.im+im*zz.re;
+        re=nr;im=ni;
+      }
+      return {re:re,im:im};
+    }
+    for(let it=0;it<300;it++){
+      let maxd=0;
+      for(let i=0;i<n;i++){
+        let d={re:1,im:0};
+        for(let j=0;j<n;j++){
+          if(i===j)continue;
+          const dr=z[i].re-z[j].re, di=z[i].im-z[j].im;
+          const nr=d.re*dr-d.im*di, ni=d.re*di+d.im*dr;
+          d={re:nr,im:ni};
+        }
+        const p=peval(z[i]);
+        const den=d.re*d.re+d.im*d.im;
+        if(den<1e-300)continue;
+        const qr=(p.re*d.re+p.im*d.im)/den;
+        const qi=(p.im*d.re-p.re*d.im)/den;
+        z[i]={re:z[i].re-qr, im:z[i].im-qi};
+        maxd=Math.max(maxd,Math.hypot(qr,qi));
+      }
+      if(maxd<1e-13)break;
+    }
+    return z.map(function(v){return {re:v.re, im:(Math.abs(v.im)<1e-7?0:v.im)};});
+  }
+
+  const SYS={
+    1:{name:'1/(s(s+1)(s+2))', D:pmul(pmul([1,0],[1,1]),[1,2]), N:[1]},
+    2:{name:'(s+3)/(s(s+1)(s+2))', D:pmul(pmul([1,0],[1,1]),[1,2]), N:[1,3]},
+    3:{name:'1/(s(s+2))', D:pmul([1,0],[1,2]), N:[1]},
+    4:{name:'1/((s−1)(s+3))', D:pmul([1,-1],[1,3]), N:[1]}
+  };
+
+  window.setSys=function(id){
+    sysId=id;
+    [1,2,3,4].forEach(function(i){
+      document.getElementById('s-'+i).className='opt'+(i===id?' active':'');
+    });
+    render();
+  };
+  window.toggle=function(k){
+    show[k]=!show[k];
+    document.getElementById('t-'+k).className='tgl'+(show[k]?' on':'');
+    render();
+  };
+
+  function clRoots(K){
+    const S=SYS[sysId];
+    return roots(padd(S.D, S.N.map(function(x){return K*x;})));
+  }
+  function Kvalue(){return Math.pow(10,parseFloat(slK.value));}
+
+  // find stability transitions (both directions) by scanning K
+  function findKcrit(){
+    const KMIN=1e-2, KMAX=Math.pow(10,2.2);
+    function maxRe(K){
+      const r=clRoots(K);
+      return Math.max.apply(null,r.map(function(p){return p.re;}));
+    }
+    function bisect(lo,hi){
+      for(let j=0;j<45;j++){
+        const mid=Math.sqrt(lo*hi);
+        if((maxRe(lo)<0)===(maxRe(mid)<0))lo=mid;else hi=mid;
+      }
+      return Math.sqrt(lo*hi);
+    }
+    const trans=[];   // {K, dir:'S2U' | 'U2S'}
+    let prevK=KMIN, prevS=(maxRe(KMIN)<0);
+    const startStable=prevS;
+    for(let i=1;i<=700;i++){
+      const K=Math.pow(10,-2+i/700*4.2);
+      const s=(maxRe(K)<0);
+      if(s!==prevS){
+        trans.push({K:bisect(prevK,K), dir:prevS?'S2U':'U2S'});
+      }
+      prevK=K; prevS=s;
+    }
+    return {trans:trans, startStable:startStable};
+  }
+
+  const XMIN=-6,XMAX=2.5,YMIN=-4,YMAX=4;
+  function resize(){
+    const r=cv.parentElement.getBoundingClientRect();
+    cv.width=r.width; cv.height=Math.round(r.width*0.72);
+  }
+  resize(); window.addEventListener('resize',function(){resize();render();});
+  function toPx(x,y){return [(x-XMIN)/(XMAX-XMIN)*cv.width,(YMAX-y)/(YMAX-YMIN)*cv.height];}
+
+  function drawPlane(S,info){
+    const W=cv.width,H=cv.height;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#fafaf8';ctx.fillRect(0,0,W,H);
+    const o=toPx(0,0);
+    ctx.fillStyle='rgba(220,38,38,0.08)';ctx.fillRect(o[0],0,W-o[0],H);
+    ctx.strokeStyle='#e5e7eb';ctx.lineWidth=1;
+    for(let x=Math.ceil(XMIN);x<=XMAX;x++){const q=toPx(x,0);ctx.beginPath();ctx.moveTo(q[0],0);ctx.lineTo(q[0],H);ctx.stroke();}
+    for(let y=Math.ceil(YMIN);y<=YMAX;y++){const q=toPx(0,y);ctx.beginPath();ctx.moveTo(0,q[1]);ctx.lineTo(W,q[1]);ctx.stroke();}
+    ctx.strokeStyle='#334155';ctx.lineWidth=1.8;
+    ctx.beginPath();ctx.moveTo(0,o[1]);ctx.lineTo(W,o[1]);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(o[0],0);ctx.lineTo(o[0],H);ctx.stroke();
+    ctx.fillStyle='#64748b';ctx.font="10px 'JetBrains Mono'";ctx.textAlign='center';
+    for(let x=Math.ceil(XMIN);x<=XMAX;x++){if(x===0)continue;const q=toPx(x,0);ctx.fillText(x,q[0],o[1]+13);}
+    ctx.textAlign='right';
+    for(let y=Math.ceil(YMIN);y<=YMAX;y+=2){if(y===0)continue;const q=toPx(0,y);ctx.fillText(y+'j',o[0]-5,q[1]+3);}
+    ctx.fillStyle='#991b1b';ctx.font="10px 'Noto Sans JP'";ctx.textAlign='left';
+    ctx.fillText('不安定領域',o[0]+6,14);
+
+    // locus (many K)
+    const NK=420;
+    const branches=[];
+    let prev=null;
+    for(let i=0;i<=NK;i++){
+      const K=Math.pow(10,-2.2+i/NK*4.6);
+      let r=clRoots(K);
+      if(prev){
+        // match order to previous for smooth branches
+        const used=new Array(r.length).fill(false);
+        const ordered=[];
+        prev.forEach(function(pp){
+          let bi=-1,bd=1e18;
+          r.forEach(function(rr,k){
+            if(used[k])return;
+            const d=Math.hypot(rr.re-pp.re,rr.im-pp.im);
+            if(d<bd){bd=d;bi=k;}
+          });
+          if(bi>=0){used[bi]=true;ordered.push(r[bi]);}
+        });
+        r=ordered;
+      }
+      r.forEach(function(p,k){
+        if(!branches[k])branches[k]=[];
+        branches[k].push(p);
+      });
+      prev=r;
+    }
+    ctx.lineWidth=show.trace?2:1.6;
+    branches.forEach(function(br,bi){
+      ctx.strokeStyle=show.trace?['#0891b2','#7c3aed','#059669','#ea580c'][bi%4]:'rgba(148,163,184,0.85)';
+      ctx.beginPath();
+      br.forEach(function(p,i){
+        const q=toPx(p.re,p.im);
+        if(i===0)ctx.moveTo(q[0],q[1]);else ctx.lineTo(q[0],q[1]);
+      });
+      ctx.stroke();
+    });
+
+    // asymptotes
+    if(show.asym&&info.nAsym>0&&isFinite(info.centroid)){
+      ctx.strokeStyle='rgba(124,58,237,0.55)';ctx.lineWidth=1.4;ctx.setLineDash([6,5]);
+      info.angles.forEach(function(deg){
+        const a=deg*Math.PI/180;
+        const c=toPx(info.centroid,0);
+        const e=toPx(info.centroid+12*Math.cos(a),12*Math.sin(a));
+        ctx.beginPath();ctx.moveTo(c[0],c[1]);ctx.lineTo(e[0],e[1]);ctx.stroke();
+      });
+      ctx.setLineDash([]);
+      const c=toPx(info.centroid,0);
+      ctx.fillStyle='#7c3aed';
+      ctx.beginPath();ctx.arc(c[0],c[1],3.5,0,2*Math.PI);ctx.fill();
+    }
+
+    // breakaway points
+    if(show.break){
+      ctx.fillStyle='#059669';
+      info.breaks.forEach(function(b){
+        const q=toPx(b,0);
+        ctx.beginPath();ctx.arc(q[0],q[1],4.5,0,2*Math.PI);ctx.fill();
+      });
+    }
+
+    // open loop poles/zeros
+    S.olp.forEach(function(p){
+      const q=toPx(p.re,p.im);
+      ctx.strokeStyle='#2563eb';ctx.lineWidth=3;
+      const r=8;
+      ctx.beginPath();ctx.moveTo(q[0]-r,q[1]-r);ctx.lineTo(q[0]+r,q[1]+r);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(q[0]-r,q[1]+r);ctx.lineTo(q[0]+r,q[1]-r);ctx.stroke();
+    });
+    S.olz.forEach(function(p){
+      const q=toPx(p.re,p.im);
+      ctx.strokeStyle='#ea580c';ctx.lineWidth=3;
+      ctx.beginPath();ctx.arc(q[0],q[1],8,0,2*Math.PI);ctx.stroke();
+    });
+
+    // current closed-loop poles
+    info.cur.forEach(function(p){
+      const q=toPx(p.re,p.im);
+      ctx.fillStyle=(p.re>1e-9)?'#dc2626':'#0891b2';
+      ctx.beginPath();ctx.arc(q[0],q[1],7,0,2*Math.PI);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=1.8;
+      ctx.beginPath();ctx.arc(q[0],q[1],7,0,2*Math.PI);ctx.stroke();
+    });
+  }
+
+  function ds(color,w,dash){return{data:[],borderColor:color,borderWidth:w,borderDash:dash||[],pointRadius:0,fill:false,tension:0.08};}
+  function mkChart(id,yTitle,logX){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x: logX?{type:'logarithmic',min:0.01,max:158,title:{display:true,text:'K',font:{size:9}},
+                   ticks:{font:{family:"'JetBrains Mono'",size:8},
+                     callback:function(v){const l=Math.log10(v);return (Math.abs(l-Math.round(l))<1e-9)?v.toString():'';}},
+                   grid:{color:'#f0f0f0'}}
+                 :{type:'linear',min:0,max:20,title:{display:true,text:'t [s]',font:{size:9}},
+                   ticks:{stepSize:4,font:{family:"'JetBrains Mono'",size:8}},grid:{color:'#f0f0f0'}},
+          y:{title:{display:true,text:yTitle,font:{size:9}},ticks:{font:{family:"'JetBrains Mono'",size:8}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chStep=mkChart('chart-step','y(t)',false);
+  const chRe=mkChart('chart-re','max Re',true);
+
+  // step response of T(s)=K N/(D+K N) by state-space simulation (controllable canonical)
+  function stepResponse(K){
+    const S=SYS[sysId];
+    const den=padd(S.D,S.N.map(function(x){return K*x;}));
+    const a=den.map(function(x){return x/den[0];});
+    const n=a.length-1;
+    const num=S.N.map(function(x){return K*x/den[0];});
+    // b coefficients aligned to length n+1
+    const b=new Array(n+1).fill(0);
+    for(let i=0;i<num.length;i++)b[n+1-num.length+i]=num[i];
+    // controllable canonical form
+    let x=new Array(n).fill(0);
+    const dt=0.002, T=20, out=[];
+    const NP=500, every=Math.round(T/dt)/NP;
+    let k=0,next=0;
+    for(let i=0;i<=Math.round(T/dt);i++){
+      // y = sum b[j] * ... use direct: y = b0*u + sum (b[n-j] - b0*a[n-j]) x_j  (D=b0 if proper)
+      // here num degree < n so b[0]=0
+      let y=0;
+      for(let j=0;j<n;j++) y+=b[n-j]*x[j];
+      if(i>=next&&k<=NP){out.push({x:i*dt,y:y});k++;next=k*every;}
+      // xdot: x1'=x2,... xn' = -a_n x1 - ... - a_1 xn + u
+      const xd=new Array(n);
+      for(let j=0;j<n-1;j++)xd[j]=x[j+1];
+      let s=1.0; // u=1
+      for(let j=0;j<n;j++)s-=a[n-j]*x[j];
+      xd[n-1]=s;
+      for(let j=0;j<n;j++)x[j]+=dt*xd[j];
+      if(!isFinite(x[0])||Math.abs(x[0])>1e8){
+        while(k<=NP){out.push({x:k*every*dt,y:null});k++;}
+        break;
+      }
+    }
+    return out;
+  }
+
+  function render(){
+    const S=SYS[sysId];
+    const K=Kvalue();
+    document.getElementById('val-k').textContent=nf(K,K<10?3:1);
+    document.getElementById('l-box').innerHTML='L(s) = '+nf(K,3)+' · '+S.name.replace('(s+3)/','<span class="frac"><span class="num">s+3</span><span class="den">s(s+1)(s+2)</span></span> ／ ').replace(/^1\//,'<span class="frac"><span class="num">1</span><span class="den">')+(S.name.indexOf('(s+3)')<0?'</span></span>':'');
+    // simpler: rebuild formula
+    let numTxt=(S.N.length===1)?'1':'s + '+nf(S.N[1],0);
+    let denTxt=(sysId===3)?'s(s+2)':((sysId===4)?'(s−1)(s+3)':'s(s+1)(s+2)');
+    document.getElementById('l-box').innerHTML=
+      'L(s) = '+nf(K,3)+' · <span class="frac"><span class="num">'+numTxt+'</span><span class="den">'+denTxt+'</span></span>';
+
+    const olp=roots(S.D), olz=(S.N.length>1)?roots(S.N):[];
+    S.olp=olp; S.olz=olz;
+    const n=olp.length, m=olz.length;
+    const nAsym=n-m;
+    const sumP=olp.reduce(function(s,p){return s+p.re;},0);
+    const sumZ=olz.reduce(function(s,p){return s+p.re;},0);
+    const centroid=(nAsym>0)?((sumP-sumZ)/nAsym):NaN;
+    const angles=[];
+    for(let i=0;i<nAsym;i++)angles.push((180*(2*i+1)/nAsym)%360);
+
+    // breakaway: dK/ds=0 -> D'N - D N' = 0, real roots between poles
+    const brPoly=padd(pmul(pder(S.D),S.N), pmul(S.D,pder(S.N)).map(function(x){return -x;}));
+    const brAll=roots(brPoly).filter(function(r){return Math.abs(r.im)<1e-6;});
+    const breaks=brAll.map(function(r){return r.re;}).filter(function(x){
+      // keep only those on the locus (K>0)
+      const Dv=S.D.reduce(function(acc,c){return acc*x+c;},0);
+      const Nv=S.N.reduce(function(acc,c){return acc*x+c;},0);
+      if(Math.abs(Nv)<1e-12)return false;
+      return (-Dv/Nv)>0;
+    });
+
+    const cur=clRoots(K);
+    const KC=findKcrit();
+    // 表示用の代表値：安定→不安定 の限界を優先
+    const kUp=KC.trans.filter(function(t){return t.dir==='S2U';})[0];
+    const kDn=KC.trans.filter(function(t){return t.dir==='U2S';})[0];
+    let kcrit=kUp?kUp.K:null;
+    let kcritTxt;
+    if(kUp&&kDn)      kcritTxt=nf(kDn.K,3)+' < K < '+nf(kUp.K,3)+' で安定';
+    else if(kUp)      kcritTxt='K < '+nf(kUp.K,3)+' で安定';
+    else if(kDn)      kcritTxt='K > '+nf(kDn.K,3)+' で安定';
+    else              kcritTxt=KC.startStable?'（常に安定）':'（常に不安定）';
+
+    document.getElementById('r-poles').textContent=olp.map(function(p){return nf(p.re,2)+(Math.abs(p.im)>1e-6?(p.im>0?'+':'')+nf(p.im,2)+'j':'');}).join(', ');
+    document.getElementById('r-zeros').textContent=m?olz.map(function(p){return nf(p.re,2);}).join(', '):'なし';
+    document.getElementById('r-nasym').textContent=String(nAsym);
+    document.getElementById('r-centroid').textContent=isFinite(centroid)?nf(centroid,3):'—';
+    document.getElementById('r-angles').textContent=angles.length?angles.map(function(a){return nf(a,0)+'°';}).join(', '):'—';
+    document.getElementById('r-kcrit').textContent=kcritTxt;
+
+    // pole table
+    let html='';
+    cur.forEach(function(p,i){
+      const wn=Math.hypot(p.re,p.im);
+      const z=(wn>1e-9)?(-p.re/wn):1;
+      html+='<tr><td>'+(i+1)+'</td><td class="num">'+nf(p.re,3)+(Math.abs(p.im)>1e-6?((p.im>0?' + ':' − ')+nf(Math.abs(p.im),3)+'j'):'')+
+        '</td><td class="num">'+(Math.abs(p.im)>1e-6?nf(z,3):'—')+'</td><td class="num">'+nf(wn,3)+
+        '</td><td style="text-align:center;">'+(p.re<0?'<span style="color:#059669;font-weight:700;">○</span>':'<span style="color:#dc2626;font-weight:700;">×</span>')+'</td></tr>';
+    });
+    document.getElementById('pole-body').innerHTML=html;
+    // dominant
+    let dom=null;
+    cur.forEach(function(p){if(dom===null||p.re>dom.re)dom=p;});
+    document.getElementById('dom-note').textContent= dom
+      ? '支配的な極（最も虚軸に近い）：'+nf(dom.re,3)+(Math.abs(dom.im)>1e-6?((dom.im>0?' + ':' − ')+nf(Math.abs(dom.im),3)+'j'):'')
+      : '';
+
+    const maxRe=Math.max.apply(null,cur.map(function(p){return p.re;}));
+    const v=document.getElementById('verdict');
+    if(maxRe<-1e-9){
+      v.className='verdict ok';
+      v.innerHTML='✓ 閉ループ安定（最大実部 '+nf(maxRe,3)+'）。'+kcritTxt;
+    }else if(maxRe<1e-6){
+      v.className='verdict warn';
+      v.innerHTML='△ 安定限界：極が虚軸上にあります（K ≒ '+nf(K,2)+'）。持続振動が生じます。';
+    }else{
+      v.className='verdict ng';
+      let adv='';
+      if(kUp&&K>=kUp.K) adv='K を '+nf(kUp.K,2)+' より小さくしてください。';
+      else if(kDn&&K<=kDn.K) adv='K を '+nf(kDn.K,2)+' より大きくしてください。';
+      v.innerHTML='✗ 閉ループ不安定（最大実部 '+nf(maxRe,3)+'）。'+adv;
+    }
+
+    // step chart
+    const sr=stepResponse(K);
+    const ref=sr.map(function(p){return {x:p.x,y:1};});
+    const a0=ds('#0891b2',2.5);a0.data=sr;
+    const a1=ds('#94a3b8',1.3,[5,4]);a1.data=ref;
+    chStep.data.datasets=[a0,a1];
+    let lo=-0.3,hi=2;
+    sr.forEach(function(p){if(p.y!==null&&isFinite(p.y)){lo=Math.min(lo,p.y);hi=Math.max(hi,p.y);}});
+    chStep.options.scales.y.min=Math.max(-8,lo-0.2);
+    chStep.options.scales.y.max=Math.min(8,hi+0.2);
+    chStep.update();
+
+    // maxRe vs K
+    const reD=[],zeroD=[],curD=[];
+    for(let i=0;i<=200;i++){
+      const KK=Math.pow(10,-2+i/200*4.2);
+      const rr=clRoots(KK);
+      const mm=Math.max.apply(null,rr.map(function(p){return p.re;}));
+      reD.push({x:KK,y:mm});zeroD.push({x:KK,y:0});
+    }
+    const b0=ds('#7c3aed',2.4);b0.data=reD;
+    const b1=ds('#dc2626',1.4,[5,4]);b1.data=zeroD;
+    const b2=ds('#0891b2',1.6,[3,3]);
+    b2.data=[{x:K,y:-10},{x:K,y:10}];
+    chRe.data.datasets=[b0,b1,b2];
+    let rlo=-3,rhi=1;
+    reD.forEach(function(p){if(isFinite(p.y)){rlo=Math.min(rlo,p.y);rhi=Math.max(rhi,p.y);}});
+    chRe.options.scales.y.min=Math.max(-6,rlo-0.3);
+    chRe.options.scales.y.max=Math.min(6,rhi+0.3);
+    chRe.update();
+
+    drawPlane(S,{cur:cur,nAsym:nAsym,centroid:centroid,angles:angles,breaks:breaks});
+  }
+
+  slK.addEventListener('input',render);
+  document.getElementById('b-crit').addEventListener('click',function(){
+    const KC=findKcrit();
+    if(KC.trans.length){slK.value=Math.log10(KC.trans[0].K).toFixed(3);render();}
+  });
+  document.getElementById('b-reset').addEventListener('click',function(){
+    slK.value=0;setSys(1);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
