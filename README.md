@@ -52,6 +52,7 @@
 | 17 | ナイキスト線図 | 参照信号と制御器の内部モデル | `control_nyquist_robust.html` |
 | 18 | 極と零点 | 極零配置と応答の関係 | `control_pole_zero.html` |
 | 19 | 応答 | 零入力応答と零状態応答 | `control_zero_input_state.html` |
+| 20 | 根軌跡 | ゲインと極の関係 | `control_root_locus.html` |
 
 
 各教材への直リンク：
@@ -75,6 +76,7 @@
 - [ナイキスト線図](https://hiroshi-okajima.github.io/control-interactive-tools/control_nyquist_robust.html)
 - [極と零点](https://hiroshi-okajima.github.io/control-interactive-tools/control_pole_zero.html)
 - [零入力・零状態応答](https://hiroshi-okajima.github.io/control-interactive-tools/control_zero_input_state.html)
+- [根軌跡](https://hiroshi-okajima.github.io/control-interactive-tools/control_root_locus.html)
 
 ## GitHub Pages URL
 
