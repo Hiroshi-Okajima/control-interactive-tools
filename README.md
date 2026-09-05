@@ -49,10 +49,13 @@
 | 14 | 内部モデル原理 | 参照信号と制御器の内部モデル | `control_internal_model.html` |
 | 15 | ボード線図1 | 伝達関数の直列接続とボード線図 | `control_bode_stack.html` |
 | 16 | ボード線図2 | 伝達関数の並列接続とボード線図 | `control_bode_parallel.html` |
-| 17 | ナイキスト線図 | 参照信号と制御器の内部モデル | `control_nyquist_robust.html` |
-| 18 | 極と零点 | 極零配置と応答の関係 | `control_pole_zero.html` |
-| 19 | 応答 | 零入力応答と零状態応答 | `control_zero_input_state.html` |
-| 20 | 根軌跡 | ゲインと極の関係 | `control_root_locus.html` |
+| 17 | ナイキスト線図1 | 参照信号と制御器の内部モデル | `control_nyquist_robust.html` |
+| 18 | ナイキスト線図2 | ベクトル軌跡と最小位相系 | `control_vector_locus.html` |
+| 19 | 極と零点 | 極零配置と応答の関係 | `control_pole_zero.html` |
+| 20 | 応答 | 零入力応答と零状態応答 | `control_zero_input_state.html` |
+| 21 | 根軌跡 | ゲインと極の関係 | `control_root_locus.html` |
+| 22 | ラウスの安定判別法 | ラウス表と安定性 | `control_routh.html` |
+| 23 | 位相進み・遅れ補償 | 閉ループ制御 | `control_lead_lag.html` |
 
 
 各教材への直リンク：
@@ -73,10 +76,13 @@
 - [内部モデル原理](https://hiroshi-okajima.github.io/control-interactive-tools/control_internal_model.html)
 - [ボード線図1](https://hiroshi-okajima.github.io/control-interactive-tools/control_bode_stack.html)
 - [ボード線図2](https://hiroshi-okajima.github.io/control-interactive-tools/control_bode_parallel.html)
-- [ナイキスト線図](https://hiroshi-okajima.github.io/control-interactive-tools/control_nyquist_robust.html)
+- [ナイキスト線図1](https://hiroshi-okajima.github.io/control-interactive-tools/control_nyquist_robust.html)
+- [ナイキスト線図2](https://hiroshi-okajima.github.io/control-interactive-tools/control_vector_locus.html)
 - [極と零点](https://hiroshi-okajima.github.io/control-interactive-tools/control_pole_zero.html)
 - [零入力・零状態応答](https://hiroshi-okajima.github.io/control-interactive-tools/control_zero_input_state.html)
 - [根軌跡](https://hiroshi-okajima.github.io/control-interactive-tools/control_root_locus.html)
+- [ラウスの安定判別法](https://hiroshi-okajima.github.io/control-interactive-tools/control_routh.html)
+- [位相進み・遅れ補償](https://hiroshi-okajima.github.io/control-interactive-tools/control_lead_lag.html)
 
 ## GitHub Pages URL
 
