@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ベクトル軌跡と最小位相系</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#312e81,#4f46e5,#a5b4fc);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.9;max-width:740px;margin:0 auto;}
+.main{max-width:1150px;margin:0 auto;padding:1rem;}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:900px){.layout{grid-template-columns:1fr;}}
+.col{display:flex;flex-direction:column;gap:0.7rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.85rem;padding:0.1em 0.5em;border-radius:4px;min-width:5em;text-align:center;color:var(--purple);background:#f3eeff;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:5px;border-radius:3px;background:#ddd;outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--purple);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--purple);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.2);cursor:pointer;}
+.canvas-wrap{position:relative;background:#fafaf8;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+canvas{display:block;width:100%;}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;}
+.opt{padding:0.5em 0.4em;border:2px solid var(--border);border-radius:9px;background:var(--card);cursor:pointer;text-align:center;font-size:0.74rem;font-weight:700;color:var(--text2);line-height:1.4;}
+.opt.active{border-color:#4f46e5;background:#eef2ff;color:#3730a3;}
+.opt:hover{border-color:#4f46e5;}
+.opt .sub{display:block;font-weight:400;font-size:0.64rem;color:var(--text3);margin-top:0.1rem;font-family:'JetBrains Mono',monospace;}
+.formula{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.5rem 0.75rem;line-height:1.9;color:var(--text);font-size:0.8rem;}
+.frac{display:inline-flex;flex-direction:column;align-items:stretch;vertical-align:middle;margin:0 0.3em;}
+.frac .num{border-bottom:1.6px solid var(--text2);padding:0 0.6em 0.1em;line-height:1.4;text-align:center;white-space:nowrap;}
+.frac .den{padding:0.1em 0.6em 0;line-height:1.4;text-align:center;white-space:nowrap;}
+.chart-wrap{position:relative;height:145px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:0.25rem;font-size:0.71rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.25rem;}
+.sw{width:15px;height:3px;border-radius:2px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.info-table{width:100%;border-collapse:collapse;font-size:0.77rem;margin-top:0.3rem;}
+.info-table th,.info-table td{padding:0.3rem 0.4rem;border-bottom:1px solid var(--border);text-align:left;}
+.info-table th{font-size:0.65rem;color:var(--text3);font-weight:700;}
+.info-table td.num{font-family:'JetBrains Mono',monospace;font-weight:600;text-align:right;}
+.badge{display:inline-block;font-size:0.68rem;font-weight:700;padding:0.15em 0.7em;border-radius:20px;}
+.badge.min{background:#dcfce7;color:#166534;}
+.badge.non{background:#fee2e2;color:#991b1b;}
+.tgl{padding:0.3em 0.75em;border:2px solid var(--border);border-radius:20px;background:var(--card);cursor:pointer;font-size:0.71rem;font-weight:700;color:var(--text2);}
+.tgl.on{border-color:#4f46e5;background:#eef2ff;color:#3730a3;}
+.insight{background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1px solid #a5b4fc;border-radius:var(--r);padding:0.6rem 0.9rem;font-size:0.79rem;line-height:1.75;color:#312e81;}
+.insight strong{color:#3730a3;}
+.note{font-size:0.71rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>ベクトル軌跡と最小位相系</h1>
+  <p>周波数を動かすと、複素平面上の点とボード線図上のマーカーが連動して動く</p>
+</div>
+<div class="main">
+<div class="layout">
+
+<!-- LEFT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:#4f46e5;">ベクトル軌跡（ナイキスト線図）</div>
+    <div class="canvas-wrap"><canvas id="nyq"></canvas></div>
+    <div class="legend-row" style="margin-top:0.35rem;">
+      <span class="legend-item"><span class="sw" style="background:#4f46e5;"></span>G(jω)（ω&gt;0）</span>
+      <span class="legend-item"><span class="sw" style="background:#c7d2fe;"></span>ω&lt;0（鏡像）</span>
+      <span class="legend-item"><span class="sw" style="background:#dc2626;height:9px;width:9px;border-radius:50%;"></span>現在のω</span>
+      <span class="legend-item" id="lg-mir1" style="display:none;"><span class="sw dash" style="border-color:#059669;"></span>比較対象</span>
+    </div>
+    <div class="note">赤い点から原点へのベクトルの長さが |G|、実軸となす角が ∠G です。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">周波数 ω</div>
+    <div class="ctrl-row">
+      <input type="range" id="sl-w" min="-2" max="2" step="0.005" value="0">
+      <span class="ctrl-val" id="val-w">1.000</span>
+    </div>
+    <table class="info-table">
+      <tr><th>項目</th><th style="text-align:right;">値</th></tr>
+      <tr><td>G(jω)</td><td class="num" id="r-gval">—</td></tr>
+      <tr><td>ゲイン |G|</td><td class="num" id="r-mag">—</td></tr>
+      <tr><td>ゲイン [dB]</td><td class="num" id="r-db">—</td></tr>
+      <tr><td>位相 ∠G</td><td class="num" id="r-pha">—</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:#4f46e5;">システムの選択</div>
+    <div class="opt-grid">
+      <div class="opt active" id="s-1" onclick="setSys(1)">1次遅れ<span class="sub">1/(1+s)</span></div>
+      <div class="opt" id="s-2" onclick="setSys(2)">2次遅れ<span class="sub">1/((1+s)(1+0.3s))</span></div>
+      <div class="opt" id="s-3" onclick="setSys(3)">積分＋遅れ<span class="sub">1/(s(1+s))</span></div>
+      <div class="opt" id="s-4" onclick="setSys(4)">非最小位相<span class="sub">(1−0.5s)/((1+s)(1+0.3s))</span></div>
+    </div>
+    <div class="formula" style="margin-top:0.5rem;" id="g-box"></div>
+    <div style="margin-top:0.4rem;">系の分類：<span id="kind-badge"></span></div>
+    <div style="margin-top:0.5rem;">
+      <div class="tgl" id="t-mirror" onclick="toggleMirror()">最小位相の相棒と比較</div>
+      <div class="note">非最小位相系のとき、零点を左半平面に移した系（ゲイン特性が同一）を重ねます。</div>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">ゲイン線図</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#4f46e5;"></span>|G| [dB]</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#dc2626;"></span>現在のω</span>
+      <span class="legend-item" id="lg-mir2" style="display:none;"><span class="sw dash" style="border-color:#059669;"></span>比較対象</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-mag"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">位相線図</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#7c3aed;"></span>∠G [deg]</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#dc2626;"></span>現在のω</span>
+      <span class="legend-item" id="lg-mir3" style="display:none;"><span class="sw dash" style="border-color:#059669;"></span>比較対象</span>
+    </div>
+    <div class="chart-wrap"><canvas id="chart-pha"></canvas></div>
+    <div class="note" id="pha-note"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--orange);">入力と出力の正弦波</div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="sw" style="background:#94a3b8;"></span>入力 sin(ωt)</span>
+      <span class="legend-item"><span class="sw" style="background:#ea580c;"></span>出力 |G|sin(ωt+∠G)</span>
+    </div>
+    <div class="chart-wrap" style="height:135px;"><canvas id="chart-time"></canvas></div>
+    <div class="note">ベクトル軌跡上の点が、この波形の振幅と位相ずれを表しています。</div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・ベクトル軌跡は、ω を 0 から ∞ まで動かしたときの <strong>G(jω) の描く軌跡</strong><br>
+    ・ボード線図は同じ情報を<strong>ゲインと位相に分けて</strong>周波数軸上に描いたもの。両者は同じ内容の別表現<br>
+    ・1次遅れの軌跡は<strong>半円</strong>、積分器を含むと ω→0 で<strong>無限遠へ発散</strong>する<br>
+    ・<strong>最小位相系</strong>：右半平面に極も零点も持たない系。ゲイン特性が決まれば位相も一意に決まる<br>
+    ・<strong>非最小位相系</strong>：ゲイン特性が同じでも<strong>位相遅れが大きい</strong>。比較機能で確認できる<br>
+    ・非最小位相系は位相が余分に遅れるため、フィードバック制御で<strong>安定余裕を確保しにくい</strong>
+  </div>
+</div>
+
+</div>
+</div>
+<div class="footer">制御工学 インタラクティブ教材 — ベクトル軌跡と最小位相系</div>
+
+<script>
+(function(){
+  const cvN=document.getElementById('nyq'), cn=cvN.getContext('2d');
+  const slW=document.getElementById('sl-w');
+  let sysId=1, showMirror=false;
+
+  function nf(v,n){
+    n=(n===undefined)?3:n;
+    const x=(typeof v==='number')?v:parseFloat(v);
+    return (v===null||v===undefined||!isFinite(x))?'—':x.toFixed(n);
+  }
+
+  // system: returns complex G(jw)
+  const SYS={
+    1:{name:'1次遅れ', tex:'<span class="frac"><span class="num">1</span><span class="den">1 + s</span></span>',
+       f:function(w){const d=1+w*w;return {re:1/d,im:-w/d};}, min:true, mirror:null},
+    2:{name:'2次遅れ', tex:'<span class="frac"><span class="num">1</span><span class="den">(1 + s)(1 + 0.3s)</span></span>',
+       f:function(w){
+         const ar=1,ai=w, br=1,bi=0.3*w;
+         const dr=ar*br-ai*bi, di=ar*bi+ai*br;
+         const d=dr*dr+di*di;
+         return {re:dr/d, im:-di/d};
+       }, min:true, mirror:null},
+    3:{name:'積分＋1次遅れ', tex:'<span class="frac"><span class="num">1</span><span class="den">s(1 + s)</span></span>',
+       f:function(w){
+         // 1/(jw(1+jw)) = 1/(jw - w^2) ; denominator = -w^2 + jw
+         const dr=-w*w, di=w;
+         const d=dr*dr+di*di;
+         return {re:dr/d, im:-di/d};
+       }, min:true, mirror:null},
+    4:{name:'非最小位相', tex:'<span class="frac"><span class="num">1 − 0.5s</span><span class="den">(1 + s)(1 + 0.3s)</span></span>',
+       f:function(w){
+         const nr=1, ni=-0.5*w;
+         const ar=1,ai=w, br=1,bi=0.3*w;
+         const dr=ar*br-ai*bi, di=ar*bi+ai*br;
+         const d=dr*dr+di*di;
+         return {re:(nr*dr+ni*di)/d, im:(ni*dr-nr*di)/d};
+       }, min:false,
+       mirror:function(w){
+         const nr=1, ni=0.5*w;
+         const ar=1,ai=w, br=1,bi=0.3*w;
+         const dr=ar*br-ai*bi, di=ar*bi+ai*br;
+         const d=dr*dr+di*di;
+         return {re:(nr*dr+ni*di)/d, im:(ni*dr-nr*di)/d};
+       }}
+  };
+
+  window.setSys=function(id){
+    sysId=id;
+    [1,2,3,4].forEach(function(i){document.getElementById('s-'+i).className='opt'+(i===id?' active':'');});
+    if(!SYS[id].mirror&&showMirror)toggleMirror();
+    render();
+  };
+  window.toggleMirror=function(){
+    if(!SYS[sysId].mirror&&!showMirror)return;
+    showMirror=!showMirror;
+    document.getElementById('t-mirror').className='tgl'+(showMirror?' on':'');
+    ['lg-mir1','lg-mir2','lg-mir3'].forEach(function(id){
+      document.getElementById(id).style.display=showMirror?'flex':'none';
+    });
+    render();
+  };
+
+  function abs(c){return Math.hypot(c.re,c.im);}
+  function arg(c){return Math.atan2(c.im,c.re)*180/Math.PI;}
+
+  const NW=900, WL=[];
+  for(let i=0;i<NW;i++)WL.push(Math.pow(10,-2.3+i/(NW-1)*4.6));
+
+  function resize(){
+    const r=cvN.parentElement.getBoundingClientRect();
+    cvN.width=r.width; cvN.height=Math.round(r.width*0.78);
+  }
+  resize(); window.addEventListener('resize',function(){resize();render();});
+
+  function drawNyq(S,curW){
+    const W=cvN.width,H=cvN.height;
+    cn.clearRect(0,0,W,H);
+    cn.fillStyle='#fafaf8';cn.fillRect(0,0,W,H);
+    // determine range
+    let mx=1.2;
+    const pts=[];
+    WL.forEach(function(w){
+      const g=S.f(w);
+      if(isFinite(g.re)&&isFinite(g.im)&&abs(g)<6){pts.push(g);mx=Math.max(mx,Math.abs(g.re),Math.abs(g.im));}
+    });
+    mx=Math.min(mx,3.2)*1.15;
+    const cx=W*0.5, cy=H*0.5, sc=Math.min(W,H)*0.42/mx;
+    function px(x){return cx+x*sc;}
+    function py(y){return cy-y*sc;}
+    // grid
+    cn.strokeStyle='#e5e7eb';cn.lineWidth=1;
+    for(let g=-Math.ceil(mx);g<=Math.ceil(mx);g++){
+      cn.beginPath();cn.moveTo(px(g),0);cn.lineTo(px(g),H);cn.stroke();
+      cn.beginPath();cn.moveTo(0,py(g));cn.lineTo(W,py(g));cn.stroke();
+    }
+    cn.strokeStyle='#334155';cn.lineWidth=1.6;
+    cn.beginPath();cn.moveTo(0,py(0));cn.lineTo(W,py(0));cn.stroke();
+    cn.beginPath();cn.moveTo(px(0),0);cn.lineTo(px(0),H);cn.stroke();
+    cn.fillStyle='#64748b';cn.font="10px 'JetBrains Mono'";cn.textAlign='center';
+    for(let g=-Math.ceil(mx);g<=Math.ceil(mx);g++){if(g===0)continue;cn.fillText(g,px(g),py(0)+13);}
+    cn.textAlign='left';cn.fillStyle='#475569';cn.font="11px 'Noto Sans JP'";
+    cn.fillText('Re',W-24,py(0)-6);cn.fillText('Im',px(0)+6,13);
+    // unit circle
+    cn.strokeStyle='rgba(148,163,184,0.7)';cn.lineWidth=1.2;cn.setLineDash([4,4]);
+    cn.beginPath();cn.arc(px(0),py(0),sc,0,2*Math.PI);cn.stroke();cn.setLineDash([]);
+
+    function drawCurve(fn,color,lw,dash,mirrorIm){
+      cn.strokeStyle=color;cn.lineWidth=lw;
+      if(dash)cn.setLineDash(dash);
+      cn.beginPath();
+      let started=false;
+      WL.forEach(function(w){
+        const g=fn(w);
+        if(!isFinite(g.re)||!isFinite(g.im))return;
+        const yy=mirrorIm?-g.im:g.im;
+        if(Math.abs(g.re)>20||Math.abs(yy)>20){started=false;return;}
+        const X=px(g.re), Y=py(yy);
+        if(!started){cn.moveTo(X,Y);started=true;}else cn.lineTo(X,Y);
+      });
+      cn.stroke();cn.setLineDash([]);
+    }
+    // mirror (w<0) light
+    drawCurve(S.f,'rgba(199,210,254,0.95)',1.6,null,true);
+    // main
+    drawCurve(S.f,'#4f46e5',2.6,null,false);
+    // comparison
+    if(showMirror&&S.mirror){
+      drawCurve(S.mirror,'rgba(5,150,105,0.85)',2,[6,4],false);
+    }
+
+    // current point + vector
+    const g=S.f(curW);
+    if(isFinite(g.re)&&isFinite(g.im)&&abs(g)<20){
+      cn.strokeStyle='rgba(220,38,38,0.75)';cn.lineWidth=2;
+      cn.beginPath();cn.moveTo(px(0),py(0));cn.lineTo(px(g.re),py(g.im));cn.stroke();
+      cn.fillStyle='#dc2626';
+      cn.beginPath();cn.arc(px(g.re),py(g.im),6.5,0,2*Math.PI);cn.fill();
+      cn.strokeStyle='#fff';cn.lineWidth=1.6;
+      cn.beginPath();cn.arc(px(g.re),py(g.im),6.5,0,2*Math.PI);cn.stroke();
+      // angle arc
+      const a=Math.atan2(g.im,g.re);
+      cn.strokeStyle='rgba(124,58,237,0.6)';cn.lineWidth=1.6;
+      cn.beginPath();cn.arc(px(0),py(0),sc*0.30,0,-a,a>0);cn.stroke();
+    }
+    if(showMirror&&S.mirror){
+      const gm=S.mirror(curW);
+      if(isFinite(gm.re)&&abs(gm)<20){
+        cn.fillStyle='#059669';
+        cn.beginPath();cn.arc(px(gm.re),py(gm.im),5.5,0,2*Math.PI);cn.fill();
+      }
+    }
+  }
+
+  function ds(color,w,dash){return{data:[],borderColor:color,borderWidth:w,borderDash:dash||[],pointRadius:0,fill:false,tension:0};}
+  function mkChart(id,yTitle,logX){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x: logX?{type:'logarithmic',min:0.01,max:100,title:{display:true,text:'ω [rad/s]',font:{size:9}},
+                   ticks:{font:{family:"'JetBrains Mono'",size:8},
+                     callback:function(v){const l=Math.log10(v);return (Math.abs(l-Math.round(l))<1e-9)?v.toString():'';}},
+                   grid:{color:'#f0f0f0'}}
+                 :{type:'linear',min:0,title:{display:true,text:'t [s]',font:{size:9}},
+                   ticks:{font:{family:"'JetBrains Mono'",size:8}},grid:{color:'#f0f0f0'}},
+          y:{title:{display:true,text:yTitle,font:{size:9}},ticks:{font:{family:"'JetBrains Mono'",size:8}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chMag=mkChart('chart-mag','|G| [dB]',true);
+  const chPha=mkChart('chart-pha','∠G [deg]',true);
+  const chTime=mkChart('chart-time','',false);
+
+  function render(){
+    const S=SYS[sysId];
+    const w=Math.pow(10,parseFloat(slW.value));
+    document.getElementById('val-w').textContent=nf(w,w<1?3:2);
+    document.getElementById('g-box').innerHTML='G(s) = '+S.tex;
+    document.getElementById('kind-badge').innerHTML=S.min
+      ? '<span class="badge min">最小位相系</span>'
+      : '<span class="badge non">非最小位相系（右半平面に零点）</span>';
+
+    const g=S.f(w);
+    document.getElementById('r-gval').textContent=nf(g.re,3)+(g.im>=0?' + ':' − ')+nf(Math.abs(g.im),3)+'j';
+    document.getElementById('r-mag').textContent=nf(abs(g),4);
+    document.getElementById('r-db').textContent=nf(20*Math.log10(Math.max(abs(g),1e-12)),2)+' dB';
+    document.getElementById('r-pha').textContent=nf(arg(g),1)+' °';
+
+    // bode data with unwrap
+    const magD=[],phaD=[],magM=[],phaM=[];
+    let prev=null,unw=0, prevM=null,unwM=0;
+    WL.forEach(function(ww){
+      if(ww<0.01||ww>100)return;
+      const gg=S.f(ww);
+      const raw=arg(gg);
+      if(prev===null)unw=raw;else{let d=raw-prev;while(d>180)d-=360;while(d<-180)d+=360;unw+=d;}
+      prev=raw;
+      magD.push({x:ww,y:20*Math.log10(Math.max(abs(gg),1e-12))});
+      phaD.push({x:ww,y:unw});
+      if(showMirror&&S.mirror){
+        const gm=S.mirror(ww);
+        const rawm=arg(gm);
+        if(prevM===null)unwM=rawm;else{let d=rawm-prevM;while(d>180)d-=360;while(d<-180)d+=360;unwM+=d;}
+        prevM=rawm;
+        magM.push({x:ww,y:20*Math.log10(Math.max(abs(gm),1e-12))});
+        phaM.push({x:ww,y:unwM});
+      }
+    });
+    const mk=[{x:w,y:-500},{x:w,y:500}];
+    const ms=[];const a0=ds('#4f46e5',2.4);a0.data=magD;ms.push(a0);
+    if(showMirror&&magM.length){const a1=ds('#059669',1.8,[6,4]);a1.data=magM;ms.push(a1);}
+    const a2=ds('#dc2626',1.4,[4,3]);a2.data=mk;ms.push(a2);
+    chMag.data.datasets=ms;
+    let lo=-40,hi=10;
+    magD.forEach(function(p){if(isFinite(p.y)){lo=Math.min(lo,p.y);hi=Math.max(hi,p.y);}});
+    chMag.options.scales.y.min=Math.max(-80,lo-6);chMag.options.scales.y.max=Math.min(60,hi+6);
+    chMag.update();
+
+    const ps=[];const b0=ds('#7c3aed',2.4);b0.data=phaD;ps.push(b0);
+    if(showMirror&&phaM.length){const b1=ds('#059669',1.8,[6,4]);b1.data=phaM;ps.push(b1);}
+    const b2=ds('#dc2626',1.4,[4,3]);b2.data=mk;ps.push(b2);
+    chPha.data.datasets=ps;
+    let plo=-200,phi=20;
+    phaD.forEach(function(p){plo=Math.min(plo,p.y);phi=Math.max(phi,p.y);});
+    if(showMirror)phaM.forEach(function(p){plo=Math.min(plo,p.y);phi=Math.max(phi,p.y);});
+    chPha.options.scales.y.min=Math.floor((plo-20)/45)*45;
+    chPha.options.scales.y.max=Math.ceil((phi+20)/45)*45;
+    chPha.update();
+
+    // time waveform
+    const A=abs(g), ph=arg(g)*Math.PI/180;
+    const T=Math.min(40,Math.max(4,6*2*Math.PI/Math.max(w,0.05)));
+    const ui=[],yo=[];
+    for(let i=0;i<=400;i++){
+      const t=i/400*T;
+      ui.push({x:t,y:Math.sin(w*t)});
+      yo.push({x:t,y:A*Math.sin(w*t+ph)});
+    }
+    const c0=ds('#94a3b8',1.8);c0.data=ui;
+    const c1=ds('#ea580c',2.4);c1.data=yo;
+    chTime.data.datasets=[c0,c1];
+    chTime.options.scales.x.max=T;
+    const amp=Math.max(1.2,A*1.2);
+    chTime.options.scales.y.min=-amp;chTime.options.scales.y.max=amp;
+    chTime.update();
+
+    document.getElementById('pha-note').textContent= (showMirror&&S.mirror)
+      ? 'ゲイン線図は完全に重なりますが、位相線図は大きく離れます。これが非最小位相系の特徴です。'
+      : (S.min?'最小位相系では、ゲイン特性から位相が一意に決まります。'
+             :'右半平面の零点により、位相が余分に遅れます。比較ボタンで確認できます。');
+
+    drawNyq(S,w);
+  }
+
+  slW.addEventListener('input',render);
+  render();
+})();
+</script>
+</body>
+</html>
