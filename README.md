@@ -49,7 +49,7 @@
 | 14 | 内部モデル原理 | 参照信号と制御器の内部モデル | `control_internal_model.html` |
 | 15 | ボード線図1 | 伝達関数の直列接続とボード線図 | `control_bode_stack.html` |
 | 16 | ボード線図2 | 伝達関数の並列接続とボード線図 | `control_bode_parallel.html` |
-| 17 | ナイキスト線図1 | 参照信号と制御器の内部モデル | `control_nyquist_robust.html` |
+| 17 | ナイキスト線図1 | ナイキストの安定判別法とロバスト安定性  | `control_nyquist_robust.html` |
 | 18 | ナイキスト線図2 | ベクトル軌跡と最小位相系 | `control_vector_locus.html` |
 | 19 | 極と零点 | 極零配置と応答の関係 | `control_pole_zero.html` |
 | 20 | 応答 | 零入力応答と零状態応答 | `control_zero_input_state.html` |
