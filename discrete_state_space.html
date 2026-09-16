@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>離散時間状態方程式の数値シミュレーション</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f4f0;--card:#fff;--text:#1a1a2e;--text2:#5a5a7a;--text3:#9a9ab0;--blue:#2563eb;--red:#dc2626;--green:#059669;--orange:#ea580c;--purple:#7c3aed;--teal:#0891b2;--border:#e2e0dc;--r:10px;--r-lg:14px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;}
+.header{background:linear-gradient(135deg,#0f172a,#1e40af,#3b82f6);color:#fff;padding:1.3rem 1.5rem 1rem;text-align:center;}
+.header h1{font-family:'Noto Serif JP',serif;font-size:clamp(1.1rem,2.8vw,1.45rem);font-weight:700;margin-bottom:0.15rem;}
+.header p{font-size:0.78rem;opacity:0.9;max-width:740px;margin:0 auto;}
+.main{max-width:1150px;margin:0 auto;padding:1rem;}
+.layout{display:grid;grid-template-columns:400px 1fr;gap:1rem;}
+@media(max-width:900px){.layout{grid-template-columns:1fr;}}
+.col{display:flex;flex-direction:column;gap:0.7rem;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:0.8rem 1rem;box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+.card-label{font-size:0.65rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.4rem;}
+.opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.45rem;}
+.opt{padding:0.6em 0.4em;border:2px solid var(--border);border-radius:9px;background:var(--card);cursor:pointer;text-align:center;font-size:0.8rem;font-weight:700;color:var(--text2);line-height:1.45;}
+.opt.active{border-color:var(--blue);background:#eff6ff;color:#1d4ed8;}
+.opt:hover{border-color:var(--blue);}
+.opt .sub{display:block;font-weight:400;font-size:0.65rem;color:var(--text3);margin-top:0.12rem;font-family:'JetBrains Mono',monospace;}
+.ctrl-group{margin-bottom:0.6rem;}
+.ctrl-group:last-child{margin-bottom:0;}
+.ctrl-label{font-size:0.75rem;font-weight:600;color:var(--text2);margin-bottom:0.12rem;}
+.ctrl-row{display:flex;align-items:center;gap:0.5rem;}
+.ctrl-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.85rem;padding:0.1em 0.5em;border-radius:4px;min-width:4.6em;text-align:center;}
+.v-d{color:var(--orange);background:#fff7ed;}
+.v-k1{color:var(--purple);background:#f3eeff;}
+.v-k2{color:var(--teal);background:#f0fdfa;}
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:linear-gradient(90deg,#fecaca 0%,#fecaca 50%,#fecaca 100%);outline:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--blue);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);cursor:pointer;}
+input[type="range"]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--blue);border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);cursor:pointer;}
+input.sd::-webkit-slider-thumb,input.sd::-moz-range-thumb{background:var(--orange);}
+input.sk1::-webkit-slider-thumb,input.sk1::-moz-range-thumb{background:var(--purple);}
+input.sk2::-webkit-slider-thumb,input.sk2::-moz-range-thumb{background:var(--teal);}
+.eq{font-family:'JetBrains Mono',monospace;background:#f8fafc;border:1px solid var(--border);border-radius:var(--r);padding:0.55rem 0.8rem;line-height:1.95;color:var(--text);font-size:0.81rem;}
+.mat{display:inline-flex;align-items:center;gap:0.15rem;vertical-align:middle;margin:0 0.15em;}
+.mat-b{display:inline-flex;flex-direction:column;border-left:2px solid #555;border-right:2px solid #555;padding:0.12rem 0.34rem;border-radius:2px;background:#fff;}
+.mat-r{white-space:pre;display:block;line-height:1.5;text-align:center;}
+.canvas-wrap{position:relative;background:#fafaf8;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+canvas#zplane{display:block;width:100%;}
+.verdict{border-radius:var(--r);padding:0.6rem 0.9rem;font-size:0.84rem;font-weight:700;margin-top:0.5rem;line-height:1.7;}
+.verdict.ok{background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;}
+.verdict.warn{background:#fffbeb;color:#92400e;border:1px solid #fcd34d;}
+.verdict.ng{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;}
+.info-table{width:100%;border-collapse:collapse;font-size:0.77rem;margin-top:0.3rem;}
+.info-table th,.info-table td{padding:0.3rem 0.4rem;border-bottom:1px solid var(--border);text-align:left;}
+.info-table th{font-size:0.65rem;color:var(--text3);font-weight:700;}
+.info-table td.num{font-family:'JetBrains Mono',monospace;font-weight:600;text-align:right;}
+.chart-wrap{position:relative;height:230px;}
+.chart-wrap.sm{height:150px;}
+.legend-row{display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:0.25rem;font-size:0.72rem;color:var(--text2);}
+.legend-item{display:flex;align-items:center;gap:0.25rem;}
+.sw{width:15px;height:3px;border-radius:2px;}
+.sw.dash{height:0;border-top:2px dashed;}
+.insight{background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #93c5fd;border-radius:var(--r);padding:0.6rem 0.9rem;font-size:0.79rem;line-height:1.75;color:#1e3a8a;}
+.insight strong{color:#1d4ed8;}
+.note{font-size:0.71rem;color:var(--text3);margin-top:0.3rem;}
+.footer{text-align:center;padding:1rem;color:var(--text3);font-size:0.7rem;}
+.btn{padding:0.42em 0.9em;border:none;border-radius:7px;font-weight:700;font-size:0.75rem;cursor:pointer;background:#e5e5e5;color:#444;}
+.btn:hover{opacity:0.85;}
+.btn-p{background:var(--blue);color:#fff;}
+.range-note{font-size:0.66rem;color:var(--text3);display:flex;justify-content:space-between;margin-top:0.1rem;font-family:'JetBrains Mono',monospace;}
+.stable-bar{height:5px;border-radius:3px;margin-top:0.25rem;background:#fecaca;position:relative;overflow:hidden;}
+.stable-bar .ok{position:absolute;top:0;bottom:0;background:#86efac;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>離散時間状態方程式の数値シミュレーション</h1>
+  <p>x(k+1) = A x(k) + B u(k)　状態フィードバック u(k) = −K x(k) で極を単位円内に入れる</p>
+</div>
+<div class="main">
+<div class="layout">
+
+<!-- LEFT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">システムの選択</div>
+    <div class="opt-grid">
+      <div class="opt active" id="o-1" onclick="setOrder(1)">1次系<span class="sub">x(k+1)=a x(k)+u(k)</span></div>
+      <div class="opt" id="o-2" onclick="setOrder(2)">2次系<span class="sub">可制御正準形</span></div>
+    </div>
+    <div class="eq" style="margin-top:0.55rem;" id="sys-box"></div>
+    <div class="note" id="sys-note"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--orange);">外乱（インパルス）</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--orange);">外乱の大きさ d（k = 20 で1回だけ印加）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-d" class="sd" min="-3" max="3" step="0.05" value="1.0">
+        <span class="ctrl-val v-d" id="val-d">1.00</span>
+      </div>
+      <div class="range-note"><span>−3</span><span>0</span><span>+3</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--purple);">状態フィードバックゲイン</div>
+    <div class="ctrl-group">
+      <div class="ctrl-label" style="color:var(--purple);" id="lbl-k1">K</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-k1" class="sk1" min="-3" max="3" step="0.01" value="0">
+        <span class="ctrl-val v-k1" id="val-k1">0.00</span>
+      </div>
+      <div class="range-note"><span>−3</span><span>0</span><span>+3</span></div>
+      <div class="stable-bar" id="bar-k1"><div class="ok" id="bar-k1-ok"></div></div>
+      <div class="note" style="margin-top:0.15rem;">緑＝この値なら安定（他方のゲインは現在値で固定）</div>
+    </div>
+    <div class="ctrl-group" id="k2-group" style="display:none;">
+      <div class="ctrl-label" style="color:var(--teal);">K₂（x₂ に対するゲイン）</div>
+      <div class="ctrl-row">
+        <input type="range" id="sl-k2" class="sk2" min="-3" max="3" step="0.01" value="0">
+        <span class="ctrl-val v-k2" id="val-k2">0.00</span>
+      </div>
+      <div class="range-note"><span>−3</span><span>0</span><span>+3</span></div>
+      <div class="stable-bar" id="bar-k2"><div class="ok" id="bar-k2-ok"></div></div>
+    </div>
+    <div style="display:flex;gap:0.4rem;margin-top:0.55rem;flex-wrap:wrap;">
+      <button class="btn btn-p" id="b-stab">安定になるゲインの例</button>
+      <button class="btn btn-p" id="b-dead">有限時間整定（デッドビート）</button>
+      <button class="btn" id="b-reset">リセット（K=0）</button>
+    </div>
+    <div class="eq" style="margin-top:0.5rem;" id="cl-box"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">閉ループ極と安定判定</div>
+    <table class="info-table">
+      <tr><th>項目</th><th style="text-align:right;">値</th></tr>
+      <tr><td>開ループ極</td><td class="num" id="r-olp">—</td></tr>
+      <tr><td>閉ループ極</td><td class="num" id="r-clp">—</td></tr>
+      <tr><td>最大絶対値 max|λ|</td><td class="num" id="r-max">—</td></tr>
+      <tr><td>安定条件</td><td class="num">max|λ| &lt; 1</td></tr>
+    </table>
+    <div class="verdict" id="verdict"></div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="col">
+  <div class="card">
+    <div class="card-label" style="color:var(--red);">状態の時間応答</div>
+    <div class="legend-row" id="leg-resp"></div>
+    <div class="chart-wrap"><canvas id="chart-x"></canvas></div>
+    <div class="note">k = 20 で外乱パルスが加わります。安定なら再び 0 に収束します。</div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--green);">制御入力 u(k) = −K x(k)</div>
+    <div class="chart-wrap sm"><canvas id="chart-u"></canvas></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="color:var(--blue);">極配置（z平面・単位円）</div>
+    <div class="canvas-wrap"><canvas id="zplane"></canvas></div>
+    <div class="legend-row" style="margin-top:0.35rem;">
+      <span class="legend-item"><span style="color:#94a3b8;font-weight:700;">×</span> 開ループ極</span>
+      <span class="legend-item"><span style="color:#2563eb;font-weight:700;">×</span> 閉ループ極（安定）</span>
+      <span class="legend-item"><span style="color:#dc2626;font-weight:700;">×</span> 閉ループ極（不安定）</span>
+      <span class="legend-item"><span class="sw dash" style="border-color:#334155;"></span>単位円</span>
+    </div>
+    <div class="note">離散時間系では<strong>単位円の内側</strong>が安定領域です（連続時間の左半平面に対応）。</div>
+  </div>
+
+  <div class="card insight">
+    <strong>📖 教育ポイント</strong><br>
+    ・離散時間系の安定条件は<strong>すべての極の絶対値が 1 未満</strong>（等比数列の公比 |r|&lt;1 と同じ考え方）<br>
+    ・極が<strong>正の実軸上</strong>なら単調に収束、<strong>負の実軸上</strong>なら符号が交互に変わりながら収束<br>
+    ・極が<strong>複素数</strong>なら振動しながら収束。絶対値が小さいほど速く収束する<br>
+    ・ゲイン K を上げれば必ず良くなるわけではなく、<strong>上げすぎると極が単位円の外へ出て不安定</strong>になる<br>
+    ・2次系は<strong>可制御正準形</strong>なので、K₁ と K₂ が特性方程式の係数を直接動かす<br>
+    ・全ての極を<strong>原点に配置</strong>すると、有限ステップで誤差がゼロになる（デッドビート制御）
+  </div>
+</div>
+
+</div>
+</div>
+<div class="footer">機械システム演習 — 離散時間状態方程式の数値シミュレーション</div>
+
+<script>
+(function(){
+  const cv=document.getElementById('zplane'), ctx=cv.getContext('2d');
+  const slD=document.getElementById('sl-d'), slK1=document.getElementById('sl-k1'), slK2=document.getElementById('sl-k2');
+  let order=1;
+
+  // ---- system parameters ----
+  // 1st: x(k+1)=a1*x(k)+u(k)   (a1>1 → 開ループ不安定)
+  const A1=1.05;
+  // 2nd: controllable canonical form
+  //  A=[[0,1],[-a0,-a1]], B=[0,1]^T
+  //  開ループ特性: z^2 + a1 z + a0 = 0
+  const A0_2=-1.0, A1_2=-0.2;   // 開ループ極 ≒ 1.105, -0.905（不安定）
+
+  const N=80, KIMP=20;
+
+  function nf(v,n){
+    n=(n===undefined)?3:n;
+    const x=(typeof v==='number')?v:parseFloat(v);
+    return (v===null||v===undefined||!isFinite(x))?'—':x.toFixed(n);
+  }
+
+  window.setOrder=function(o){
+    order=o;
+    document.getElementById('o-1').className='opt'+(o===1?' active':'');
+    document.getElementById('o-2').className='opt'+(o===2?' active':'');
+    document.getElementById('k2-group').style.display=(o===2)?'block':'none';
+    document.getElementById('lbl-k1').textContent=(o===1)?'K（x に対するゲイン）':'K₁（x₁ に対するゲイン）';
+    slK1.value=0; slK2.value=0;
+    render();
+  };
+
+  // ---- closed-loop poles ----
+  function clPoles(K1,K2){
+    if(order===1){
+      return [{re:A1-K1, im:0}];
+    }
+    // char: z^2 + (a1+K2) z + (a0+K1) = 0
+    const c1=A1_2+K2, c0=A0_2+K1;
+    const D=c1*c1-4*c0;
+    if(D>=0){
+      const r=Math.sqrt(D);
+      return [{re:(-c1+r)/2,im:0},{re:(-c1-r)/2,im:0}];
+    }
+    const r=Math.sqrt(-D);
+    return [{re:-c1/2,im:r/2},{re:-c1/2,im:-r/2}];
+  }
+  function olPoles(){
+    if(order===1)return [{re:A1,im:0}];
+    const c1=A1_2, c0=A0_2;
+    const D=c1*c1-4*c0;
+    if(D>=0){const r=Math.sqrt(D);return [{re:(-c1+r)/2,im:0},{re:(-c1-r)/2,im:0}];}
+    const r=Math.sqrt(-D);
+    return [{re:-c1/2,im:r/2},{re:-c1/2,im:-r/2}];
+  }
+  function maxAbs(ps){return Math.max.apply(null,ps.map(function(p){return Math.hypot(p.re,p.im);}));}
+
+  // ---- simulation ----
+  function simulate(K1,K2,d){
+    const xs=[],x2s=[],us=[];
+    if(order===1){
+      let x=1.0;   // 初期値
+      for(let k=0;k<=N;k++){
+        const u=-K1*x;
+        xs.push({x:k,y:cap(x)}); us.push({x:k,y:cap(u)});
+        const dk=(k===KIMP)?d:0;
+        x=A1*x+u+dk;
+      }
+    }else{
+      let x1=1.0,x2=0.0;
+      for(let k=0;k<=N;k++){
+        const u=-(K1*x1+K2*x2);
+        xs.push({x:k,y:cap(x1)}); x2s.push({x:k,y:cap(x2)}); us.push({x:k,y:cap(u)});
+        const dk=(k===KIMP)?d:0;
+        const n1=x2;
+        const n2=-A0_2*x1-A1_2*x2+u+dk;   // B=[0;1] に外乱も入る
+        x1=n1; x2=n2;
+      }
+    }
+    return {x1:xs,x2:x2s,u:us};
+  }
+  function cap(v){
+    if(!isFinite(v))return null;
+    return Math.max(-1e6,Math.min(1e6,v));
+  }
+
+  // ---- charts ----
+  function ds(color,w,dash){return{data:[],borderColor:color,backgroundColor:color,borderWidth:w,borderDash:dash||[],pointRadius:2.2,pointHoverRadius:3,fill:false,tension:0,stepped:false};}
+  function mkChart(id,yTitle){
+    return new Chart(document.getElementById(id).getContext('2d'),{
+      type:'line',data:{datasets:[]},
+      options:{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        scales:{
+          x:{type:'linear',min:0,max:N,title:{display:true,text:'離散時刻 k',font:{size:10}},
+             ticks:{stepSize:10,font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}},
+          y:{title:{display:true,text:yTitle,font:{size:10}},ticks:{font:{family:"'JetBrains Mono'",size:9}},grid:{color:'#f0f0f0'}}
+        },
+        plugins:{legend:{display:false},tooltip:{enabled:false}}
+      }
+    });
+  }
+  const chX=mkChart('chart-x','状態量'), chU=mkChart('chart-u','u(k)');
+
+  // ---- z-plane ----
+  function resize(){
+    const r=cv.parentElement.getBoundingClientRect();
+    cv.width=r.width; cv.height=Math.round(r.width*0.72);
+  }
+  resize(); window.addEventListener('resize',function(){resize();render();});
+
+  function drawZ(ol,cl){
+    const W=cv.width,H=cv.height;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#fafaf8';ctx.fillRect(0,0,W,H);
+    let mx=1.6;
+    cl.concat(ol).forEach(function(p){mx=Math.max(mx,Math.abs(p.re)+0.2,Math.abs(p.im)+0.2);});
+    mx=Math.min(mx,3.2);
+    const cx=W/2, cy=H/2, sc=Math.min(W,H)*0.42/mx;
+    function px(x){return cx+x*sc;}
+    function py(y){return cy-y*sc;}
+    // outside unit circle = unstable tint
+    ctx.fillStyle='rgba(220,38,38,0.06)';ctx.fillRect(0,0,W,H);
+    ctx.save();
+    ctx.beginPath();ctx.arc(px(0),py(0),sc,0,2*Math.PI);ctx.clip();
+    ctx.fillStyle='#ecfdf5';ctx.fillRect(0,0,W,H);
+    ctx.restore();
+    // grid
+    ctx.strokeStyle='#e5e7eb';ctx.lineWidth=1;
+    for(let g=-Math.ceil(mx);g<=Math.ceil(mx);g++){
+      ctx.beginPath();ctx.moveTo(px(g),0);ctx.lineTo(px(g),H);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,py(g));ctx.lineTo(W,py(g));ctx.stroke();
+    }
+    ctx.strokeStyle='#334155';ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.moveTo(0,py(0));ctx.lineTo(W,py(0));ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px(0),0);ctx.lineTo(px(0),H);ctx.stroke();
+    // unit circle
+    ctx.strokeStyle='#334155';ctx.lineWidth=2;ctx.setLineDash([6,4]);
+    ctx.beginPath();ctx.arc(px(0),py(0),sc,0,2*Math.PI);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#64748b';ctx.font="10px 'JetBrains Mono'";ctx.textAlign='center';
+    for(let g=-Math.ceil(mx);g<=Math.ceil(mx);g++){if(g===0)continue;ctx.fillText(g,px(g),py(0)+13);}
+    ctx.textAlign='left';ctx.fillStyle='#475569';ctx.font="11px 'Noto Sans JP'";
+    ctx.fillText('Re',W-24,py(0)-6);ctx.fillText('Im',px(0)+6,13);
+    ctx.fillStyle='#065f46';ctx.font="10px 'Noto Sans JP'";
+    ctx.fillText('安定（単位円内）',px(0)+6,py(0)-sc*0.12);
+    ctx.fillStyle='#991b1b';
+    ctx.fillText('不安定',8,14);
+    // open-loop poles
+    ol.forEach(function(p){
+      const q=[px(p.re),py(p.im)];
+      ctx.strokeStyle='#94a3b8';ctx.lineWidth=2.4;
+      const r=7;
+      ctx.beginPath();ctx.moveTo(q[0]-r,q[1]-r);ctx.lineTo(q[0]+r,q[1]+r);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(q[0]-r,q[1]+r);ctx.lineTo(q[0]+r,q[1]-r);ctx.stroke();
+    });
+    // closed-loop poles
+    cl.forEach(function(p){
+      const q=[px(p.re),py(p.im)];
+      const st=(Math.hypot(p.re,p.im)<1);
+      ctx.strokeStyle=st?'#2563eb':'#dc2626';ctx.lineWidth=3.4;
+      const r=9;
+      ctx.beginPath();ctx.moveTo(q[0]-r,q[1]-r);ctx.lineTo(q[0]+r,q[1]+r);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(q[0]-r,q[1]+r);ctx.lineTo(q[0]+r,q[1]-r);ctx.stroke();
+    });
+  }
+
+  // ---- stable range bar ----
+  function updateBar(which){
+    const K1=parseFloat(slK1.value), K2=parseFloat(slK2.value);
+    const lo=-3, hi=3, steps=240;
+    let start=null,segs=[];
+    for(let i=0;i<=steps;i++){
+      const v=lo+(hi-lo)*i/steps;
+      const ok=(which===1)? (maxAbs(clPoles(v,K2))<1) : (maxAbs(clPoles(K1,v))<1);
+      if(ok&&start===null)start=i;
+      if((!ok||i===steps)&&start!==null){segs.push([start,ok?i:i-1]);start=null;}
+    }
+    const bar=document.getElementById('bar-k'+which);
+    bar.innerHTML='';
+    segs.forEach(function(s){
+      const d=document.createElement('div');
+      d.className='ok';
+      d.style.left=(100*s[0]/steps)+'%';
+      d.style.width=(100*(s[1]-s[0])/steps)+'%';
+      bar.appendChild(d);
+    });
+  }
+
+  function render(){
+    const d=parseFloat(slD.value);
+    const K1=parseFloat(slK1.value), K2=parseFloat(slK2.value);
+    document.getElementById('val-d').textContent=nf(d,2);
+    document.getElementById('val-k1').textContent=nf(K1,2);
+    document.getElementById('val-k2').textContent=nf(K2,2);
+
+    // system display
+    if(order===1){
+      document.getElementById('sys-box').innerHTML=
+        'x(k+1) = '+A1+' x(k) + u(k) + d(k)<br>'+
+        'u(k) = −K x(k)　→　x(k+1) = ('+A1+' − K) x(k)';
+      document.getElementById('sys-note').textContent=
+        '開ループ極 '+A1+' は単位円の外にあるため、制御しないと発散します。';
+    }else{
+      document.getElementById('sys-box').innerHTML=
+        '<div class="mat">x(k+1) = <span class="mat-b"><span class="mat-r"> 0    1 </span><span class="mat-r">'+nf(-A0_2,1)+'  '+nf(-A1_2,1)+'</span></span> x(k) + <span class="mat-b"><span class="mat-r">0</span><span class="mat-r">1</span></span> u(k)</div><br>'+
+        'u(k) = −K₁x₁(k) − K₂x₂(k)<br>'+
+        '閉ループ特性方程式：z² + ('+nf(A1_2,1)+'+K₂) z + ('+nf(A0_2,1)+'+K₁) = 0';
+      document.getElementById('sys-note').textContent=
+        '可制御正準形なので、K₁ は定数項、K₂ は1次の係数を直接動かします。';
+    }
+
+    const ol=olPoles(), cl=clPoles(K1,K2);
+    const mx=maxAbs(cl);
+
+    function pstr(ps){
+      return ps.map(function(p){
+        return nf(p.re,3)+(Math.abs(p.im)>1e-9?((p.im>0?' + ':' − ')+nf(Math.abs(p.im),3)+'j'):'');
+      }).join(' ,  ');
+    }
+    document.getElementById('r-olp').textContent=pstr(ol);
+    document.getElementById('r-clp').textContent=pstr(cl);
+    document.getElementById('r-max').textContent=nf(mx,4);
+
+    if(order===1){
+      document.getElementById('cl-box').innerHTML='閉ループ：x(k+1) = ('+nf(A1-K1,3)+') x(k)　極 = '+nf(A1-K1,3);
+    }else{
+      document.getElementById('cl-box').innerHTML=
+        '閉ループ特性方程式：z² + ('+nf(A1_2+K2,3)+') z + ('+nf(A0_2+K1,3)+') = 0';
+    }
+
+    const v=document.getElementById('verdict');
+    if(mx<1-1e-9){
+      v.className='verdict ok';
+      v.innerHTML='✓ <strong>安定</strong>：すべての極が単位円の内側（max|λ| = '+nf(mx,4)+' &lt; 1）。外乱を受けても 0 に戻ります。';
+    }else if(mx<1+1e-9){
+      v.className='verdict warn';
+      v.innerHTML='△ <strong>安定限界</strong>：極が単位円上にあります（max|λ| ≒ 1）。外乱が減衰せず残り続けます。';
+    }else{
+      v.className='verdict ng';
+      v.innerHTML='✗ <strong>不安定</strong>：極が単位円の外（max|λ| = '+nf(mx,4)+' &gt; 1）。応答が発散します。';
+    }
+
+    // simulation
+    const S=simulate(K1,K2,d);
+    const leg=document.getElementById('leg-resp');
+    const sets=[];
+    const c1=ds('#2563eb',2);c1.data=S.x1;sets.push(c1);
+    let legHtml='<span class="legend-item"><span class="sw" style="background:#2563eb;"></span>'+(order===1?'x(k)':'x₁(k)')+'</span>';
+    if(order===2){
+      const c2=ds('#0891b2',2);c2.data=S.x2;sets.push(c2);
+      legHtml+='<span class="legend-item"><span class="sw" style="background:#0891b2;"></span>x₂(k)</span>';
+    }
+    const zeroLine={data:[{x:0,y:0},{x:N,y:0}],borderColor:'#cbd5e1',borderWidth:1.2,borderDash:[4,3],pointRadius:0,fill:false};
+    sets.push(zeroLine);
+    const impLine={data:[{x:KIMP,y:-1e6},{x:KIMP,y:1e6}],borderColor:'#ea580c',borderWidth:1.6,borderDash:[5,4],pointRadius:0,fill:false};
+    sets.push(impLine);
+    legHtml+='<span class="legend-item"><span class="sw dash" style="border-color:#ea580c;"></span>外乱 (k=20)</span>';
+    leg.innerHTML=legHtml;
+    chX.data.datasets=sets;
+    let lo=-1.5,hi=1.5;
+    S.x1.concat(order===2?S.x2:[]).forEach(function(p){
+      if(p.y!==null&&isFinite(p.y)){lo=Math.min(lo,p.y);hi=Math.max(hi,p.y);}
+    });
+    const pad=(hi-lo)*0.1+0.2;
+    chX.options.scales.y.min=Math.max(-50,lo-pad);
+    chX.options.scales.y.max=Math.min(50,hi+pad);
+    chX.update();
+
+    const u0=ds('#059669',2);u0.data=S.u;
+    chU.data.datasets=[u0,{data:[{x:0,y:0},{x:N,y:0}],borderColor:'#cbd5e1',borderWidth:1.2,borderDash:[4,3],pointRadius:0,fill:false},
+      {data:[{x:KIMP,y:-1e6},{x:KIMP,y:1e6}],borderColor:'#ea580c',borderWidth:1.4,borderDash:[5,4],pointRadius:0,fill:false}];
+    let ulo=-1,uhi=1;
+    S.u.forEach(function(p){if(p.y!==null&&isFinite(p.y)){ulo=Math.min(ulo,p.y);uhi=Math.max(uhi,p.y);}});
+    const upad=(uhi-ulo)*0.1+0.2;
+    chU.options.scales.y.min=Math.max(-50,ulo-upad);
+    chU.options.scales.y.max=Math.min(50,uhi+upad);
+    chU.update();
+
+    updateBar(1);
+    if(order===2)updateBar(2);
+
+    drawZ(ol,cl);
+  }
+
+  document.getElementById('b-stab').addEventListener('click',function(){
+    if(order===1){ slK1.value=1.05; }        // 極 0
+    else { slK1.value=(A0_2*-1+0.2).toFixed(2); slK2.value=(A1_2*-1+0.3).toFixed(2); }
+    render();
+  });
+  document.getElementById('b-dead').addEventListener('click',function(){
+    // 全極を原点へ：1次 K=a、2次 K1=-a0, K2=-a1
+    if(order===1){ slK1.value=A1.toFixed(2); }
+    else { slK1.value=(-A0_2).toFixed(2); slK2.value=(-A1_2).toFixed(2); }
+    render();
+  });
+  document.getElementById('b-reset').addEventListener('click',function(){
+    slK1.value=0; slK2.value=0; render();
+  });
+  [slD,slK1,slK2].forEach(function(s){s.addEventListener('input',render);});
+
+  render();
+})();
+</script>
+</body>
+</html>
