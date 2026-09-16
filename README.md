@@ -56,6 +56,7 @@
 | 21 | 根軌跡 | ゲインと極の関係 | `control_root_locus.html` |
 | 22 | ラウスの安定判別法 | ラウス表と安定性 | `control_routh.html` |
 | 23 | 位相進み・遅れ補償 | 閉ループ制御 | `control_lead_lag.html` |
+| 24 | 離散時間系 | 離散時間状態空間モデルとFB | `discrete_state_space.html` |
 
 
 各教材への直リンク：
@@ -83,6 +84,7 @@
 - [根軌跡](https://hiroshi-okajima.github.io/control-interactive-tools/control_root_locus.html)
 - [ラウスの安定判別法](https://hiroshi-okajima.github.io/control-interactive-tools/control_routh.html)
 - [位相進み・遅れ補償](https://hiroshi-okajima.github.io/control-interactive-tools/control_lead_lag.html)
+- [離散状態空間](https://hiroshi-okajima.github.io/control-interactive-tools/discrete_state_space.html)
 
 ## GitHub Pages URL
 
