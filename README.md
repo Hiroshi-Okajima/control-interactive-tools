@@ -122,7 +122,7 @@ https://hiroshi-okajima.github.io/control-interactive-tools/
 
 ## Author
 
-岡島 寛（熊本大学 工学部 情報電気工学科 准教授）
+岡島 寛（熊本大学 工学部 教授）
 - Web: https://www.control-theory.com
 - Blog: https://blog.control-theory.com
 - YouTube: https://www.youtube.com/@ControlEngineeringChannel
