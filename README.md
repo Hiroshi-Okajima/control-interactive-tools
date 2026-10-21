@@ -2,7 +2,7 @@
 
 制御工学のインタラクティブ教材集（HTML + JavaScript）
 
-教材例（11）
+教材例
 
 <img width="1087" height="807" alt="20260613184403" src="https://github.com/user-attachments/assets/9faa63eb-6a1c-4a6c-bc0d-87a6941f1740" />
 
